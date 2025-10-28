@@ -1,0 +1,376 @@
+openapi: 3.0.3
+info:
+  title: Landscape Design Platform API
+  description: API for managing users, credits, and design generations
+  version: 1.0.0
+servers:
+  - url: https://api.yarda.ai/v1
+    description: Production server
+  - url: http://localhost:8000/v1
+    description: Development server
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/register:
+    post:
+      summary: Register new user
+      operationId: registerUser
+      tags:
+        - Authentication
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/verify-email:
+    post:
+      summary: Verify email address
+      operationId: verifyEmail
+      tags:
+        - Authentication
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Email verified successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Email verified successfully
+        '400':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/me:
+    get:
+      summary: Get current user details
+      operationId: getCurrentUser
+      tags:
+        - Users
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserWithCredits'
+
+  /credits/balance:
+    get:
+      summary: Get credit balance
+      operationId: getCreditBalance
+      tags:
+        - Credits
+      responses:
+        '200':
+          description: Credit balance
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trial_credits:
+                    type: integer
+                    minimum: 0
+                    example: 3
+                  token_balance:
+                    type: integer
+                    minimum: 0
+                    example: 10
+                  total_available:
+                    type: integer
+                    minimum: 0
+                    example: 13
+
+  /generations:
+    post:
+      summary: Create new generation
+      operationId: createGeneration
+      tags:
+        - Generations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - input_type
+                - style
+              properties:
+                input_type:
+                  type: string
+                  enum: [photo, address]
+                input_photo_url:
+                  type: string
+                  format: uri
+                  description: Required if input_type is photo
+                input_address:
+                  type: string
+                  description: Required if input_type is address
+                style:
+                  type: string
+                  enum: [modern, traditional, japanese, tropical, desert]
+                custom_prompt:
+                  type: string
+                  maxLength: 500
+      responses:
+        '202':
+          description: Generation started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Generation'
+        '402':
+          description: Insufficient credits
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+
+    get:
+      summary: Get generation history
+      operationId: getGenerationHistory
+      tags:
+        - Generations
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, processing, completed, failed]
+      responses:
+        '200':
+          description: Generation history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  generations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Generation'
+                  total:
+                    type: integer
+                    example: 42
+                  limit:
+                    type: integer
+                    example: 20
+                  offset:
+                    type: integer
+                    example: 0
+
+  /generations/{id}:
+    get:
+      summary: Get generation details
+      operationId: getGeneration
+      tags:
+        - Generations
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Generation details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Generation'
+        '404':
+          description: Generation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        email_verified:
+          type: boolean
+        trial_credits:
+          type: integer
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+
+    UserWithCredits:
+      allOf:
+        - $ref: '#/components/schemas/UserResponse'
+        - type: object
+          properties:
+            token_account:
+              type: object
+              properties:
+                balance:
+                  type: integer
+                  minimum: 0
+                lifetime_purchased:
+                  type: integer
+                  minimum: 0
+                lifetime_consumed:
+                  type: integer
+                  minimum: 0
+
+    Generation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+        input_type:
+          type: string
+          enum: [photo, address]
+        input_photo_url:
+          type: string
+          format: uri
+          nullable: true
+        input_address:
+          type: string
+          nullable: true
+        style:
+          type: string
+        custom_prompt:
+          type: string
+          nullable: true
+        output_image_url:
+          type: string
+          format: uri
+          nullable: true
+        error_message:
+          type: string
+          nullable: true
+        processing_time_ms:
+          type: integer
+          nullable: true
+        credit_type:
+          type: string
+          enum: [trial, token]
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+    RateLimitError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            retry_after:
+              type: integer
+              description: Seconds until next request allowed
+            limit:
+              type: integer
+              description: Maximum requests per minute
+            remaining:
+              type: integer
+              description: Requests remaining in current window
