@@ -20,3 +20,5 @@ services:
         value: INFO
       - key: LOG_FORMAT
         value: json
+      - key: ALLOWED_ORIGINS
+        value: "*"
