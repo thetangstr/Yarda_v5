@@ -40,7 +40,7 @@ export const EmailVerification: React.FC = () => {
     setStatus({ type: 'verifying', message: 'Verifying your email...' });
 
     try {
-      await apiClient.verifyEmail(verificationToken);
+      await apiClient.verifyEmail({ token: verificationToken });
 
       setStatus({
         type: 'success',
