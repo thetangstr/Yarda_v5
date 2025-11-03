@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 from src.models.user import User
 from src.api.dependencies import get_current_user, require_verified_email
 from src.services.trial_service import get_trial_service, TrialService
+from src.services.token_service import TokenService
 from src.db.connection_pool import db_pool
 
 router = APIRouter(prefix="/generations", tags=["generations"])
@@ -76,6 +77,7 @@ async def deduct_payment(
     user_id: UUID,
     payment_method: str,
     trial_service: TrialService,
+    token_service: TokenService,
     description: str = "Landscape generation"
 ) -> tuple[bool, str]:
     """
@@ -83,10 +85,14 @@ async def deduct_payment(
 
     This is called BEFORE Gemini API call to ensure payment upfront.
 
+    Requirements:
+    - T053: Token deduction integrated with generation flow
+
     Args:
         user_id: User UUID
         payment_method: 'subscription', 'trial', or 'token'
         trial_service: Trial service
+        token_service: Token service
         description: Transaction description
 
     Returns:
@@ -108,12 +114,9 @@ async def deduct_payment(
             return True, None
 
         elif payment_method == 'token':
-            # Deduct token atomically
-            result = await db_pool.fetchrow("""
-                SELECT * FROM deduct_token_atomic($1, $2)
-            """, user_id, description)
-
-            if not result['success']:
+            # Deduct token atomically with FOR UPDATE lock
+            success, new_balance = await token_service.deduct_token_atomic(user_id)
+            if not success:
                 return False, "Token deduction failed - insufficient balance"
             return True, None
 
@@ -128,7 +131,8 @@ async def deduct_payment(
 async def refund_payment(
     user_id: UUID,
     payment_method: str,
-    trial_service: TrialService
+    trial_service: TrialService,
+    token_service: TokenService
 ) -> None:
     """
     Refund payment when generation fails.
@@ -136,11 +140,13 @@ async def refund_payment(
     Requirements:
     - FR-013: Refund trial if generation fails
     - FR-066: Refund payment on generation failure
+    - T053: Token refund integrated with generation flow
 
     Args:
         user_id: User UUID
         payment_method: 'subscription', 'trial', or 'token'
         trial_service: Trial service
+        token_service: Token service
     """
     try:
         if payment_method == 'subscription':
@@ -155,12 +161,9 @@ async def refund_payment(
 
         elif payment_method == 'token':
             # Refund token
-            result = await db_pool.fetchrow("""
-                SELECT * FROM add_tokens($1, 1, 'refund', 'Generation failed - refund', NULL)
-            """, user_id)
-
-            if result['success']:
-                print(f"Refunded token to user {user_id}. New balance: {result['new_balance']}")
+            success, new_balance = await token_service.refund_token(user_id)
+            if success:
+                print(f"Refunded token to user {user_id}. New balance: {new_balance}")
 
     except Exception as e:
         print(f"Payment refund error: {e}")
@@ -209,6 +212,9 @@ async def create_generation(
         HTTPException 400: Invalid input
         HTTPException 500: Generation failed
     """
+    # Initialize token service
+    token_service = TokenService(db_pool)
+
     try:
         # Step 1: Check authorization hierarchy
         payment_method = await check_authorization_hierarchy(user, trial_service)
@@ -219,6 +225,7 @@ async def create_generation(
             user.id,
             payment_method,
             trial_service,
+            token_service,
             f"Landscape generation for {address}"
         )
 
@@ -268,7 +275,7 @@ async def create_generation(
         raise
     except Exception as e:
         # Refund payment if generation setup failed
-        await refund_payment(user.id, payment_method, trial_service)
+        await refund_payment(user.id, payment_method, trial_service, token_service)
 
         print(f"Generation creation error: {e}")
         raise HTTPException(
