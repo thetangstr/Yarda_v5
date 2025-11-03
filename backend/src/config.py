@@ -32,6 +32,7 @@ class Settings(BaseSettings):
 
     # Application
     app_url: str = "http://localhost:3000"
+    frontend_url: str = "http://localhost:3000"  # For email verification links
     api_url: str = "http://localhost:8000"
     environment: str = "development"
 
