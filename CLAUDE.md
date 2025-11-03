@@ -1,16 +1,15 @@
 # Yarda_v5 Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2025-10-28
+Auto-generated from all feature plans. Last updated: 2025-11-03
 
 ## Active Technologies
 
-- TypeScript (React 18+ frontend), Python 3.11+ (FastAPI backend) + Supabase (PostgreSQL + Auth), React Query, Zustand (001-data-model)
+- Python 3.11+ (backend), TypeScript 5.x (frontend) (001-002-landscape-studio)
 
 ## Project Structure
 
 ```text
-backend/
-frontend/
+src/
 tests/
 ```
 
@@ -20,11 +19,11 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 
 ## Code Style
 
-TypeScript (React 18+ frontend), Python 3.11+ (FastAPI backend): Follow standard conventions
+Python 3.11+ (backend), TypeScript 5.x (frontend): Follow standard conventions
 
 ## Recent Changes
 
-- 001-data-model: Added TypeScript (React 18+ frontend), Python 3.11+ (FastAPI backend) + Supabase (PostgreSQL + Auth), React Query, Zustand
+- 001-002-landscape-studio: Added Python 3.11+ (backend), TypeScript 5.x (frontend)
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

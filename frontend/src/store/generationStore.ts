@@ -1,113 +1,121 @@
-import { create } from 'zustand'
-import { apiClient } from '@/services/api'
-import type { Generation, GenerationStatus } from '@/types'
+/**
+ * Generation state management using Zustand
+ *
+ * Manages landscape design generation state, progress, and results.
+ */
 
-interface GenerationStore {
-  // State
-  generations: Generation[]
-  totalCount: number
-  currentPage: number
-  pageSize: number
-  statusFilter: GenerationStatus | 'all'
-  selectedGeneration: Generation | null
-  isLoading: boolean
-  error: string | null
+import { create } from 'zustand';
 
-  // Actions
-  fetchGenerations: (page?: number, status?: GenerationStatus | 'all') => Promise<void>
-  setStatusFilter: (status: GenerationStatus | 'all') => void
-  setSelectedGeneration: (generation: Generation | null) => void
-  clearSelectedGeneration: () => void
-  nextPage: () => void
-  prevPage: () => void
-  refreshGenerations: () => Promise<void>
+export type YardAreaType = 'front_yard' | 'backyard' | 'walkway' | 'side_yard';
+export type LandscapeStyle =
+  | 'modern_minimalist'
+  | 'california_native'
+  | 'japanese_zen'
+  | 'english_garden'
+  | 'desert_landscape';
+export type GenerationStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type PaymentType = 'trial' | 'token' | 'subscription';
+
+export interface GenerationAreaResult {
+  area_id: string;
+  area_type: YardAreaType;
+  style: LandscapeStyle;
+  custom_prompt?: string;
+  status: GenerationStatus;
+  progress?: number; // 0-100
+  image_urls?: string[];
+  error_message?: string;
 }
 
-export const useGenerationStore = create<GenerationStore>((set, get) => ({
+export interface Generation {
+  generation_id: string;
+  user_id: string;
+  status: GenerationStatus;
+  progress: number; // 0-100
+  payment_type: PaymentType;
+  tokens_deducted?: number;
+  address?: string;
+  areas: GenerationAreaResult[];
+  created_at: string;
+  completed_at?: string;
+}
+
+interface GenerationState {
+  // Current generation in progress
+  currentGeneration: Generation | null;
+
+  // Generation history
+  generationHistory: Generation[];
+
+  // UI state
+  isGenerating: boolean;
+
+  // Actions
+  setCurrentGeneration: (generation: Generation | null) => void;
+  updateGenerationProgress: (generationId: string, progress: number) => void;
+  updateAreaStatus: (
+    generationId: string,
+    areaId: string,
+    status: GenerationStatus,
+    progress?: number
+  ) => void;
+  addGenerationToHistory: (generation: Generation) => void;
+  clearCurrentGeneration: () => void;
+}
+
+export const useGenerationStore = create<GenerationState>((set) => ({
   // Initial state
-  generations: [],
-  totalCount: 0,
-  currentPage: 1,
-  pageSize: 10,
-  statusFilter: 'all',
-  selectedGeneration: null,
-  isLoading: false,
-  error: null,
+  currentGeneration: null,
+  generationHistory: [],
+  isGenerating: false,
 
-  // Fetch generations with pagination and filtering
-  fetchGenerations: async (page?: number, status?: GenerationStatus | 'all') => {
-    const state = get()
-    const targetPage = page !== undefined ? page : state.currentPage
-    const targetStatus = status !== undefined ? status : state.statusFilter
+  // Actions
+  setCurrentGeneration: (generation) =>
+    set({
+      currentGeneration: generation,
+      isGenerating: !!generation,
+    }),
 
-    set({ isLoading: true, error: null })
-
-    try {
-      const offset = (targetPage - 1) * state.pageSize
-      const params: any = {
-        limit: state.pageSize,
-        offset: offset,
+  updateGenerationProgress: (generationId, progress) =>
+    set((state) => {
+      if (state.currentGeneration?.generation_id === generationId) {
+        return {
+          currentGeneration: {
+            ...state.currentGeneration,
+            progress,
+          },
+        };
       }
+      return state;
+    }),
 
-      // Only add status filter if not 'all'
-      if (targetStatus !== 'all') {
-        params.status = targetStatus
+  updateAreaStatus: (generationId, areaId, status, progress) =>
+    set((state) => {
+      if (state.currentGeneration?.generation_id === generationId) {
+        const updatedAreas = state.currentGeneration.areas.map((area) =>
+          area.area_id === areaId
+            ? { ...area, status, progress: progress ?? area.progress }
+            : area
+        );
+
+        return {
+          currentGeneration: {
+            ...state.currentGeneration,
+            areas: updatedAreas,
+          },
+        };
       }
+      return state;
+    }),
 
-      const response = await apiClient.getGenerationHistory(params)
+  addGenerationToHistory: (generation) =>
+    set((state) => ({
+      generationHistory: [generation, ...state.generationHistory],
+    })),
 
-      set({
-        generations: response.generations,
-        totalCount: response.total,
-        currentPage: targetPage,
-        statusFilter: targetStatus,
-        isLoading: false,
-      })
-    } catch (error) {
-      set({
-        error: error instanceof Error ? error.message : 'Failed to fetch generations',
-        isLoading: false,
-      })
-    }
-  },
-
-  // Set status filter and refetch
-  setStatusFilter: async (status: GenerationStatus | 'all') => {
-    // Reset to page 1 when changing filter
-    await get().fetchGenerations(1, status)
-  },
-
-  // Set selected generation for modal
-  setSelectedGeneration: (generation: Generation | null) => {
-    set({ selectedGeneration: generation })
-  },
-
-  // Clear selected generation
-  clearSelectedGeneration: () => {
-    set({ selectedGeneration: null })
-  },
-
-  // Navigate to next page
-  nextPage: async () => {
-    const state = get()
-    const totalPages = Math.ceil(state.totalCount / state.pageSize)
-
-    if (state.currentPage < totalPages) {
-      await get().fetchGenerations(state.currentPage + 1)
-    }
-  },
-
-  // Navigate to previous page
-  prevPage: async () => {
-    const state = get()
-
-    if (state.currentPage > 1) {
-      await get().fetchGenerations(state.currentPage - 1)
-    }
-  },
-
-  // Refresh current page
-  refreshGenerations: async () => {
-    await get().fetchGenerations()
-  },
-}))
+  clearCurrentGeneration: () =>
+    set({
+      currentGeneration: null,
+      isGenerating: false,
+    }),
+}));

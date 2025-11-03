@@ -1,0 +1,1148 @@
+openapi: 3.0.3
+info:
+  title: Yarda AI Landscape Studio API
+  version: 1.0.0
+  description: |
+    Complete API specification for Yarda AI-powered landscape design platform.
+
+    **Key Features**:
+    - Trial system (3 free credits per user)
+    - Token-based pay-per-use generation
+    - Subscription tiers (7-Day Pass, Per-Property, Monthly Pro)
+    - Auto-reload configuration
+    - Multi-area parallel generation
+    - Transaction history and analytics
+
+    **Authentication**: All endpoints require Firebase JWT in Authorization header except registration/login.
+
+    **Base URL**: https://api.yarda.pro/v1
+
+servers:
+  - url: https://api.yarda.pro/v1
+    description: Production
+  - url: http://localhost:8000/v1
+    description: Local Development
+
+security:
+  - BearerAuth: []
+
+paths:
+  # ===========================
+  # Authentication & User Management (FR-001 to FR-010)
+  # ===========================
+
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register new user account (FR-001, FR-004)
+      description: Creates new user with email/password, initializes trial_remaining=3, sends verification email
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: Valid email per RFC 5322
+                password:
+                  type: string
+                  minLength: 8
+                  description: Minimum 8 characters
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: string
+                    format: uuid
+                  email:
+                    type: string
+                  trial_remaining:
+                    type: integer
+                    example: 3
+                  verification_sent:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email already registered (FR-005)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/register/google:
+    post:
+      tags: [Authentication]
+      summary: Register via Google OAuth (FR-002)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [google_token]
+              properties:
+                google_token:
+                  type: string
+                  description: Google OAuth token
+      responses:
+        '201':
+          description: User created via Google
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: string
+                  email:
+                    type: string
+                  trial_remaining:
+                    type: integer
+
+  /auth/verify-email:
+    post:
+      tags: [Authentication]
+      summary: Verify email address (FR-003, FR-007)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+                  description: Verification token from email (valid 24h)
+      responses:
+        '200':
+          description: Email verified
+        '400':
+          description: Token expired or invalid
+
+  /auth/resend-verification:
+    post:
+      tags: [Authentication]
+      summary: Resend verification email (FR-008)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Verification email sent
+        '429':
+          description: Rate limit exceeded (max 3 per hour)
+
+  /auth/reset-password:
+    post:
+      tags: [Authentication]
+      summary: Request password reset (FR-010)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Reset email sent
+
+  /auth/token:
+    post:
+      tags: [Authentication]
+      summary: Login and get JWT token (FR-009)
+      description: Returns JWT valid for 1 hour with auto-refresh
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  token_type:
+                    type: string
+                    example: Bearer
+                  expires_in:
+                    type: integer
+                    example: 3600
+
+  # ===========================
+  # Token Operations (FR-017 to FR-027)
+  # ===========================
+
+  /tokens/balance:
+    get:
+      tags: [Tokens]
+      summary: Get current token balance (FR-026)
+      description: Returns real-time balance with <100ms response time
+      responses:
+        '200':
+          description: Token balance retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  balance:
+                    type: integer
+                    description: Current token count
+                  trial_remaining:
+                    type: integer
+                    description: Remaining trial credits
+
+  /tokens/purchase:
+    post:
+      tags: [Tokens]
+      summary: Purchase token package (FR-017, FR-018)
+      description: Creates Stripe Checkout session for token purchase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [package_id]
+              properties:
+                package_id:
+                  type: string
+                  enum: [tokens_10, tokens_50, tokens_100, tokens_200]
+                  description: |
+                    Token packages:
+                    - tokens_10: 10 tokens ($2)
+                    - tokens_50: 50 tokens ($10)
+                    - tokens_100: 100 tokens ($20)
+                    - tokens_200: 200 tokens ($40)
+      responses:
+        '200':
+          description: Stripe Checkout session created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checkout_url:
+                    type: string
+                    description: Redirect user to this URL
+                  session_id:
+                    type: string
+
+  /tokens/deduct:
+    post:
+      tags: [Tokens]
+      summary: Deduct token (internal use) (FR-021, FR-022)
+      description: |
+        Atomically deducts 1 token using row-level locking.
+        MUST be called BEFORE Gemini API call.
+        Response time <50ms.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [description]
+              properties:
+                description:
+                  type: string
+                  description: Reason for deduction (e.g., "Generation for Front Yard")
+      responses:
+        '200':
+          description: Token deducted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  new_balance:
+                    type: integer
+                  transaction_id:
+                    type: string
+                    format: uuid
+        '402':
+          description: Insufficient tokens (FR-024)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tokens/refund:
+    post:
+      tags: [Tokens]
+      summary: Refund token (internal use) (FR-023, FR-066)
+      description: Automatically refunds token if generation fails
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [transaction_id, reason]
+              properties:
+                transaction_id:
+                  type: string
+                  format: uuid
+                  description: Original deduction transaction ID
+                reason:
+                  type: string
+                  description: Failure reason
+      responses:
+        '200':
+          description: Token refunded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  new_balance:
+                    type: integer
+
+  # ===========================
+  # Transaction History (FR-028 to FR-033)
+  # ===========================
+
+  /tokens/transactions:
+    get:
+      tags: [Tokens]
+      summary: Get transaction history (FR-028, FR-029)
+      description: Paginated transaction history with running balance
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [purchase, deduction, refund, auto_reload]
+          description: Filter by transaction type (FR-031)
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Transaction list (response <200ms)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transactions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TokenTransaction'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+
+  /tokens/transactions/export:
+    get:
+      tags: [Tokens]
+      summary: Export transactions to CSV (FR-033)
+      parameters:
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+
+  # ===========================
+  # Auto-Reload (FR-034 to FR-042)
+  # ===========================
+
+  /tokens/auto-reload:
+    get:
+      tags: [Auto-Reload]
+      summary: Get auto-reload configuration
+      responses:
+        '200':
+          description: Auto-reload settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutoReloadConfig'
+
+    put:
+      tags: [Auto-Reload]
+      summary: Update auto-reload configuration (FR-034, FR-035)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled, threshold, amount]
+              properties:
+                enabled:
+                  type: boolean
+                threshold:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                  description: Trigger reload when balance < threshold
+                amount:
+                  type: integer
+                  minimum: 10
+                  description: Tokens to add on auto-reload
+      responses:
+        '200':
+          description: Auto-reload updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutoReloadConfig'
+        '400':
+          description: No payment method on file (FR-035)
+
+  /tokens/auto-reload/check:
+    post:
+      tags: [Auto-Reload]
+      summary: Check and trigger auto-reload (internal) (FR-036, FR-037)
+      description: |
+        Called after each token deduction to check if auto-reload should trigger.
+        Implements 60-second throttle (FR-037).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_balance]
+              properties:
+                current_balance:
+                  type: integer
+      responses:
+        '200':
+          description: Auto-reload triggered or not needed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  triggered:
+                    type: boolean
+                  stripe_payment_intent_id:
+                    type: string
+                    description: Present if triggered
+
+  # ===========================
+  # Subscriptions (FR-043 to FR-054)
+  # ===========================
+
+  /subscriptions/plans:
+    get:
+      tags: [Subscriptions]
+      summary: List available subscription plans (FR-043)
+      security: []
+      responses:
+        '200':
+          description: Subscription plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    plan_id:
+                      type: string
+                      enum: [7day_pass, per_property, monthly_pro]
+                    name:
+                      type: string
+                    price:
+                      type: number
+                    interval:
+                      type: string
+                      enum: [one_time, monthly]
+                    features:
+                      type: array
+                      items:
+                        type: string
+
+  /subscriptions/subscribe:
+    post:
+      tags: [Subscriptions]
+      summary: Create subscription (FR-044)
+      description: Creates Stripe Checkout session for subscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan_id]
+              properties:
+                plan_id:
+                  type: string
+                  enum: [7day_pass, per_property, monthly_pro]
+      responses:
+        '200':
+          description: Stripe Checkout session created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checkout_url:
+                    type: string
+
+  /subscriptions/current:
+    get:
+      tags: [Subscriptions]
+      summary: Get current subscription status (FR-046)
+      responses:
+        '200':
+          description: Subscription details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+
+  /subscriptions/portal:
+    get:
+      tags: [Subscriptions]
+      summary: Get Stripe Customer Portal link (FR-050)
+      description: Allows users to manage subscription (cancel, update payment method)
+      responses:
+        '200':
+          description: Portal URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  portal_url:
+                    type: string
+
+  /subscriptions/cancel:
+    post:
+      tags: [Subscriptions]
+      summary: Cancel subscription (FR-051)
+      description: Sets cancel_at_period_end=true (access until period end)
+      responses:
+        '200':
+          description: Subscription cancellation scheduled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cancel_at_period_end:
+                    type: boolean
+                  current_period_end:
+                    type: string
+                    format: date-time
+
+  # ===========================
+  # Design Generation (FR-055 to FR-070)
+  # ===========================
+
+  /generations:
+    post:
+      tags: [Generations]
+      summary: Create new landscape design generation (FR-061 to FR-070)
+      description: |
+        Supports single-area or multi-area generation.
+        Deducts payment BEFORE Gemini API call (FR-062).
+        Multi-area processed in parallel (FR-070).
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [areas]
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: Property photo (max 10MB, JPG/PNG/WEBP) (FR-055)
+                address:
+                  type: string
+                  description: Alternative to image (FR-056)
+                areas:
+                  type: array
+                  items:
+                    type: object
+                    required: [area_type, style]
+                    properties:
+                      area_type:
+                        type: string
+                        enum: [front_yard, backyard, walkway, side_yard]
+                      style:
+                        type: string
+                        enum: [modern_minimalist, california_native, japanese_zen, english_garden, desert_landscape]
+                      custom_prompt:
+                        type: string
+                        maxLength: 500
+      responses:
+        '201':
+          description: Generation started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  generation_id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [pending]
+                  areas:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        area_id:
+                          type: string
+                          format: uuid
+                        area_type:
+                          type: string
+                        status:
+                          type: string
+        '402':
+          description: Insufficient access (trial=0, tokens=0, subscription expired)
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /generations/{generation_id}:
+    get:
+      tags: [Generations]
+      summary: Get generation status and results (FR-064)
+      description: Poll this endpoint for real-time progress (0-100%)
+      parameters:
+        - name: generation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Generation details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Generation'
+
+  /generations/{generation_id}/areas/{area_id}:
+    get:
+      tags: [Generations]
+      summary: Get specific area result (multi-area support)
+      parameters:
+        - name: generation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: area_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Area details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  area_id:
+                    type: string
+                  area_type:
+                    type: string
+                  status:
+                    type: string
+                    enum: [pending, processing, completed, failed]
+                  progress:
+                    type: integer
+                    minimum: 0
+                    maximum: 100
+                  image_urls:
+                    type: array
+                    items:
+                      type: string
+                  error_message:
+                    type: string
+
+  # ===========================
+  # Gallery (FR-071 to FR-079)
+  # ===========================
+
+  /gallery:
+    get:
+      tags: [Gallery]
+      summary: Get user's design gallery (FR-071, FR-072)
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: style
+          in: query
+          schema:
+            type: string
+          description: Filter by style (FR-073)
+        - name: area
+          in: query
+          schema:
+            type: string
+          description: Filter by area type (FR-073)
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Fuzzy search by address (FR-074)
+      responses:
+        '200':
+          description: Gallery items (response <200ms)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  designs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        generation_id:
+                          type: string
+                          format: uuid
+                        thumbnail_url:
+                          type: string
+                        area:
+                          type: string
+                        style:
+                          type: string
+                        address:
+                          type: string
+                        created_at:
+                          type: string
+                          format: date-time
+                  pagination:
+                    type: object
+
+  /gallery/{generation_id}:
+    delete:
+      tags: [Gallery]
+      summary: Delete design from gallery (FR-078)
+      parameters:
+        - name: generation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Design deleted
+
+  /gallery/{generation_id}/download:
+    get:
+      tags: [Gallery]
+      summary: Download design images (FR-077)
+      description: Returns ZIP for multi-image generations
+      parameters:
+        - name: generation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Image file or ZIP
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            application/zip:
+              schema:
+                type: string
+                format: binary
+
+  # ===========================
+  # Account Management (FR-080 to FR-088)
+  # ===========================
+
+  /account/profile:
+    get:
+      tags: [Account]
+      summary: Get user profile (FR-080)
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: string
+                  email:
+                    type: string
+                  email_verified:
+                    type: boolean
+                  created_at:
+                    type: string
+                    format: date-time
+                  trial_remaining:
+                    type: integer
+                  trial_used:
+                    type: integer
+
+    patch:
+      tags: [Account]
+      summary: Update profile (FR-081, FR-082)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                current_password:
+                  type: string
+                  description: Required for password or email change
+                new_password:
+                  type: string
+                  minLength: 8
+                new_email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Profile updated
+
+  /account/statistics:
+    get:
+      tags: [Account]
+      summary: Get usage statistics (FR-085, FR-086)
+      responses:
+        '200':
+          description: Usage stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tokens_used_week:
+                    type: integer
+                  tokens_used_month:
+                    type: integer
+                  tokens_used_lifetime:
+                    type: integer
+                  designs_generated_week:
+                    type: integer
+                  designs_generated_month:
+                    type: integer
+                  designs_generated_lifetime:
+                    type: integer
+
+  /account/preferences:
+    get:
+      tags: [Account]
+      summary: Get user preferences (FR-087, FR-088)
+      responses:
+        '200':
+          description: User preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+
+    patch:
+      tags: [Account]
+      summary: Update preferences (FR-087, FR-088)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPreferences'
+      responses:
+        '200':
+          description: Preferences updated
+
+  # ===========================
+  # Webhooks (Internal)
+  # ===========================
+
+  /webhooks/stripe:
+    post:
+      tags: [Webhooks]
+      summary: Stripe webhook endpoint (FR-019, FR-045)
+      description: |
+        Handles webhook events:
+        - checkout.session.completed (token purchase, subscription activation)
+        - customer.subscription.updated (renewal, status changes)
+        - customer.subscription.deleted (cancellation)
+        - payment_intent.succeeded (auto-reload)
+        - payment_intent.payment_failed (auto-reload failure)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Webhook processed
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Firebase JWT token
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        code:
+          type: string
+
+    TokenTransaction:
+      type: object
+      properties:
+        transaction_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        amount:
+          type: integer
+          description: Positive for credits, negative for deductions
+        type:
+          type: string
+          enum: [purchase, deduction, refund, auto_reload]
+        description:
+          type: string
+        balance_after:
+          type: integer
+          description: Running balance after this transaction
+        stripe_payment_intent_id:
+          type: string
+          description: For idempotency (FR-020)
+        created_at:
+          type: string
+          format: date-time
+
+    AutoReloadConfig:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        threshold:
+          type: integer
+          minimum: 1
+          maximum: 100
+        amount:
+          type: integer
+          minimum: 10
+        failure_count:
+          type: integer
+        last_reload_at:
+          type: string
+          format: date-time
+
+    Subscription:
+      type: object
+      properties:
+        subscription_id:
+          type: string
+        plan:
+          type: string
+          enum: [7day_pass, per_property, monthly_pro]
+        status:
+          type: string
+          enum: [active, past_due, cancelled, inactive]
+        current_period_start:
+          type: string
+          format: date-time
+        current_period_end:
+          type: string
+          format: date-time
+        cancel_at_period_end:
+          type: boolean
+
+    Generation:
+      type: object
+      properties:
+        generation_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        payment_type:
+          type: string
+          enum: [trial, token, subscription]
+        tokens_deducted:
+          type: integer
+        address:
+          type: string
+        areas:
+          type: array
+          items:
+            type: object
+            properties:
+              area_id:
+                type: string
+                format: uuid
+              area_type:
+                type: string
+              style:
+                type: string
+              custom_prompt:
+                type: string
+              status:
+                type: string
+              image_urls:
+                type: array
+                items:
+                  type: string
+              error_message:
+                type: string
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+
+    UserPreferences:
+      type: object
+      properties:
+        download_quality:
+          type: string
+          enum: [standard, high]
+          description: standard=1024x1024, high=2048x2048
+        notifications:
+          type: object
+          properties:
+            generation_complete:
+              type: boolean
+            token_low:
+              type: boolean
+            auto_reload:
+              type: boolean
+            subscription_events:
+              type: boolean
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Invalid or missing authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
