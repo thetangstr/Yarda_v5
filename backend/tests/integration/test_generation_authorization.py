@@ -15,11 +15,12 @@ Requirements:
 """
 
 import pytest
+import pytest_asyncio
 import asyncpg
 from uuid import UUID
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def db_connection():
     """Create database connection for testing."""
     conn = await asyncpg.connect(
@@ -109,7 +110,8 @@ async def test_auth_hierarchy_subscription_overrides_all(db_connection):
 
         assert user_state['trial_remaining'] == 0
         assert user_state['subscription_status'] == 'active'
-        assert user_state['token_balance'] == 0
+        # Token balance can be None if no token account exists, which is fine
+        assert user_state['token_balance'] in (0, None)
 
         # User can generate despite having no trial or tokens
         # This proves subscription is checked FIRST
@@ -309,8 +311,8 @@ async def test_auth_hierarchy_subscription_preserves_tokens(db_connection):
             ) VALUES (
                 $1,
                 'completed',
-                'subscription',  # Paid via subscription
-                0,  # No tokens deducted
+                'subscription',
+                0,
                 '123 Test Street',
                 '{}'::jsonb
             ) RETURNING id

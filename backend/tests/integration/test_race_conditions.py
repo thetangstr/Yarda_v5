@@ -12,13 +12,14 @@ Requirements:
 """
 
 import pytest
+import pytest_asyncio
 import asyncio
 import asyncpg
 from typing import List
 from uuid import UUID
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def db_connection():
     """Create database connection for testing."""
     conn = await asyncpg.connect(
@@ -31,7 +32,7 @@ async def db_connection():
     await conn.close()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def test_user(db_connection):
     """Create a test user with 3 trial credits."""
     # Insert test user
@@ -225,7 +226,7 @@ async def test_check_constraint_prevents_negative_trial():
         """)
 
         # Attempt to set trial_remaining to negative (should fail)
-        with pytest.raises(asyncpg.CheckViolationError):
+        with pytest.raises(asyncpg.exceptions.RaiseError, match="Trial remaining cannot be negative"):
             await conn.execute("""
                 UPDATE users
                 SET trial_remaining = -1
@@ -280,7 +281,7 @@ async def test_check_constraint_prevents_negative_token_balance():
         """, user_id)
 
         # Attempt to set balance to negative (should fail)
-        with pytest.raises(asyncpg.CheckViolationError):
+        with pytest.raises(asyncpg.exceptions.RaiseError, match="Token balance cannot be negative"):
             await conn.execute("""
                 UPDATE users_token_accounts
                 SET balance = -50

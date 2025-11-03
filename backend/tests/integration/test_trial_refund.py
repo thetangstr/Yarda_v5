@@ -11,11 +11,12 @@ Requirements:
 """
 
 import pytest
+import pytest_asyncio
 import asyncpg
 from uuid import UUID
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def db_connection():
     """Create database connection for testing."""
     conn = await asyncpg.connect(
@@ -28,7 +29,7 @@ async def db_connection():
     await conn.close()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def test_user_with_trials(db_connection):
     """Create a test user with 3 trial credits."""
     user_id = await db_connection.fetchval("""

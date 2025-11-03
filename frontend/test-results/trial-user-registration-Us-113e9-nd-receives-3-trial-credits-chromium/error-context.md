@@ -1,0 +1,51 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - heading "Get Started Free" [level=1] [ref=e6]
+      - paragraph [ref=e7]: Create your account and receive 3 free trial credits
+    - generic [ref=e8]:
+      - heading "What's included in your trial:" [level=3] [ref=e9]
+      - list [ref=e10]:
+        - listitem [ref=e11]:
+          - img [ref=e12]
+          - text: 3 AI-powered landscape design generations
+        - listitem [ref=e14]:
+          - img [ref=e15]
+          - text: Multiple design styles to choose from
+        - listitem [ref=e17]:
+          - img [ref=e18]
+          - text: No credit card required
+    - generic [ref=e20]:
+      - generic [ref=e21]: Network Error
+      - generic [ref=e22]:
+        - text: Email
+        - textbox "Email" [ref=e23]:
+          - /placeholder: you@example.com
+          - text: test-1762204783154@yarda-test.com
+      - generic [ref=e24]:
+        - text: Password
+        - textbox "Password" [ref=e25]:
+          - /placeholder: At least 8 characters
+          - text: SecurePassword123!
+      - generic [ref=e26]:
+        - text: Confirm Password
+        - textbox "Confirm Password" [ref=e27]:
+          - /placeholder: Re-enter your password
+          - text: SecurePassword123!
+      - button "Create Account" [ref=e28]
+    - paragraph [ref=e29]:
+      - text: Already have an account?
+      - link "Sign in" [ref=e30] [cursor=pointer]:
+        - /url: /login
+    - paragraph [ref=e31]:
+      - text: By creating an account, you agree to our
+      - link "Terms of Service" [ref=e32] [cursor=pointer]:
+        - /url: /terms
+      - text: and
+      - link "Privacy Policy" [ref=e33] [cursor=pointer]:
+        - /url: /privacy
+  - alert [ref=e34]: Register - Yarda AI Landscape Studio
+```

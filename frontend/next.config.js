@@ -2,6 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // Set the pages directory to src/pages
+  pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
+
   // Image optimization configuration
   images: {
     remotePatterns: [
@@ -44,4 +47,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+export default nextConfig;

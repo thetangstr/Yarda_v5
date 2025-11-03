@@ -1,0 +1,12 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - img [ref=e6]
+    - heading "Verification failed" [level=1] [ref=e8]
+    - generic [ref=e9]: Network Error
+    - link "Go to login" [ref=e10] [cursor=pointer]:
+      - /url: /login
+  - alert [ref=e11]
+```
