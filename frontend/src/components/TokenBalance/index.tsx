@@ -46,11 +46,25 @@ export default function TokenBalance({
 
     try {
       setLoading(true);
+
+      // Get token from Zustand persisted state
+      const userStorage = localStorage.getItem('user-storage');
+      if (!userStorage) {
+        setLoading(false);
+        return;
+      }
+
+      const { state } = JSON.parse(userStorage);
+      if (!state?.accessToken) {
+        setLoading(false);
+        return;
+      }
+
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/tokens/balance`,
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+            Authorization: `Bearer ${state.accessToken}`,
           },
         }
       );

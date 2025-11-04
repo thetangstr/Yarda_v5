@@ -34,13 +34,8 @@ export default function LoginPage() {
 
   const [isLoading, setIsLoading] = useState(false);
 
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      const redirect = (router.query.redirect as string) || '/generate';
-      router.push(redirect);
-    }
-  }, [isAuthenticated, router]);
+  // Note: Removed auto-redirect on page load to allow users to access login page
+  // Redirect only happens after successful login (see handleSubmit)
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

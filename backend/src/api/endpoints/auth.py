@@ -365,7 +365,8 @@ async def login(request: LoginRequest):
             )
 
         # Generate access token (use JWT in production)
-        access_token = secrets.token_urlsafe(32)
+        # For now, use user_id as token since get_current_user expects UUID
+        access_token = str(user["id"])
 
         return LoginResponse(
             access_token=access_token,

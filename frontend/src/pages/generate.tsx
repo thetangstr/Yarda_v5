@@ -68,11 +68,18 @@ export default function GeneratePage() {
     if (!isAuthenticated) return;
 
     try {
+      // Get token from Zustand persisted state
+      const userStorage = localStorage.getItem('user-storage');
+      if (!userStorage) return;
+
+      const { state } = JSON.parse(userStorage);
+      if (!state?.accessToken) return;
+
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/tokens/balance`,
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+            Authorization: `Bearer ${state.accessToken}`,
           },
         }
       );
