@@ -15,7 +15,7 @@ import Footer from '@/components/Footer';
 
 export default function HistoryPage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useUserStore();
+  const { isAuthenticated } = useUserStore();
   const [generations, setGenerations] = useState<Generation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

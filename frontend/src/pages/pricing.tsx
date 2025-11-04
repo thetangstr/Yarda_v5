@@ -25,9 +25,9 @@ import Footer from '@/components/Footer';
 interface TokenPackage {
   package_id: string;
   tokens: number;
-  price_usd: number;
+  price_usd: string;
   price_cents: number;
-  price_per_token: number;
+  price_per_token: string;
   discount_percent: number | null;
   is_best_value: boolean;
 }
@@ -39,7 +39,7 @@ interface FAQ {
 
 export default function PricingPage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useUserStore();
+  const { isAuthenticated } = useUserStore();
   const { subscribe } = useSubscriptionStore();
   const [tokenPackages, setTokenPackages] = useState<TokenPackage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -167,12 +167,12 @@ export default function PricingPage() {
                             {pkg.tokens} tokens
                           </h3>
                           <p className="text-sm text-neutral-600 mt-1">
-                            ${pkg.price_per_token.toFixed(2)} per generation
+                            ${parseFloat(pkg.price_per_token).toFixed(2)} per generation
                           </p>
                         </div>
                         <div className="text-right">
                           <div className="text-3xl font-extrabold text-brand-green">
-                            ${pkg.price_usd.toFixed(2)}
+                            ${parseFloat(pkg.price_usd).toFixed(2)}
                           </div>
                           {pkg.discount_percent && (
                             <span className="inline-block mt-1 px-2 py-0.5 bg-success-100 text-success-700 text-xs font-semibold rounded">

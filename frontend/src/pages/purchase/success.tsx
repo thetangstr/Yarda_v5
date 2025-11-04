@@ -26,7 +26,7 @@ interface SessionData {
 
 export default function PurchaseSuccessPage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useUserStore();
+  const { isAuthenticated } = useUserStore();
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

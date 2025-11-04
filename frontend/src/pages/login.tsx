@@ -11,7 +11,7 @@
  * - Error handling
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -20,7 +20,7 @@ import { useUserStore } from '@/store/userStore';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { setUser, setAccessToken, isAuthenticated } = useUserStore();
+  const { setUser, setAccessToken } = useUserStore();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -83,7 +83,7 @@ export default function LoginPage() {
 
       // Save access token and user data
       setAccessToken(response.access_token);
-      setUser(response.user);
+      setUser(response.user as any); // Type assertion for API response
 
       // Also save to localStorage for the API interceptor
       const userStorage = localStorage.getItem('user-storage');

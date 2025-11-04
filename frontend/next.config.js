@@ -45,6 +45,20 @@ const nextConfig = {
   experimental: {
     // Enable server actions if needed
   },
+
+  // Webpack configuration to exclude test files
+  webpack: (config) => {
+    config.module.rules.push({
+      test: /\.(test|spec)\.(ts|tsx|js|jsx)$/,
+      loader: 'ignore-loader'
+    });
+    // Exclude test directories from compilation
+    config.watchOptions = {
+      ...config.watchOptions,
+      ignored: ['**/test/**', '**/tests/**', '**/*.test.*', '**/*.spec.*']
+    };
+    return config;
+  },
 };
 
 export default nextConfig;

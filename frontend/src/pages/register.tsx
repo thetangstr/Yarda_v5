@@ -90,7 +90,7 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      const response = await authAPI.register({
+      await authAPI.register({
         email: formData.email,
         password: formData.password,
       });
@@ -107,7 +107,7 @@ export default function RegisterPage() {
           });
 
           setAccessToken(loginResponse.access_token);
-          setUser(loginResponse.user);
+          setUser(loginResponse.user as any); // Type assertion for API response
 
           // Redirect to dashboard or generate page
           router.push('/generate');

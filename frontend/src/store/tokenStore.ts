@@ -46,7 +46,7 @@ interface TokenState {
 
 export const useTokenStore = create<TokenState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       // Initial state
       balance: 0,
       total_purchased: 0,

@@ -22,7 +22,7 @@ interface NavigationProps {
 
 export default function Navigation({ transparent = false }: NavigationProps) {
   const router = useRouter();
-  const { user, isAuthenticated } = useUserStore();
+  const { isAuthenticated } = useUserStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
