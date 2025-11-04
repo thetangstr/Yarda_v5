@@ -17,6 +17,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { authAPI, getErrorMessage } from '@/lib/api';
 import { useUserStore } from '@/store/userStore';
+import GoogleSignInButton from '@/components/GoogleSignInButton';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -261,6 +262,26 @@ export default function LoginPage() {
             )}
           </button>
         </form>
+
+        {/* OR Divider */}
+        <div className="mt-6">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">Or continue with</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Google Sign-In Button */}
+        <div className="mt-6">
+          <GoogleSignInButton
+            disabled={isLoading}
+            redirectTo={`${window.location.origin}/auth/callback${router.query.redirect ? `?redirect=${router.query.redirect}` : ''}`}
+          />
+        </div>
 
         {/* Divider */}
         <div className="mt-6">

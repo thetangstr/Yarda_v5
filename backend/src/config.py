@@ -25,8 +25,6 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str
     stripe_monthly_pro_price_id: str = ""  # Stripe Price ID for Monthly Pro subscription
 
-    # Firebase Authentication
-    firebase_credentials_path: str
 
     # Google Gemini AI
     gemini_api_key: str
@@ -132,9 +130,7 @@ def configure_logging():
             structlog.dev.ConsoleRenderer() if settings.environment == "development"
             else structlog.processors.JSONRenderer(),
         ],
-        wrapper_class=structlog.make_filtering_bound_logger(
-            logging_level=20  # INFO level
-        ),
+        wrapper_class=structlog.make_filtering_bound_logger(20),  # INFO level
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(file=sys.stdout),
         cache_logger_on_first_use=False,
