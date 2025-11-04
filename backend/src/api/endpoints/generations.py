@@ -410,6 +410,14 @@ async def create_generation(
             )
 
         # Step 4: Create generation record with status='pending'
+        # Build request_params as JSONB outside query to avoid type inference issues
+        import json
+        request_params_json = json.dumps({
+            'area': area,
+            'style': style,
+            'custom_prompt': custom_prompt
+        })
+
         generation_id = await db_pool.fetchval("""
             INSERT INTO generations (
                 user_id,
@@ -425,14 +433,10 @@ async def create_generation(
                 $2,
                 $3,
                 $4,
-                jsonb_build_object(
-                    'area', $5,
-                    'style', $6,
-                    'custom_prompt', $7
-                ),
-                $8
+                $5::jsonb,
+                $6
             ) RETURNING id
-        """, user.id, payment_method, 1 if payment_method == 'token' else 0, address, area, style, custom_prompt, image_source.value)
+        """, user.id, payment_method, 1 if payment_method == 'token' else 0, address, request_params_json, image_source.value)
 
         # Step 4: Process generation asynchronously (TODO: Use background task)
         # For now, we'll return pending status and process later
