@@ -5,11 +5,11 @@
  *
  * Requirements:
  * - T077: Account page with auto-reload settings tab
- * - T097: Extended with subscription tab
+ * - T097: Extended with subscription tab and query parameter support
  * - FR-034 to FR-042: Display and configure auto-reload settings
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useUserStore } from '@/store/userStore';
 import TokenBalance from '@/components/TokenBalance';
@@ -24,11 +24,21 @@ export default function AccountPage() {
   const [activeTab, setActiveTab] = useState<Tab>('profile');
 
   // Redirect to login if not authenticated
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isAuthenticated) {
       router.push('/login');
     }
   }, [isAuthenticated, router]);
+
+  // Handle tab query parameter
+  useEffect(() => {
+    if (router.isReady && router.query.tab) {
+      const tab = router.query.tab as string;
+      if (['profile', 'tokens', 'auto-reload', 'subscription'].includes(tab)) {
+        setActiveTab(tab as Tab);
+      }
+    }
+  }, [router.isReady, router.query.tab]);
 
   const handleLogout = async () => {
     await logout();

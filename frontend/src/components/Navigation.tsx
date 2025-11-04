@@ -9,12 +9,14 @@
  * - Sign In / Account button
  * - Mobile responsive hamburger menu
  * - Transparent on hero, white on scroll
+ * - T099: Subscription link and pro badge for authenticated users
  */
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useUserStore } from '@/store/userStore';
+import { useSubscriptionStore } from '@/store/subscriptionStore';
 
 interface NavigationProps {
   transparent?: boolean;
@@ -23,8 +25,12 @@ interface NavigationProps {
 export default function Navigation({ transparent = false }: NavigationProps) {
   const router = useRouter();
   const { isAuthenticated } = useUserStore();
+  const { subscription } = useSubscriptionStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+
+  // Check if user has active pro subscription
+  const isProUser = subscription?.status === 'active' && subscription?.plan_name === 'Monthly Pro';
 
   // Handle scroll for sticky header
   useEffect(() => {
@@ -45,6 +51,7 @@ export default function Navigation({ transparent = false }: NavigationProps) {
       ? [
           { href: '/generate', label: 'Generate' },
           { href: '/history', label: 'History' },
+          { href: '/account?tab=subscription', label: 'Subscription' },
           { href: '/account', label: 'Account' },
         ]
       : []),
@@ -76,6 +83,11 @@ export default function Navigation({ transparent = false }: NavigationProps) {
               <span className={`ml-2 text-xl font-bold ${textClass}`}>
                 Yarda
               </span>
+              {isProUser && (
+                <span className="ml-2 px-2 py-0.5 text-xs font-bold bg-brand-green text-white rounded-full">
+                  PRO
+                </span>
+              )}
             </div>
           </Link>
 
@@ -101,12 +113,19 @@ export default function Navigation({ transparent = false }: NavigationProps) {
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
             {isAuthenticated ? (
-              <Link
-                href="/account"
-                className="btn-primary px-4 py-2 text-sm"
-              >
-                Account
-              </Link>
+              <div className="flex items-center gap-3">
+                {isProUser && (
+                  <span className="text-xs font-semibold text-brand-green bg-brand-sage px-3 py-1 rounded-full">
+                    Monthly Pro
+                  </span>
+                )}
+                <Link
+                  href="/account"
+                  className="btn-primary px-4 py-2 text-sm"
+                >
+                  Account
+                </Link>
+              </div>
             ) : (
               <>
                 <Link
@@ -173,6 +192,16 @@ export default function Navigation({ transparent = false }: NavigationProps) {
         {mobileMenuOpen && (
           <div className="md:hidden bg-white border-t border-neutral-200 py-4 animate-fade-in">
             <div className="space-y-2">
+              {isProUser && (
+                <div className="px-4 py-2">
+                  <span className="inline-flex items-center gap-2 text-xs font-semibold text-brand-green bg-brand-sage px-3 py-1.5 rounded-full">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                    Monthly Pro Member
+                  </span>
+                </div>
+              )}
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
