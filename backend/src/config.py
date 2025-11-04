@@ -5,10 +5,12 @@ Loads environment variables and provides typed configuration objects.
 """
 
 import os
+import sys
 from typing import Optional, Union
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
 import stripe
+import structlog
 
 
 class Settings(BaseSettings):
@@ -106,3 +108,38 @@ def get_settings() -> Settings:
             return {"environment": settings.environment}
     """
     return settings
+
+
+# Configure structured logging for Google Maps API calls
+def configure_logging():
+    """
+    Configure structlog for structured logging of Google Maps API calls.
+
+    Logs API calls with:
+    - api: Endpoint called (geocoding, street_view_metadata, street_view, satellite)
+    - request_params: Request parameters (coordinates, address, size, etc.)
+    - status: Response status
+    - duration_ms: Response time in milliseconds
+    - error_details: Error information (if any)
+    """
+    structlog.configure(
+        processors=[
+            structlog.contextvars.merge_contextvars,
+            structlog.processors.add_log_level,
+            structlog.processors.StackInfoRenderer(),
+            structlog.dev.set_exc_info,
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.dev.ConsoleRenderer() if settings.environment == "development"
+            else structlog.processors.JSONRenderer(),
+        ],
+        wrapper_class=structlog.make_filtering_bound_logger(
+            logging_level=20  # INFO level
+        ),
+        context_class=dict,
+        logger_factory=structlog.PrintLoggerFactory(file=sys.stdout),
+        cache_logger_on_first_use=False,
+    )
+
+
+# Initialize logging configuration
+configure_logging()

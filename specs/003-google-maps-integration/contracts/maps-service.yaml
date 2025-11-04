@@ -1,0 +1,532 @@
+# MapsService Interface Contract
+# Feature: 003-google-maps-integration
+# Date: 2025-11-04
+# Purpose: Define the interface for Google Maps Platform integration service
+
+openapi: 3.0.3
+info:
+  title: Maps Service Interface
+  description: |
+    Internal service interface for fetching property images from Google Maps Platform APIs.
+    This is NOT a REST API - it's a Python class interface documented in OpenAPI format
+    for contract clarity and testing purposes.
+  version: 1.0.0
+  contact:
+    name: Yarda AI Development Team
+
+# This is a Python service, not a REST API
+# The paths below represent method signatures, not HTTP endpoints
+
+components:
+  schemas:
+    Coordinates:
+      type: object
+      required:
+        - lat
+        - lng
+      properties:
+        lat:
+          type: number
+          format: float
+          description: Latitude in decimal degrees
+          example: 37.4224764
+        lng:
+          type: number
+          format: float
+          description: Longitude in decimal degrees
+          example: -122.0842499
+
+    StreetViewMetadata:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [OK, ZERO_RESULTS, NOT_FOUND, ERROR]
+          description: Status of Street View availability check
+        pano_id:
+          type: string
+          nullable: true
+          description: Panorama ID if available
+          example: "tu510ie_z4ptBZYo2BGEJg"
+        date:
+          type: string
+          nullable: true
+          description: Date of imagery capture (YYYY-MM format)
+          example: "2021-05"
+        location:
+          $ref: '#/components/schemas/Coordinates'
+          nullable: true
+
+    ImageBytes:
+      type: string
+      format: binary
+      description: Raw image bytes (JPEG format)
+
+    ImageSource:
+      type: string
+      enum: [user_upload, google_street_view, google_satellite]
+      description: Source of property image
+
+    MapsServiceError:
+      type: object
+      required:
+        - error_type
+        - message
+      properties:
+        error_type:
+          type: string
+          enum:
+            - GEOCODING_FAILED
+            - STREET_VIEW_UNAVAILABLE
+            - SATELLITE_UNAVAILABLE
+            - QUOTA_EXCEEDED
+            - API_ERROR
+            - NETWORK_ERROR
+          description: Type of error encountered
+        message:
+          type: string
+          description: Human-readable error message
+          example: "No imagery available for address: 123 Invalid St"
+        retry_after:
+          type: integer
+          nullable: true
+          description: Seconds to wait before retrying (for rate limit errors)
+          example: 60
+
+  parameters:
+    Address:
+      name: address
+      required: true
+      schema:
+        type: string
+        minLength: 5
+        example: "1600 Amphitheatre Parkway, Mountain View, CA"
+      description: Full street address for property lookup
+
+    Area:
+      name: area
+      required: true
+      schema:
+        type: string
+        enum: [front_yard, back_yard, side_yard, full_property]
+      description: Landscape area being generated
+
+# Method signatures as "paths" (not actual HTTP endpoints)
+paths:
+  /geocode_address:
+    post:
+      summary: Convert address to coordinates
+      description: |
+        Uses Google Geocoding API to validate and convert address string to lat/lng coordinates.
+        Returns None if address is invalid or cannot be found.
+      operationId: geocode_address
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - address
+              properties:
+                address:
+                  type: string
+                  example: "1600 Amphitheatre Parkway, Mountain View, CA"
+      responses:
+        '200':
+          description: Address successfully geocoded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coordinates'
+        '404':
+          description: Address not found or invalid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Address not found"
+        '429':
+          description: API quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MapsServiceError'
+
+  /get_street_view_metadata:
+    post:
+      summary: Check Street View availability (FREE)
+      description: |
+        Queries Google Street View Metadata API to check if imagery is available
+        for the given coordinates. This is a FREE request and should ALWAYS be
+        called before fetching the actual Street View image.
+      operationId: get_street_view_metadata
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - coords
+              properties:
+                coords:
+                  $ref: '#/components/schemas/Coordinates'
+                radius:
+                  type: integer
+                  default: 50
+                  description: Search radius in meters (default 50, recommend 50-100 for residential)
+      responses:
+        '200':
+          description: Metadata retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StreetViewMetadata'
+        '429':
+          description: API quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MapsServiceError'
+
+  /fetch_street_view_image:
+    post:
+      summary: Fetch Street View image (PAID - $0.007/image)
+      description: |
+        Fetches actual Street View panorama image from Google Maps API.
+        This is a PAID request ($0.007 per image). Always check metadata first.
+      operationId: fetch_street_view_image
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - coords
+              properties:
+                coords:
+                  $ref: '#/components/schemas/Coordinates'
+                size:
+                  type: string
+                  default: "600x400"
+                  pattern: '^\d+x\d+$'
+                  description: Image dimensions (max 640x640 standard)
+                fov:
+                  type: integer
+                  default: 90
+                  minimum: 0
+                  maximum: 120
+                  description: Horizontal field of view in degrees
+                heading:
+                  type: integer
+                  default: 0
+                  minimum: 0
+                  maximum: 360
+                  description: Compass direction (0=North, 90=East, 180=South, 270=West)
+                pitch:
+                  type: integer
+                  default: 0
+                  minimum: -90
+                  maximum: 90
+                  description: Vertical angle (0=straight, positive=up, negative=down)
+      responses:
+        '200':
+          description: Image fetched successfully
+          content:
+            image/jpeg:
+              schema:
+                $ref: '#/components/schemas/ImageBytes'
+        '404':
+          description: No imagery available at this location
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MapsServiceError'
+        '429':
+          description: API quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MapsServiceError'
+
+  /fetch_satellite_image:
+    post:
+      summary: Fetch satellite image (PAID - $0.002/image)
+      description: |
+        Fetches satellite imagery from Google Maps Static API.
+        This is a PAID request ($0.002 per image). Use as fallback when
+        Street View is unavailable.
+      operationId: fetch_satellite_image
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - coords
+              properties:
+                coords:
+                  $ref: '#/components/schemas/Coordinates'
+                zoom:
+                  type: integer
+                  default: 18
+                  minimum: 0
+                  maximum: 21
+                  description: Zoom level (17-18 recommended for residential properties)
+                size:
+                  type: string
+                  default: "600x400"
+                  pattern: '^\d+x\d+$'
+                  description: Image dimensions (max 640x640 standard)
+                maptype:
+                  type: string
+                  default: "satellite"
+                  enum: [satellite, hybrid, roadmap, terrain]
+                  description: Map type (satellite or hybrid recommended)
+      responses:
+        '200':
+          description: Image fetched successfully
+          content:
+            image/jpeg:
+              schema:
+                $ref: '#/components/schemas/ImageBytes'
+        '429':
+          description: API quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MapsServiceError'
+
+  /get_property_images:
+    post:
+      summary: Main method - Get property images with automatic fallback
+      description: |
+        High-level method that orchestrates the full image retrieval workflow:
+        1. Geocode address to coordinates
+        2. Check Street View metadata (FREE)
+        3. Fetch Street View if available (PAID)
+        4. Fallback to satellite if Street View unavailable (PAID)
+
+        Returns tuple of (street_view_bytes | None, satellite_bytes | None).
+      operationId: get_property_images
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - address
+                - area
+              properties:
+                address:
+                  type: string
+                  example: "1600 Amphitheatre Parkway, Mountain View, CA"
+                area:
+                  type: string
+                  enum: [front_yard, back_yard, side_yard, full_property]
+                  description: Landscape area (determines Street View vs Satellite priority)
+      responses:
+        '200':
+          description: Images retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  street_view:
+                    $ref: '#/components/schemas/ImageBytes'
+                    nullable: true
+                    description: Street View image bytes if available
+                  satellite:
+                    $ref: '#/components/schemas/ImageBytes'
+                    nullable: true
+                    description: Satellite image bytes (always attempted as fallback)
+                  image_source:
+                    $ref: '#/components/schemas/ImageSource'
+                    description: Source used (google_street_view or google_satellite)
+        '404':
+          description: No imagery available for this address
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MapsServiceError'
+        '429':
+          description: API quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MapsServiceError'
+
+# Python Implementation Contract
+# These are the actual method signatures that must be implemented
+
+# class MapsService:
+#     """
+#     Google Maps Platform integration service for property image retrieval.
+
+#     All methods are async to support FastAPI's async request handling.
+#     """
+
+#     def __init__(self, api_key: str):
+#         """
+#         Initialize MapsService with Google Maps API key.
+
+#         Args:
+#             api_key: Google Maps Platform API key (from environment variable)
+#         """
+#         pass
+
+#     async def geocode_address(self, address: str) -> Optional[Coordinates]:
+#         """
+#         Convert address to coordinates using Geocoding API.
+
+#         Args:
+#             address: Full street address
+
+#         Returns:
+#             Coordinates object with lat/lng, or None if address invalid
+
+#         Raises:
+#             MapsServiceError: If API quota exceeded or network error
+#         """
+#         pass
+
+#     async def get_street_view_metadata(
+#         self,
+#         coords: Coordinates,
+#         radius: int = 50
+#     ) -> StreetViewMetadata:
+#         """
+#         Check if Street View imagery is available (FREE request).
+
+#         Always call this before fetch_street_view_image() to avoid
+#         wasting paid requests.
+
+#         Args:
+#             coords: Property coordinates
+#             radius: Search radius in meters (default 50, recommend 50-100)
+
+#         Returns:
+#             StreetViewMetadata with status and panorama info
+
+#         Raises:
+#             MapsServiceError: If API quota exceeded or network error
+#         """
+#         pass
+
+#     async def fetch_street_view_image(
+#         self,
+#         coords: Coordinates,
+#         size: str = "600x400",
+#         fov: int = 90,
+#         heading: int = 0,
+#         pitch: int = 0
+#     ) -> Optional[bytes]:
+#         """
+#         Fetch Street View image (PAID: $0.007/image).
+
+#         Args:
+#             coords: Property coordinates
+#             size: Image dimensions "WIDTHxHEIGHT" (max 640x640)
+#             fov: Horizontal field of view 0-120 degrees (default 90)
+#             heading: Compass direction 0-360 (0=N, 90=E, 180=S, 270=W)
+#             pitch: Vertical angle -90 to 90 (0=straight, positive=up, negative=down)
+
+#         Returns:
+#             Image bytes (JPEG), or None if not available
+
+#         Raises:
+#             MapsServiceError: If API quota exceeded or network error
+#         """
+#         pass
+
+#     async def fetch_satellite_image(
+#         self,
+#         coords: Coordinates,
+#         zoom: int = 18,
+#         size: str = "600x400",
+#         maptype: str = "satellite"
+#     ) -> Optional[bytes]:
+#         """
+#         Fetch satellite image (PAID: $0.002/image).
+
+#         Args:
+#             coords: Property coordinates
+#             zoom: Zoom level 0-21 (17-18 recommended for residential)
+#             size: Image dimensions "WIDTHxHEIGHT" (max 640x640)
+#             maptype: Map type (satellite, hybrid, roadmap, terrain)
+
+#         Returns:
+#             Image bytes (JPEG)
+
+#         Raises:
+#             MapsServiceError: If API quota exceeded or network error
+#         """
+#         pass
+
+#     async def get_property_images(
+#         self,
+#         address: str,
+#         area: str
+#     ) -> Tuple[Optional[bytes], Optional[bytes]]:
+#         """
+#         Main method: Get property images with automatic fallback.
+
+#         Workflow:
+#         1. Geocode address → coordinates
+#         2. Check Street View metadata (FREE)
+#         3. If Street View available → fetch Street View (PAID)
+#         4. Always fetch satellite as fallback (PAID)
+
+#         For front_yard: Prioritize Street View
+#         For other areas: Prioritize Satellite
+
+#         Args:
+#             address: Full street address
+#             area: Landscape area (front_yard, back_yard, side_yard, full_property)
+
+#         Returns:
+#             Tuple of (street_view_bytes | None, satellite_bytes | None)
+#             At least one will be non-None, or raises error
+
+#         Raises:
+#             MapsServiceError: If no imagery available or API error
+#         """
+#         pass
+
+# Error Handling Contract
+# All methods must implement exponential backoff retry logic for:
+# - OVER_QUERY_LIMIT (429): Retry 3 times with 2s, 4s, 8s delays
+# - UNKNOWN_ERROR (500): Retry 3 times with exponential backoff
+# - Network timeouts: Retry 3 times with exponential backoff
+#
+# No retry for:
+# - REQUEST_DENIED: Invalid API key or API not enabled
+# - INVALID_REQUEST: Missing or malformed parameters
+# - ZERO_RESULTS: No data available for location
+# - OVER_DAILY_LIMIT: Daily quota exhausted
+
+# Logging Contract
+# All API calls must be logged with:
+# - API endpoint called (geocoding, street_view_metadata, street_view, satellite)
+# - Request parameters (coordinates, address, size, etc.)
+# - Response status
+# - Response time (ms)
+# - Error details (if any)
+#
+# Use structlog for structured logging:
+# logger.info("google_maps_api_call",
+#             api="street_view_metadata",
+#             lat=37.4224764,
+#             lng=-122.0842499,
+#             status="OK",
+#             duration_ms=234)

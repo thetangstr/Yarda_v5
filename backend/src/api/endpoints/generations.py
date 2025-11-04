@@ -22,7 +22,12 @@ from src.models.user import User
 from src.api.dependencies import get_current_user, require_verified_email
 from src.services.trial_service import get_trial_service, TrialService
 from src.services.token_service import TokenService
+from src.services.maps_service import MapsService, MapsServiceError
+from src.models.generation import ImageSource
 from src.db.connection_pool import db_pool
+import structlog
+
+logger = structlog.get_logger()
 
 router = APIRouter(prefix="/generations", tags=["generations"])
 
@@ -199,7 +204,7 @@ async def create_generation(
     area: str = Form(...),
     style: str = Form(...),
     custom_prompt: Optional[str] = Form(None),
-    image: UploadFile = File(...),
+    image: Optional[UploadFile] = File(None),
     user: User = Depends(require_verified_email),
     trial_service: TrialService = Depends(get_trial_service)
 ):
@@ -274,7 +279,137 @@ async def create_generation(
             # NOTE: In production, this would initiate a Stripe charge
             # using the user's saved payment method
 
-        # Step 3: Create generation record with status='pending'
+        # Step 3: Handle image source (user upload OR Google Maps retrieval)
+        image_source = ImageSource.USER_UPLOAD  # Default
+        image_url = None
+
+        if image is not None:
+            # User uploaded an image - use it directly
+            image_source = ImageSource.USER_UPLOAD
+            logger.info(
+                "image_source_selected",
+                source="user_upload",
+                user_id=str(user.id),
+                address=address
+            )
+            # TODO: Upload to storage and get URL
+            # For now, we'll store the file temporarily
+            # In production: Upload to S3/GCS and store image_url
+
+        elif area == 'front_yard':
+            # No image uploaded AND front_yard - retrieve from Google Street View
+            try:
+                logger.info(
+                    "attempting_google_maps_retrieval",
+                    area=area,
+                    address=address,
+                    user_id=str(user.id)
+                )
+
+                # Initialize MapsService
+                maps_service = MapsService()
+
+                # Step 3a: Geocode address to get coordinates
+                coords = await maps_service.geocode_address(address)
+
+                if coords is None:
+                    # Address could not be geocoded - refund and return error
+                    await refund_payment(user.id, payment_method, trial_service, token_service)
+                    logger.error(
+                        "geocoding_failed",
+                        address=address,
+                        user_id=str(user.id)
+                    )
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Could not find address: {address}. Please verify the address or upload an image manually."
+                    )
+
+                # Step 3b: Check Street View metadata (FREE request)
+                metadata = await maps_service.get_street_view_metadata(coords)
+
+                if metadata.status != "OK":
+                    # No Street View available - refund and return error
+                    await refund_payment(user.id, payment_method, trial_service, token_service)
+                    logger.warning(
+                        "street_view_unavailable",
+                        address=address,
+                        coords={"lat": coords.lat, "lng": coords.lng},
+                        metadata_status=metadata.status,
+                        user_id=str(user.id)
+                    )
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Street View imagery not available for this address. Please upload an image manually."
+                    )
+
+                # Step 3c: Fetch Street View image (PAID request - $0.007)
+                image_bytes = await maps_service.fetch_street_view_image(
+                    coords,
+                    size="600x400",
+                    fov=90,
+                    heading=0,  # Front-facing view
+                    pitch=-10   # Slightly downward angle
+                )
+
+                if image_bytes is None:
+                    # Image fetch failed - refund and return error
+                    await refund_payment(user.id, payment_method, trial_service, token_service)
+                    logger.error(
+                        "street_view_fetch_failed",
+                        address=address,
+                        pano_id=metadata.pano_id,
+                        user_id=str(user.id)
+                    )
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Failed to retrieve Street View image. Please try again or upload an image manually."
+                    )
+
+                # Success! Set image_source
+                image_source = ImageSource.GOOGLE_STREET_VIEW
+
+                logger.info(
+                    "google_street_view_retrieved",
+                    address=address,
+                    pano_id=metadata.pano_id,
+                    date=metadata.date,
+                    user_id=str(user.id),
+                    cost="$0.007"
+                )
+
+                # TODO: Upload image_bytes to storage and get URL
+                # For now, we'll store it temporarily
+                # In production: Upload to S3/GCS and store image_url
+
+            except MapsServiceError as e:
+                # Google Maps API error - refund and return error
+                await refund_payment(user.id, payment_method, trial_service, token_service)
+                logger.error(
+                    "maps_service_error",
+                    error_type=e.error_type,
+                    message=e.message,
+                    address=address,
+                    user_id=str(user.id)
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Failed to retrieve property image: {e.message}"
+                )
+        else:
+            # No image uploaded AND not front_yard - require manual upload
+            await refund_payment(user.id, payment_method, trial_service, token_service)
+            logger.warning(
+                "image_required_for_area",
+                area=area,
+                user_id=str(user.id)
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Image upload required for {area}. Automatic image retrieval is only available for front_yard."
+            )
+
+        # Step 4: Create generation record with status='pending'
         generation_id = await db_pool.fetchval("""
             INSERT INTO generations (
                 user_id,
@@ -282,7 +417,8 @@ async def create_generation(
                 payment_type,
                 tokens_deducted,
                 address,
-                request_params
+                request_params,
+                image_source
             ) VALUES (
                 $1,
                 'pending',
@@ -293,9 +429,10 @@ async def create_generation(
                     'area', $5,
                     'style', $6,
                     'custom_prompt', $7
-                )
+                ),
+                $8
             ) RETURNING id
-        """, user.id, payment_method, 1 if payment_method == 'token' else 0, address, area, style, custom_prompt)
+        """, user.id, payment_method, 1 if payment_method == 'token' else 0, address, area, style, custom_prompt, image_source.value)
 
         # Step 4: Process generation asynchronously (TODO: Use background task)
         # For now, we'll return pending status and process later
@@ -305,6 +442,7 @@ async def create_generation(
             "id": generation_id,
             "status": "pending",
             "payment_method": payment_method,
+            "image_source": image_source.value,
             "message": "Generation started. This may take 30-60 seconds."
         }
 
@@ -349,6 +487,7 @@ async def list_generations(
             tokens_deducted,
             address,
             request_params,
+            image_source,
             error_message,
             created_at,
             completed_at
@@ -395,6 +534,7 @@ async def get_generation(
             tokens_deducted,
             address,
             request_params,
+            image_source,
             error_message,
             created_at,
             completed_at

@@ -27,6 +27,8 @@ vercel-blob==0.2.1
 
 # Utilities
 python-dotenv==1.0.1
+aiohttp==3.10.10  # Google Maps API async HTTP client
+structlog==24.4.0  # Structured logging for Google Maps API calls
 
 # Testing
 pytest==8.3.3
