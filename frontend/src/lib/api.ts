@@ -132,7 +132,7 @@ export interface CreateGenerationRequest {
   area: string;
   style: string;
   custom_prompt?: string;
-  image: File;
+  image?: File; // Optional - backend fetches from Google Maps if not provided
 }
 
 export interface Generation {
@@ -155,7 +155,9 @@ export const generationAPI = {
     if (data.custom_prompt) {
       formData.append('custom_prompt', data.custom_prompt);
     }
-    formData.append('image', data.image);
+    if (data.image) {
+      formData.append('image', data.image);
+    }
 
     const response = await apiClient.post('/generations/', formData, {
       headers: {

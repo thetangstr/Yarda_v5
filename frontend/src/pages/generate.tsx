@@ -200,7 +200,7 @@ export default function GeneratePage() {
         area: formData.area,
         style: formData.style,
         custom_prompt: formData.custom_prompt || undefined,
-        image: formData.image || undefined, // Optional - backend fetches from Google Maps if not provided
+        image: formData.image ?? undefined, // Optional - backend fetches from Google Maps if not provided
       });
 
       setGenerationStatus(response.status);
