@@ -2,6 +2,7 @@
  * TokenBalance Component
  *
  * Displays user's token balance with auto-refresh.
+ * Updated with yarda.pro design system.
  *
  * Requirements:
  * - T054: TokenBalance component
@@ -10,7 +11,6 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { generationAPI } from '@/lib/api';
 import { useUserStore } from '@/store/userStore';
 
 interface TokenBalanceProps {
@@ -30,19 +30,22 @@ export default function TokenBalance({
   autoRefresh = true,
   refreshInterval = 10000, // 10 seconds default
 }: TokenBalanceProps) {
-  const { user, isAuthenticated } = useUserStore();
+  const { isAuthenticated } = useUserStore();
   const [balance, setBalance] = useState<TokenBalanceData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchBalance = useCallback(async () => {
+    // Don't make API calls if not authenticated
     if (!isAuthenticated) {
       setLoading(false);
+      setBalance(null);
+      setError(null);
       return;
     }
 
     try {
-      // Note: Need to add this endpoint to api.ts
+      setLoading(true);
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/tokens/balance`,
         {
@@ -69,22 +72,30 @@ export default function TokenBalance({
     }
   }, [isAuthenticated]);
 
-  // Initial fetch
+  // Initial fetch - only when authenticated
   useEffect(() => {
-    fetchBalance();
-  }, [fetchBalance]);
+    if (isAuthenticated) {
+      fetchBalance();
+    } else {
+      // Clear state when not authenticated
+      setBalance(null);
+      setLoading(false);
+      setError(null);
+    }
+  }, [isAuthenticated, fetchBalance]);
 
-  // Auto-refresh every 10 seconds
+  // Auto-refresh every 10 seconds - only when authenticated
   useEffect(() => {
-    if (!autoRefresh) return;
+    if (!autoRefresh || !isAuthenticated) return;
 
     const intervalId = setInterval(() => {
       fetchBalance();
     }, refreshInterval);
 
     return () => clearInterval(intervalId);
-  }, [autoRefresh, refreshInterval, fetchBalance]);
+  }, [autoRefresh, refreshInterval, isAuthenticated, fetchBalance]);
 
+  // Don't render anything if not authenticated
   if (!isAuthenticated) {
     return null;
   }
@@ -104,7 +115,7 @@ export default function TokenBalance({
     return (
       <div
         data-testid="token-balance"
-        className="text-red-600 text-sm"
+        className="text-error-600 text-sm"
       >
         {error}
       </div>
@@ -118,7 +129,7 @@ export default function TokenBalance({
     return (
       <div
         data-testid="token-balance"
-        className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-medium"
+        className="flex items-center gap-2 px-3 py-1.5 bg-brand-sage text-brand-dark-green rounded-full text-sm font-medium"
       >
         <svg
           className="w-4 h-4"
@@ -142,13 +153,13 @@ export default function TokenBalance({
   return (
     <div
       data-testid="token-balance"
-      className="bg-white rounded-lg border border-gray-200 p-6"
+      className="bg-white rounded-xl border-2 border-brand-sage p-6 shadow-md"
     >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Token Balance</h3>
-        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+        <h3 className="text-lg font-semibold text-neutral-900">Token Balance</h3>
+        <div className="w-12 h-12 bg-brand-sage rounded-full flex items-center justify-center">
           <svg
-            className="w-6 h-6 text-blue-600"
+            className="w-6 h-6 text-brand-green"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -166,24 +177,24 @@ export default function TokenBalance({
       <div className="space-y-3">
         {/* Current Balance */}
         <div className="flex items-baseline gap-2">
-          <span className="text-4xl font-bold text-gray-900">
+          <span className="text-4xl font-bold text-brand-green">
             {tokenBalance}
           </span>
-          <span className="text-gray-600">available tokens</span>
+          <span className="text-neutral-600">available tokens</span>
         </div>
 
         {/* Statistics */}
         {balance && (
-          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-brand-sage">
             <div>
-              <div className="text-xs text-gray-500 mb-1">Total Purchased</div>
-              <div className="text-lg font-semibold text-gray-900">
+              <div className="text-xs text-neutral-500 mb-1">Total Purchased</div>
+              <div className="text-lg font-semibold text-neutral-900">
                 {balance.total_purchased}
               </div>
             </div>
             <div>
-              <div className="text-xs text-gray-500 mb-1">Total Spent</div>
-              <div className="text-lg font-semibold text-gray-900">
+              <div className="text-xs text-neutral-500 mb-1">Total Spent</div>
+              <div className="text-lg font-semibold text-neutral-900">
                 {balance.total_spent}
               </div>
             </div>
@@ -192,8 +203,8 @@ export default function TokenBalance({
 
         {/* Low Balance Warning */}
         {tokenBalance < 5 && tokenBalance > 0 && (
-          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-sm text-yellow-800">
+          <div className="mt-4 p-3 bg-warning-50 border border-warning-200 rounded-lg">
+            <p className="text-sm text-warning-800">
               Your token balance is running low. Consider purchasing more tokens.
             </p>
           </div>
@@ -201,8 +212,8 @@ export default function TokenBalance({
 
         {/* Zero Balance */}
         {tokenBalance === 0 && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-800 font-medium">
+          <div className="mt-4 p-3 bg-error-50 border border-error-200 rounded-lg">
+            <p className="text-sm text-error-800 font-medium">
               You're out of tokens! Purchase tokens to continue generating designs.
             </p>
           </div>
@@ -211,10 +222,9 @@ export default function TokenBalance({
         {/* Purchase Button */}
         <button
           onClick={() => {
-            // This will be handled by parent component or router
             window.location.href = '/purchase';
           }}
-          className="w-full mt-4 py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition"
+          className="w-full mt-4 py-3 px-4 bg-brand-green hover:bg-brand-dark-green text-white font-medium rounded-lg transition-colors duration-200"
         >
           Purchase Tokens
         </button>
@@ -222,7 +232,7 @@ export default function TokenBalance({
 
       {/* Auto-refresh indicator */}
       {autoRefresh && (
-        <div className="mt-4 text-xs text-gray-400 text-center">
+        <div className="mt-4 text-xs text-neutral-400 text-center">
           Auto-refreshes every 10 seconds
         </div>
       )}

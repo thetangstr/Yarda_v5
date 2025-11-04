@@ -6,14 +6,19 @@ Handles token account operations with atomic transactions and race condition pre
 Requirements:
 - FR-026: Atomic token deduction with FOR UPDATE lock
 - FR-066: Token refund on generation failure
+- FR-036: Trigger auto-reload when balance drops below threshold
 - T046: Atomic deduct_token
 - T047: Token refund
+- T072: Integration with auto-reload service
 """
 
 import asyncpg
 from uuid import UUID
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, Any
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class TokenService:
@@ -54,24 +59,30 @@ class TokenService:
 
             return (row["balance"], row["total_purchased"], row["total_spent"])
 
-    async def deduct_token_atomic(self, user_id: UUID) -> Tuple[bool, int]:
+    async def deduct_token_atomic(
+        self, user_id: UUID
+    ) -> Tuple[bool, int, Optional[Dict[str, Any]]]:
         """
         Atomically deduct 1 token from user's balance with FOR UPDATE lock.
 
         This prevents race conditions when multiple concurrent requests
         try to deduct tokens at the same time.
 
+        After successful deduction, checks if auto-reload should be triggered.
+
         Requirements:
         - FR-026: Atomic deduction with row-level locking
+        - FR-036: Check and trigger auto-reload after deduction
         - TC-TOK-RACE-1.1: Concurrent deductions prevented
 
         Args:
             user_id: User ID
 
         Returns:
-            Tuple of (success: bool, new_balance: int)
+            Tuple of (success: bool, new_balance: int, auto_reload_info: Optional[Dict])
             - success=True if token deducted successfully
             - success=False if insufficient balance or no account
+            - auto_reload_info contains trigger info if auto-reload should happen
         """
         async with self.db_pool.acquire() as conn:
             async with conn.transaction():
@@ -90,11 +101,11 @@ class TokenService:
 
                 # No account exists
                 if balance is None:
-                    return (False, 0)
+                    return (False, 0, None)
 
                 # Insufficient balance
                 if balance < 1:
-                    return (False, balance)
+                    return (False, balance, None)
 
                 # Deduct 1 token
                 await conn.execute(
@@ -109,7 +120,12 @@ class TokenService:
                 )
 
                 new_balance = balance - 1
-                return (True, new_balance)
+
+        # Check for auto-reload trigger AFTER transaction completes
+        # This ensures the balance update is committed before checking
+        auto_reload_info = await self.check_and_trigger_auto_reload(user_id, new_balance)
+
+        return (True, new_balance, auto_reload_info)
 
     async def refund_token(self, user_id: UUID) -> Tuple[bool, int]:
         """
@@ -386,3 +402,58 @@ class TokenService:
         """
         balance, _, _ = await self.get_token_balance(user_id)
         return balance >= 1
+
+    async def check_and_trigger_auto_reload(
+        self, user_id: UUID, current_balance: int
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Check if auto-reload should be triggered and return trigger info.
+
+        This method is called after token deduction to check if balance
+        has dropped below the auto-reload threshold.
+
+        Requirements:
+        - FR-036: Trigger auto-reload when balance drops below threshold
+        - FR-037: 60-second throttle to prevent duplicate charges
+        - T072: Integration with auto-reload service
+
+        IMPORTANT: This method does NOT initiate the Stripe charge.
+        It returns trigger information that the caller should use to
+        create a Stripe checkout session or payment intent.
+
+        Args:
+            user_id: User ID
+            current_balance: Current token balance after deduction
+
+        Returns:
+            Dict with auto-reload trigger info if should trigger, None otherwise
+            {
+                "should_trigger": bool,
+                "amount": int,  # Tokens to reload
+                "balance": int,  # Current balance
+                "threshold": int,  # Threshold that triggered reload
+                "user_id": str
+            }
+        """
+        # Import here to avoid circular dependency
+        from .auto_reload_service import AutoReloadService
+
+        auto_reload_service = AutoReloadService(self.db_pool)
+
+        # Check if auto-reload should trigger
+        trigger_info = await auto_reload_service.check_and_trigger(user_id)
+
+        if trigger_info and trigger_info.get("should_trigger"):
+            logger.info(
+                f"Auto-reload triggered for user {user_id}: "
+                f"balance={current_balance}, "
+                f"threshold={trigger_info.get('threshold')}, "
+                f"amount={trigger_info.get('amount')}"
+            )
+
+            # Record the reload attempt timestamp (for throttling)
+            await auto_reload_service.record_reload_attempt(user_id)
+
+            return trigger_info
+
+        return None

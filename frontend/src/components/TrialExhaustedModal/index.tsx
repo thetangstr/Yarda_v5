@@ -22,19 +22,29 @@ interface TrialExhaustedModalProps {
   isOpen: boolean;
   /** Callback when modal is closed */
   onClose: () => void;
+  /** Optional callback when "Purchase Tokens" is clicked */
+  onPurchaseTokens?: () => void;
 }
 
 export const TrialExhaustedModal: React.FC<TrialExhaustedModalProps> = ({
   isOpen,
-  onClose
+  onClose,
+  onPurchaseTokens
 }) => {
   const router = useRouter();
 
   if (!isOpen) return null;
 
   const handlePurchaseTokens = () => {
-    router.push('/purchase');
-    onClose();
+    if (onPurchaseTokens) {
+      // Use callback if provided (e.g., to show TokenPurchaseModal)
+      onPurchaseTokens();
+      onClose();
+    } else {
+      // Otherwise navigate to purchase page
+      router.push('/purchase');
+      onClose();
+    }
   };
 
   const handleLearnSubscriptions = () => {

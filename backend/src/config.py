@@ -5,7 +5,8 @@ Loads environment variables and provides typed configuration objects.
 """
 
 import os
-from typing import Optional
+from typing import Optional, Union
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 import stripe
 
@@ -20,6 +21,7 @@ class Settings(BaseSettings):
     stripe_secret_key: str
     stripe_publishable_key: str
     stripe_webhook_secret: str
+    stripe_monthly_pro_price_id: str = ""  # Stripe Price ID for Monthly Pro subscription
 
     # Firebase Authentication
     firebase_credentials_path: str
@@ -27,8 +29,15 @@ class Settings(BaseSettings):
     # Google Gemini AI
     gemini_api_key: str
 
+    # Google Maps API
+    google_maps_api_key: str
+
     # Vercel Blob Storage
     blob_read_write_token: str
+
+    # Email Configuration
+    skip_email_verification: bool = True
+    whitelisted_emails: str = ""
 
     # Application
     app_url: str = "http://localhost:3000"
@@ -37,7 +46,15 @@ class Settings(BaseSettings):
     environment: str = "development"
 
     # CORS
-    cors_origins: list[str] = ["http://localhost:3000"]
+    cors_origins: Union[list[str], str] = ["http://localhost:3000"]
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v):
+        """Parse CORS origins from string or list."""
+        if isinstance(v, str):
+            return [origin.strip() for origin in v.split(",")]
+        return v
 
     # Token/Trial Configuration
     trial_credits: int = 3

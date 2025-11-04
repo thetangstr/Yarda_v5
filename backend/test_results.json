@@ -1,0 +1,130 @@
+{
+  "total": 15,
+  "passed": 15,
+  "failed": 0,
+  "skipped": 0,
+  "tests": [
+    {
+      "suite": "Health & Performance",
+      "name": "Health endpoint responds",
+      "status": "passed",
+      "duration_ms": 61542.98,
+      "details": "Status: {'status': 'healthy', 'database': 'connected', 'environment': 'development'}",
+      "error": null
+    },
+    {
+      "suite": "Health & Performance",
+      "name": "Frontend accessible",
+      "status": "passed",
+      "duration_ms": 25.14,
+      "details": "Frontend is running",
+      "error": null
+    },
+    {
+      "suite": "Trial Credits (Phase 3)",
+      "name": "New user gets 3 trial credits",
+      "status": "passed",
+      "duration_ms": 418.51,
+      "details": "User test_l2ltc581@yarda-test.com has 3 trials",
+      "error": null
+    },
+    {
+      "suite": "Token Purchase (Phase 4)",
+      "name": "List token packages",
+      "status": "passed",
+      "duration_ms": 0.51,
+      "details": "Found 4 packages with tokens: [10, 50, 100, 500]",
+      "error": null
+    },
+    {
+      "suite": "Token Purchase (Phase 4)",
+      "name": "Token balance performance",
+      "status": "passed",
+      "duration_ms": 625.47,
+      "details": "Response time: 625.47ms (acceptable), Balance: 0",
+      "error": null
+    },
+    {
+      "suite": "Token Purchase (Phase 4)",
+      "name": "Create token checkout session",
+      "status": "passed",
+      "duration_ms": 1305.78,
+      "details": "Session ID: cs_test_a1pl6q0HolCs...",
+      "error": null
+    },
+    {
+      "suite": "Auto-Reload (Phase 5)",
+      "name": "Get auto-reload config",
+      "status": "passed",
+      "duration_ms": 1045.28,
+      "details": "Config: {'auto_reload_enabled': False, 'auto_reload_threshold': None, 'auto_reload_amount': None, 'auto_reload_failure_count': 0, 'last_reload_at': None}",
+      "error": null
+    },
+    {
+      "suite": "Auto-Reload (Phase 5)",
+      "name": "Configure auto-reload",
+      "status": "passed",
+      "duration_ms": 1533.29,
+      "details": "Config updated: {'auto_reload_enabled': True, 'auto_reload_threshold': 20, 'auto_reload_amount': 100, 'auto_reload_failure_count': 0, 'last_reload_at': None}",
+      "error": null
+    },
+    {
+      "suite": "Subscription (Phase 6)",
+      "name": "List subscription plans",
+      "status": "passed",
+      "duration_ms": 0.5,
+      "details": "Monthly Pro: $99.0/month",
+      "error": null
+    },
+    {
+      "suite": "Subscription (Phase 6)",
+      "name": "Get subscription status (no subscription)",
+      "status": "passed",
+      "duration_ms": 1069.59,
+      "details": "Status: {'is_active': False, 'plan': None, 'current_period_start': None, 'current_period_end': None, 'cancel_at_period_end': False, 'status': 'inactive'}",
+      "error": null
+    },
+    {
+      "suite": "Subscription (Phase 6)",
+      "name": "Create subscription checkout (email verification check)",
+      "status": "passed",
+      "duration_ms": 841.73,
+      "details": "Correctly blocks unverified email",
+      "error": null
+    },
+    {
+      "suite": "Authorization Hierarchy (Critical)",
+      "name": "Authorization blocks without payment method",
+      "status": "passed",
+      "duration_ms": 1246.28,
+      "details": "User has 0 tokens, verified API works",
+      "error": null
+    },
+    {
+      "suite": "Webhooks (Phases 4 & 6)",
+      "name": "Webhook endpoint exists and validates signature",
+      "status": "passed",
+      "duration_ms": 1.21,
+      "details": "Correctly rejects unsigned request with 400",
+      "error": null
+    },
+    {
+      "suite": "Token Purchase (Phase 4)",
+      "name": "Get token transaction history",
+      "status": "passed",
+      "duration_ms": 1038.67,
+      "details": "Retrieved 0 transactions",
+      "error": null
+    },
+    {
+      "suite": "Subscription (Phase 6)",
+      "name": "Get customer portal URL",
+      "status": "passed",
+      "duration_ms": 1043.91,
+      "details": "Correctly requires Stripe customer",
+      "error": null
+    }
+  ],
+  "performance": {},
+  "issues": []
+}

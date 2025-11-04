@@ -9,7 +9,7 @@ Requirements:
 - T045: TokenTransaction model
 """
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from uuid import UUID
 from datetime import datetime
 from typing import Optional
@@ -35,9 +35,9 @@ class TokenAccount(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-    class Config:
-        from_attributes = True
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "user_id": "550e8400-e29b-41d4-a716-446655440000",
                 "balance": 50,
@@ -47,6 +47,7 @@ class TokenAccount(BaseModel):
                 "updated_at": "2025-01-20T14:45:00Z",
             }
         }
+    )
 
 
 class TokenAccountResponse(BaseModel):
@@ -55,11 +56,24 @@ class TokenAccountResponse(BaseModel):
     balance: int = Field(..., description="Current token balance")
     total_purchased: int = Field(..., description="Total tokens purchased")
     total_spent: int = Field(..., description="Total tokens spent")
+    auto_reload_enabled: bool = Field(default=False, description="Auto-reload enabled")
+    auto_reload_threshold: Optional[int] = Field(None, description="Reload threshold (1-100)")
+    auto_reload_amount: Optional[int] = Field(None, description="Reload amount (min 10)")
+    auto_reload_failure_count: int = Field(default=0, description="Consecutive failures")
 
-    class Config:
-        json_schema_extra = {
-            "example": {"balance": 50, "total_purchased": 100, "total_spent": 50}
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "balance": 50,
+                "total_purchased": 100,
+                "total_spent": 50,
+                "auto_reload_enabled": True,
+                "auto_reload_threshold": 20,
+                "auto_reload_amount": 100,
+                "auto_reload_failure_count": 0,
+            }
         }
+    )
 
 
 class TokenTransaction(BaseModel):
@@ -116,9 +130,9 @@ class TokenTransaction(BaseModel):
 
         return v
 
-    class Config:
-        from_attributes = True
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "id": "650e8400-e29b-41d4-a716-446655440000",
                 "user_id": "550e8400-e29b-41d4-a716-446655440000",
@@ -130,6 +144,7 @@ class TokenTransaction(BaseModel):
                 "created_at": "2025-01-20T14:45:00Z",
             }
         }
+    )
 
 
 class TokenTransactionResponse(BaseModel):
@@ -142,8 +157,8 @@ class TokenTransactionResponse(BaseModel):
     price_paid_cents: Optional[int]
     created_at: datetime
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": "650e8400-e29b-41d4-a716-446655440000",
                 "amount": 50,
@@ -153,6 +168,7 @@ class TokenTransactionResponse(BaseModel):
                 "created_at": "2025-01-20T14:45:00Z",
             }
         }
+    )
 
 
 class TokenPackage(BaseModel):
@@ -174,8 +190,8 @@ class TokenPackage(BaseModel):
     discount_percent: Optional[int] = Field(None, ge=0, le=100, description="Discount %")
     is_best_value: bool = Field(default=False, description="Best value badge")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "package_id": "package_50",
                 "tokens": 50,
@@ -186,6 +202,7 @@ class TokenPackage(BaseModel):
                 "is_best_value": False,
             }
         }
+    )
 
 
 # Token package definitions (FR-021 to FR-024)
@@ -247,8 +264,9 @@ class CreateCheckoutSessionRequest(BaseModel):
             raise ValueError(f"Invalid package_id: {v}")
         return v
 
-    class Config:
-        json_schema_extra = {"example": {"package_id": "package_50"}}
+    model_config = ConfigDict(
+        json_schema_extra={"example": {"package_id": "package_50"}}
+    )
 
 
 class CreateCheckoutSessionResponse(BaseModel):
@@ -257,10 +275,89 @@ class CreateCheckoutSessionResponse(BaseModel):
     session_id: str = Field(..., description="Stripe checkout session ID")
     url: str = Field(..., description="Checkout URL to redirect user")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "session_id": "cs_test_1234567890abcdef",
                 "url": "https://checkout.stripe.com/pay/cs_test_1234567890abcdef",
             }
         }
+    )
+
+
+class ConfigureAutoReloadRequest(BaseModel):
+    """
+    Request to configure auto-reload settings.
+
+    Requirements:
+    - FR-034: Enable auto-reload with threshold (1-100) and amount (min 10)
+    """
+
+    enabled: bool = Field(..., description="Enable or disable auto-reload")
+    threshold: Optional[int] = Field(
+        None, ge=1, le=100, description="Balance threshold to trigger reload (1-100)"
+    )
+    amount: Optional[int] = Field(
+        None, ge=10, description="Amount of tokens to reload (minimum 10)"
+    )
+
+    @field_validator("threshold")
+    @classmethod
+    def validate_threshold_when_enabled(cls, v: Optional[int], info) -> Optional[int]:
+        """Validate threshold is provided when enabling auto-reload."""
+        enabled = info.data.get("enabled")
+        if enabled and v is None:
+            raise ValueError("threshold required when enabling auto-reload")
+        return v
+
+    @field_validator("amount")
+    @classmethod
+    def validate_amount_when_enabled(cls, v: Optional[int], info) -> Optional[int]:
+        """Validate amount is provided when enabling auto-reload."""
+        enabled = info.data.get("enabled")
+        if enabled and v is None:
+            raise ValueError("amount required when enabling auto-reload")
+        return v
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "enabled": True,
+                "threshold": 20,
+                "amount": 100,
+            }
+        }
+    )
+
+
+class AutoReloadConfigResponse(BaseModel):
+    """
+    Response with current auto-reload configuration.
+
+    Requirements:
+    - FR-034 to FR-042: All auto-reload configuration fields
+    """
+
+    auto_reload_enabled: bool = Field(..., description="Auto-reload enabled")
+    auto_reload_threshold: Optional[int] = Field(
+        None, description="Balance threshold (1-100)"
+    )
+    auto_reload_amount: Optional[int] = Field(None, description="Reload amount (min 10)")
+    auto_reload_failure_count: int = Field(
+        default=0, description="Consecutive failure count"
+    )
+    last_reload_at: Optional[datetime] = Field(
+        None, description="Last reload timestamp (for throttling)"
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "auto_reload_enabled": True,
+                "auto_reload_threshold": 20,
+                "auto_reload_amount": 100,
+                "auto_reload_failure_count": 0,
+                "last_reload_at": "2025-01-20T14:45:00Z",
+            }
+        }
+    )

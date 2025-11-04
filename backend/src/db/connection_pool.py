@@ -22,11 +22,14 @@ class DatabasePool:
         if self._pool is not None:
             return
 
-        database_url = os.getenv("DATABASE_URL")
+        # Import here to avoid circular dependency
+        from src.config import settings
+        database_url = settings.database_url
         if not database_url:
-            raise ValueError("DATABASE_URL environment variable is required")
+            raise ValueError("DATABASE_URL not found in settings")
 
         # Create connection pool with optimized settings
+        # Note: statement_cache_size=0 for Supabase pgbouncer compatibility
         self._pool = await asyncpg.create_pool(
             database_url,
             min_size=2,  # Minimum connections
@@ -34,6 +37,7 @@ class DatabasePool:
             max_queries=50000,  # Max queries per connection
             max_inactive_connection_lifetime=300,  # 5 minutes
             command_timeout=60,  # 60 second timeout
+            statement_cache_size=0,  # Disable prepared statements for pgbouncer
         )
 
     async def disconnect(self):

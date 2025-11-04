@@ -10,6 +10,7 @@ Dependencies:
 from typing import Optional
 from uuid import UUID
 
+import asyncpg
 from fastapi import Depends, HTTPException, status, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
@@ -18,6 +19,23 @@ from src.db.connection_pool import db_pool
 
 # HTTP Bearer token security scheme
 security = HTTPBearer()
+
+
+async def get_db_pool() -> asyncpg.Pool:
+    """
+    Dependency for injecting database connection pool.
+
+    Returns:
+        asyncpg.Pool instance
+
+    Usage:
+        @app.get("/endpoint")
+        async def endpoint(db_pool: asyncpg.Pool = Depends(get_db_pool)):
+            ...
+    """
+    if db_pool._pool is None:
+        await db_pool.connect()
+    return db_pool._pool
 
 
 async def get_current_user(
@@ -59,11 +77,13 @@ async def get_current_user(
             id,
             email,
             email_verified,
+            firebase_uid,
             trial_remaining,
             trial_used,
             subscription_tier,
             subscription_status,
-            created_at
+            created_at,
+            updated_at
         FROM users
         WHERE id = $1
     """, user_id)
@@ -78,11 +98,13 @@ async def get_current_user(
         id=user_row["id"],
         email=user_row["email"],
         email_verified=user_row["email_verified"],
+        firebase_uid=user_row["firebase_uid"],
         trial_remaining=user_row["trial_remaining"],
         trial_used=user_row["trial_used"],
         subscription_tier=user_row["subscription_tier"],
         subscription_status=user_row["subscription_status"],
-        created_at=user_row["created_at"]
+        created_at=user_row["created_at"],
+        updated_at=user_row["updated_at"]
     )
 
 
@@ -140,11 +162,13 @@ async def get_optional_user(
             id,
             email,
             email_verified,
+            firebase_uid,
             trial_remaining,
             trial_used,
             subscription_tier,
             subscription_status,
-            created_at
+            created_at,
+            updated_at
         FROM users
         WHERE id = $1
     """, user_id)
@@ -156,9 +180,11 @@ async def get_optional_user(
         id=user_row["id"],
         email=user_row["email"],
         email_verified=user_row["email_verified"],
+        firebase_uid=user_row["firebase_uid"],
         trial_remaining=user_row["trial_remaining"],
         trial_used=user_row["trial_used"],
         subscription_tier=user_row["subscription_tier"],
         subscription_status=user_row["subscription_status"],
-        created_at=user_row["created_at"]
+        created_at=user_row["created_at"],
+        updated_at=user_row["updated_at"]
     )

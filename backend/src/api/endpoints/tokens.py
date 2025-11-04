@@ -18,10 +18,13 @@ from ...models.token_account import (
     TokenAccountResponse,
     TokenTransactionResponse,
     TokenPackage,
+    ConfigureAutoReloadRequest,
+    AutoReloadConfigResponse,
 )
 from ...models.user import User
 from ...services.stripe_service import StripeService
 from ...services.token_service import TokenService
+from ...services.auto_reload_service import AutoReloadService
 from ..dependencies import get_current_user, get_db_pool
 
 import asyncpg
@@ -126,16 +129,26 @@ async def get_token_balance(
         HTTPException 500: Database error
     """
     token_service = TokenService(db_pool)
+    auto_reload_service = AutoReloadService(db_pool)
 
     try:
         balance, total_purchased, total_spent = await token_service.get_token_balance(
             user.id
         )
 
+        # Get auto-reload configuration
+        config = await auto_reload_service.get_auto_reload_config(user.id)
+
         return TokenAccountResponse(
             balance=balance,
             total_purchased=total_purchased,
             total_spent=total_spent,
+            auto_reload_enabled=config["auto_reload_enabled"] if config else False,
+            auto_reload_threshold=config["auto_reload_threshold"] if config else None,
+            auto_reload_amount=config["auto_reload_amount"] if config else None,
+            auto_reload_failure_count=(
+                config["auto_reload_failure_count"] if config else 0
+            ),
         )
 
     except Exception as e:
@@ -244,4 +257,144 @@ async def purchase_success(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to retrieve session: {str(e)}",
+        )
+
+
+@router.get("/auto-reload", response_model=AutoReloadConfigResponse)
+async def get_auto_reload_config(
+    user: User = Depends(get_current_user),
+    db_pool: asyncpg.Pool = Depends(get_db_pool),
+):
+    """
+    Get user's current auto-reload configuration.
+
+    Requirements:
+    - T071: GET /tokens/auto-reload endpoint
+    - FR-034 to FR-042: Auto-reload configuration
+
+    Args:
+        user: Current authenticated user
+        db_pool: Database connection pool
+
+    Returns:
+        AutoReloadConfigResponse with current configuration
+
+    Raises:
+        HTTPException 500: Database error
+    """
+    auto_reload_service = AutoReloadService(db_pool)
+
+    try:
+        config = await auto_reload_service.get_auto_reload_config(user.id)
+
+        if not config:
+            # Return default disabled state if no configuration exists
+            return AutoReloadConfigResponse(
+                auto_reload_enabled=False,
+                auto_reload_threshold=None,
+                auto_reload_amount=None,
+                auto_reload_failure_count=0,
+                last_reload_at=None,
+            )
+
+        return AutoReloadConfigResponse(
+            auto_reload_enabled=config["auto_reload_enabled"],
+            auto_reload_threshold=config["auto_reload_threshold"],
+            auto_reload_amount=config["auto_reload_amount"],
+            auto_reload_failure_count=config["auto_reload_failure_count"],
+            last_reload_at=config["last_reload_at"],
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch auto-reload configuration: {str(e)}",
+        )
+
+
+@router.put("/auto-reload", response_model=AutoReloadConfigResponse)
+async def configure_auto_reload(
+    request: ConfigureAutoReloadRequest,
+    user: User = Depends(get_current_user),
+    db_pool: asyncpg.Pool = Depends(get_db_pool),
+):
+    """
+    Configure auto-reload settings for the user.
+
+    Requirements:
+    - T070: PUT /tokens/auto-reload endpoint
+    - FR-034: Enable auto-reload with threshold (1-100) and amount (min 10)
+    - FR-035: Validate payment method on file (TODO: integrate with Stripe)
+
+    Workflow:
+    1. Validate request (threshold 1-100, amount >= 10)
+    2. TODO: Check user has payment method on file (FR-035)
+    3. Update auto-reload configuration in database
+    4. Return updated configuration
+
+    Args:
+        request: ConfigureAutoReloadRequest with enabled, threshold, amount
+        user: Current authenticated user
+        db_pool: Database connection pool
+
+    Returns:
+        AutoReloadConfigResponse with updated configuration
+
+    Raises:
+        HTTPException 400: Invalid configuration
+        HTTPException 402: Payment method required (FR-035, TODO)
+        HTTPException 500: Database error
+    """
+    auto_reload_service = AutoReloadService(db_pool)
+
+    try:
+        # TODO: FR-035 - Validate user has payment method on file
+        # This will be implemented when Stripe customer management is added
+        # For now, we allow configuration without this check
+        # stripe_service = StripeService()
+        # has_payment_method = await stripe_service.has_payment_method(user.id)
+        # if request.enabled and not has_payment_method:
+        #     raise HTTPException(
+        #         status_code=402,
+        #         detail="Payment method required to enable auto-reload"
+        #     )
+
+        # Configure auto-reload
+        success = await auto_reload_service.configure_auto_reload(
+            user_id=user.id,
+            enabled=request.enabled,
+            threshold=request.threshold,
+            amount=request.amount,
+        )
+
+        if not success:
+            raise HTTPException(
+                status_code=500, detail="Failed to update auto-reload configuration"
+            )
+
+        # Fetch and return updated configuration
+        config = await auto_reload_service.get_auto_reload_config(user.id)
+
+        if not config:
+            raise HTTPException(
+                status_code=500, detail="Failed to fetch updated configuration"
+            )
+
+        return AutoReloadConfigResponse(
+            auto_reload_enabled=config["auto_reload_enabled"],
+            auto_reload_threshold=config["auto_reload_threshold"],
+            auto_reload_amount=config["auto_reload_amount"],
+            auto_reload_failure_count=config["auto_reload_failure_count"],
+            last_reload_at=config["last_reload_at"],
+        )
+
+    except ValueError as e:
+        # Validation errors from auto_reload_service
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to configure auto-reload: {str(e)}",
         )

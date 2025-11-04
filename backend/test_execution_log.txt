@@ -1,0 +1,66 @@
+
+================================================================================
+YARDA AI LANDSCAPE STUDIO - COMPREHENSIVE INTEGRATION TEST SUITE
+================================================================================
+Start Time: 2025-11-03 17:37:09
+Backend URL: http://localhost:8000
+Frontend URL: http://localhost:3000
+================================================================================
+
+✓ Test session initialized
+
+[1/6] Health & Performance Tests
+--------------------------------------------------------------------------------
+  ✓ Health endpoint responds (61543ms)
+  ✓ Frontend accessible (25ms)
+
+[2/6] Trial Credits Integration Tests (Phase 3)
+--------------------------------------------------------------------------------
+  ✓ New user gets 3 trial credits (419ms)
+
+[3/6] Token Purchase Integration Tests (Phase 4)
+--------------------------------------------------------------------------------
+  ✓ List token packages (1ms)
+  ✓ Token balance performance (625ms)
+  ✓ Create token checkout session (1306ms)
+
+[4/6] Auto-Reload Integration Tests (Phase 5)
+--------------------------------------------------------------------------------
+  ✓ Get auto-reload config (1045ms)
+  ✓ Configure auto-reload (1533ms)
+
+[5/6] Subscription Integration Tests (Phase 6)
+--------------------------------------------------------------------------------
+  ✓ List subscription plans (0ms)
+  ✓ Get subscription status (no subscription) (1070ms)
+  ✓ Create subscription checkout (email verification check) (842ms)
+
+[6/8] Authorization Hierarchy Tests (Critical)
+--------------------------------------------------------------------------------
+  ✓ Authorization blocks without payment method (1246ms)
+
+[7/8] Webhook Integration Tests
+--------------------------------------------------------------------------------
+  ✓ Webhook endpoint exists and validates signature (1ms)
+
+[8/8] Additional Integration Tests
+--------------------------------------------------------------------------------
+  ✓ Get token transaction history (1039ms)
+  ✓ Get customer portal URL (1044ms)
+✓ Test session cleaned up
+
+================================================================================
+TEST EXECUTION SUMMARY
+================================================================================
+Total Tests: 15
+✓ Passed: 15 (100.0%)
+✗ Failed: 0 (0.0%)
+○ Skipped: 0
+================================================================================
+
+================================================================================
+End Time: 2025-11-03 17:38:22
+================================================================================
+
+✓ Test results saved to: test_results.json
+

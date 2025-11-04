@@ -179,6 +179,190 @@ export const generationAPI = {
 };
 
 // ============================================================================
+// Token APIs
+// ============================================================================
+
+export interface TokenBalanceResponse {
+  balance: number;
+  total_purchased: number;
+  total_spent: number;
+  auto_reload_enabled: boolean;
+  auto_reload_threshold: number | null;
+  auto_reload_amount: number | null;
+  auto_reload_failure_count: number;
+}
+
+export interface AutoReloadConfigRequest {
+  enabled: boolean;
+  threshold?: number;
+  amount?: number;
+}
+
+export interface AutoReloadConfigResponse {
+  auto_reload_enabled: boolean;
+  auto_reload_threshold: number | null;
+  auto_reload_amount: number | null;
+  auto_reload_failure_count: number;
+  last_reload_at: string | null;
+}
+
+export interface TokenTransaction {
+  id: string;
+  amount: number;
+  transaction_type: 'purchase' | 'generation' | 'refund';
+  description: string;
+  price_paid_cents: number | null;
+  created_at: string;
+}
+
+export interface TokenPackage {
+  package_id: string;
+  tokens: number;
+  price_usd: string;
+  price_cents: number;
+  price_per_token: string;
+  discount_percent: number | null;
+  is_best_value: boolean;
+}
+
+export interface CreateCheckoutSessionRequest {
+  package_id: string;
+}
+
+export interface CreateCheckoutSessionResponse {
+  session_id: string;
+  url: string;
+}
+
+export const tokenAPI = {
+  getBalance: async (): Promise<TokenBalanceResponse> => {
+    const response = await apiClient.get('/tokens/balance');
+    return response.data;
+  },
+
+  getTransactions: async (limit = 50, offset = 0): Promise<TokenTransaction[]> => {
+    const response = await apiClient.get('/tokens/transactions', {
+      params: { limit, offset },
+    });
+    return response.data;
+  },
+
+  getPackages: async (): Promise<TokenPackage[]> => {
+    const response = await apiClient.get('/tokens/packages');
+    return response.data;
+  },
+
+  createCheckoutSession: async (
+    data: CreateCheckoutSessionRequest
+  ): Promise<CreateCheckoutSessionResponse> => {
+    const response = await apiClient.post('/tokens/purchase/checkout', data);
+    return response.data;
+  },
+
+  getAutoReloadConfig: async (): Promise<AutoReloadConfigResponse> => {
+    const response = await apiClient.get('/tokens/auto-reload');
+    return response.data;
+  },
+
+  configureAutoReload: async (
+    data: AutoReloadConfigRequest
+  ): Promise<AutoReloadConfigResponse> => {
+    const response = await apiClient.put('/tokens/auto-reload', data);
+    return response.data;
+  },
+};
+
+// ============================================================================
+// Subscription APIs
+// ============================================================================
+
+export interface SubscriptionPlan {
+  plan_id: string;
+  name: string;
+  price_cents: number;
+  description: string;
+  features: string[];
+  billing_period: 'monthly' | 'annual';
+}
+
+export interface SubscriptionStatus {
+  subscription_id: string;
+  status: 'active' | 'inactive' | 'past_due' | 'cancelled';
+  plan_id: string;
+  plan_name: string;
+  price_cents: number;
+  current_period_start: string;
+  current_period_end: string;
+  cancel_at_period_end: boolean;
+  cancelled_at?: string;
+}
+
+export interface CreateSubscriptionCheckoutRequest {
+  plan_id: string;
+  success_url: string;
+  cancel_url: string;
+}
+
+export interface CreateSubscriptionCheckoutResponse {
+  session_id: string;
+  url: string;
+}
+
+export interface CustomerPortalResponse {
+  url: string;
+}
+
+export const subscriptionAPI = {
+  /**
+   * Get available subscription plans
+   */
+  getPlans: async (): Promise<SubscriptionPlan[]> => {
+    const response = await apiClient.get('/subscriptions/plans');
+    return response.data;
+  },
+
+  /**
+   * Get current user's subscription status
+   */
+  getCurrentSubscription: async (): Promise<SubscriptionStatus> => {
+    const response = await apiClient.get('/subscriptions/current');
+    return response.data;
+  },
+
+  /**
+   * Create Stripe checkout session for subscription
+   */
+  createCheckout: async (
+    planId: string,
+    successUrl: string,
+    cancelUrl: string
+  ): Promise<CreateSubscriptionCheckoutResponse> => {
+    const response = await apiClient.post('/subscriptions/subscribe', {
+      plan_id: planId,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+    });
+    return response.data;
+  },
+
+  /**
+   * Cancel current subscription
+   */
+  cancelSubscription: async (): Promise<{ message: string }> => {
+    const response = await apiClient.post('/subscriptions/cancel');
+    return response.data;
+  },
+
+  /**
+   * Get Stripe customer portal URL
+   */
+  getCustomerPortal: async (): Promise<CustomerPortalResponse> => {
+    const response = await apiClient.get('/subscriptions/portal');
+    return response.data;
+  },
+};
+
+// ============================================================================
 // Error handling utilities
 // ============================================================================
 

@@ -5,10 +5,15 @@ Endpoints:
 - POST /generations: Create new landscape generation
 - GET /generations: List user's generation history
 - GET /generations/{id}: Get specific generation details
+
+Requirements:
+- FR-034: Unlimited generations for active subscribers
+- FR-047: Authorization hierarchy checks subscription FIRST
+- T092: Update generation authorization hierarchy
 """
 
 from uuid import UUID
-from typing import List, Optional
+from typing import List, Optional, Dict, Any, Tuple
 
 from fastapi import APIRouter, HTTPException, Depends, status, UploadFile, File, Form
 from fastapi.responses import JSONResponse
@@ -26,10 +31,13 @@ async def check_authorization_hierarchy(user: User, trial_service: TrialService)
     """
     Check authorization hierarchy for generation.
 
-    Authorization Order (FR-047, FR-048):
-    1. Check subscription_status='active' FIRST (unlimited generations)
+    Authorization Order (FR-034, FR-047, FR-048):
+    1. Check subscription_status='active' FIRST (unlimited generations) ← NEW!
     2. Check trial_remaining > 0 SECOND (if no active subscription)
     3. Check token balance > 0 THIRD (if no trial and no subscription)
+
+    This ensures that Monthly Pro subscribers get unlimited generations
+    without deducting trial or token balances.
 
     Args:
         user: Current authenticated user
@@ -41,16 +49,18 @@ async def check_authorization_hierarchy(user: User, trial_service: TrialService)
     Raises:
         HTTPException 403: No payment method available
     """
-    # Check 1: Active Subscription (FR-047, FR-048)
-    if user.subscription_status == 'active':
+    # Check 1: Active Subscription (FR-034, FR-047) - PRIORITY #1
+    # Statuses 'active' and 'past_due' allow unlimited generations
+    # past_due = grace period (user gets 3 days to update payment)
+    if user.subscription_status in ['active', 'past_due']:
         return 'subscription'
 
-    # Check 2: Trial Credits (FR-016)
+    # Check 2: Trial Credits (FR-016) - PRIORITY #2
     trial_remaining, _ = await trial_service.get_trial_balance(user.id)
     if trial_remaining > 0:
         return 'trial'
 
-    # Check 3: Token Balance (FR-024)
+    # Check 3: Token Balance (FR-024) - PRIORITY #3
     token_balance = await db_pool.fetchval("""
         SELECT COALESCE(balance, 0)
         FROM users_token_accounts
@@ -65,10 +75,11 @@ async def check_authorization_hierarchy(user: User, trial_service: TrialService)
         status_code=status.HTTP_403_FORBIDDEN,
         detail={
             "error": "insufficient_payment",
-            "message": "No payment method available. Please purchase tokens or subscribe.",
+            "message": "No payment method available. Please purchase tokens or subscribe to Monthly Pro.",
             "trial_remaining": trial_remaining,
             "token_balance": token_balance or 0,
-            "subscription_status": user.subscription_status
+            "subscription_status": user.subscription_status,
+            "subscription_tier": user.subscription_tier
         }
     )
 
@@ -79,14 +90,17 @@ async def deduct_payment(
     trial_service: TrialService,
     token_service: TokenService,
     description: str = "Landscape generation"
-) -> tuple[bool, str]:
+) -> Tuple[bool, Optional[str], Optional[Dict[str, Any]]]:
     """
     Deduct payment for generation based on payment method.
 
     This is called BEFORE Gemini API call to ensure payment upfront.
 
     Requirements:
+    - FR-034: No deduction for active subscriptions (unlimited)
     - T053: Token deduction integrated with generation flow
+    - T072: Auto-reload trigger integration
+    - T092: Subscription payment method support
 
     Args:
         user_id: User UUID
@@ -96,7 +110,8 @@ async def deduct_payment(
         description: Transaction description
 
     Returns:
-        Tuple of (success, error_message)
+        Tuple of (success, error_message, auto_reload_info)
+        - auto_reload_info: Dict with trigger info if auto-reload should happen (token payment only)
 
     Raises:
         HTTPException 500: Payment deduction failed
@@ -104,28 +119,35 @@ async def deduct_payment(
     try:
         if payment_method == 'subscription':
             # No deduction needed - subscription allows unlimited generations
-            return True, None
+            # This is the core value proposition of Monthly Pro
+            return True, None, None
 
         elif payment_method == 'trial':
             # Deduct trial credit atomically
             success, remaining = await trial_service.deduct_trial(user_id)
             if not success:
-                return False, "Trial credit deduction failed - insufficient credits"
-            return True, None
+                return False, "Trial credit deduction failed - insufficient credits", None
+            return True, None, None
 
         elif payment_method == 'token':
             # Deduct token atomically with FOR UPDATE lock
-            success, new_balance = await token_service.deduct_token_atomic(user_id)
+            # Returns auto_reload_info if balance drops below threshold
+            success, new_balance, auto_reload_info = await token_service.deduct_token_atomic(user_id)
             if not success:
-                return False, "Token deduction failed - insufficient balance"
-            return True, None
+                return False, "Token deduction failed - insufficient balance", None
+
+            # Log auto-reload trigger if applicable
+            if auto_reload_info and auto_reload_info.get("should_trigger"):
+                print(f"Auto-reload triggered for user {user_id}: {auto_reload_info}")
+
+            return True, None, auto_reload_info
 
         else:
-            return False, f"Invalid payment method: {payment_method}"
+            return False, f"Invalid payment method: {payment_method}", None
 
     except Exception as e:
         print(f"Payment deduction error: {e}")
-        return False, str(e)
+        return False, str(e), None
 
 
 async def refund_payment(
@@ -141,6 +163,7 @@ async def refund_payment(
     - FR-013: Refund trial if generation fails
     - FR-066: Refund payment on generation failure
     - T053: Token refund integrated with generation flow
+    - T092: No refund needed for subscriptions
 
     Args:
         user_id: User UUID
@@ -183,14 +206,14 @@ async def create_generation(
     """
     Create new landscape generation.
 
-    Authorization Hierarchy (FR-047, FR-048):
-    1. Active subscription → unlimited generations
-    2. Trial credits → limited generations
-    3. Token balance → pay-per-use
+    Authorization Hierarchy (FR-034, FR-047, FR-048):
+    1. Active subscription → unlimited generations (NO DEDUCTION)
+    2. Trial credits → limited generations (DEDUCT 1 TRIAL)
+    3. Token balance → pay-per-use (DEDUCT 1 TOKEN)
 
     Payment Flow:
     1. Check authorization (hierarchy)
-    2. Deduct payment BEFORE Gemini API call
+    2. Deduct payment BEFORE Gemini API call (if not subscription)
     3. Call Gemini API
     4. If success: save results, return generation
     5. If failure: refund payment, return error
@@ -216,12 +239,12 @@ async def create_generation(
     token_service = TokenService(db_pool)
 
     try:
-        # Step 1: Check authorization hierarchy
+        # Step 1: Check authorization hierarchy (subscription FIRST)
         payment_method = await check_authorization_hierarchy(user, trial_service)
         print(f"User {user.email} authorized with payment_method={payment_method}")
 
-        # Step 2: Deduct payment BEFORE Gemini API call
-        success, error_msg = await deduct_payment(
+        # Step 2: Deduct payment BEFORE Gemini API call (unless subscription)
+        success, error_msg, auto_reload_info = await deduct_payment(
             user.id,
             payment_method,
             trial_service,
@@ -235,7 +258,21 @@ async def create_generation(
                 detail=error_msg
             )
 
-        print(f"Payment deducted successfully for user {user.email}")
+        if payment_method == 'subscription':
+            print(f"Subscription user {user.email} - no payment deducted (unlimited)")
+        else:
+            print(f"Payment deducted successfully for user {user.email}")
+
+        # TODO (T073): Handle auto-reload trigger
+        # If auto_reload_info is not None, we should:
+        # 1. Create Stripe Payment Intent for auto-reload amount
+        # 2. Process payment automatically (requires saved payment method)
+        # 3. Webhook will credit tokens when payment succeeds
+        # For now, we just log it - actual Stripe integration pending
+        if auto_reload_info:
+            print(f"Auto-reload would be triggered: {auto_reload_info}")
+            # NOTE: In production, this would initiate a Stripe charge
+            # using the user's saved payment method
 
         # Step 3: Create generation record with status='pending'
         generation_id = await db_pool.fetchval("""

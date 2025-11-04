@@ -4,24 +4,101 @@ User models for authentication and trial credit management.
 Pydantic models for request/response validation and database entities.
 """
 
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 from datetime import datetime
 from uuid import UUID
 import re
 
 
+# RFC 5322 compliant email regex pattern
+# This pattern supports common email formats including:
+# - Plus addressing: user+tag@domain.com
+# - Dots in local part: first.last@domain.com
+# - Numbers and special chars: user123@domain.co.uk
+EMAIL_REGEX = re.compile(
+    r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+)
+
+
+def validate_email(email: str) -> str:
+    """
+    Validate email format using RFC 5322 compliant regex.
+
+    Accepts:
+    - Plus addressing: test+tag@example.com
+    - Dots in local part: first.last@example.com
+    - Numbers and underscores: user_123@example.com
+    - Percent signs: user%name@example.com
+    - Hyphens in domain: user@my-domain.com
+
+    Rejects:
+    - Missing @ symbol
+    - Multiple @ symbols
+    - Missing domain
+    - Invalid characters
+
+    Args:
+        email: Email address to validate
+
+    Returns:
+        Normalized email (lowercase)
+
+    Raises:
+        ValueError: If email format is invalid
+    """
+    if not email:
+        raise ValueError('Email is required')
+
+    # Normalize to lowercase
+    email = email.lower().strip()
+
+    # Validate format
+    if not EMAIL_REGEX.match(email):
+        raise ValueError('Invalid email format')
+
+    # Additional checks
+    if email.count('@') != 1:
+        raise ValueError('Email must contain exactly one @ symbol')
+
+    local_part, domain = email.split('@')
+
+    if not local_part or not domain:
+        raise ValueError('Email must have both local and domain parts')
+
+    if len(email) > 254:  # RFC 5321 maximum email length
+        raise ValueError('Email is too long (max 254 characters)')
+
+    if len(local_part) > 64:  # RFC 5321 maximum local part length
+        raise ValueError('Email local part is too long (max 64 characters)')
+
+    return email
+
+
 class UserBase(BaseModel):
     """Base user fields."""
-    email: EmailStr
+    email: str
+
+    @field_validator('email')
+    @classmethod
+    def validate_email_field(cls, v):
+        """Validate email format."""
+        return validate_email(v)
 
 
 class UserRegisterRequest(BaseModel):
     """Request model for user registration."""
-    email: EmailStr
+    email: str
     password: str = Field(..., min_length=8, description="Password must be at least 8 characters")
 
-    @validator('password')
+    @field_validator('email')
+    @classmethod
+    def validate_email_field(cls, v):
+        """Validate email format."""
+        return validate_email(v)
+
+    @field_validator('password')
+    @classmethod
     def validate_password_strength(cls, v):
         """Validate password meets minimum requirements."""
         if len(v) < 8:
@@ -39,15 +116,21 @@ class UserRegisterResponse(BaseModel):
 
 class LoginRequest(BaseModel):
     """Request model for user login."""
-    email: EmailStr
+    email: str
     password: str
+
+    @field_validator('email')
+    @classmethod
+    def validate_email_field(cls, v):
+        """Validate email format."""
+        return validate_email(v)
 
 
 class LoginResponse(BaseModel):
     """Response model for successful login."""
     access_token: str
-    token_type: str = "Bearer"
-    expires_in: int = Field(default=3600, description="Token expiration in seconds")
+    token_type: str = "bearer"
+    user: "User"
 
 
 class VerifyEmailRequest(BaseModel):
@@ -63,7 +146,13 @@ class VerifyEmailResponse(BaseModel):
 
 class ResendVerificationRequest(BaseModel):
     """Request model for resending verification email."""
-    email: EmailStr
+    email: str
+
+    @field_validator('email')
+    @classmethod
+    def validate_email_field(cls, v):
+        """Validate email format."""
+        return validate_email(v)
 
 
 class User(BaseModel):
@@ -71,7 +160,7 @@ class User(BaseModel):
     id: UUID
     email: str
     email_verified: bool
-    firebase_uid: str
+    firebase_uid: Optional[str] = None
 
     # Trial System
     trial_remaining: int = Field(ge=0, description="Trial credits remaining")
@@ -87,10 +176,9 @@ class User(BaseModel):
 
     # Timestamps
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
 
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}
 
 
 class UserProfile(BaseModel):
@@ -109,12 +197,26 @@ class UpdateProfileRequest(BaseModel):
     """Request model for updating user profile."""
     current_password: Optional[str] = None
     new_password: Optional[str] = Field(None, min_length=8)
-    new_email: Optional[EmailStr] = None
+    new_email: Optional[str] = None
+
+    @field_validator('new_email')
+    @classmethod
+    def validate_new_email_field(cls, v):
+        """Validate new email format if provided."""
+        if v is not None:
+            return validate_email(v)
+        return v
 
 
 class PasswordResetRequest(BaseModel):
     """Request model for password reset."""
-    email: EmailStr
+    email: str
+
+    @field_validator('email')
+    @classmethod
+    def validate_email_field(cls, v):
+        """Validate email format."""
+        return validate_email(v)
 
 
 class PasswordResetConfirm(BaseModel):

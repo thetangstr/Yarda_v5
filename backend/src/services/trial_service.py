@@ -127,7 +127,7 @@ class TrialService:
 _trial_service_instance = None
 
 
-async def get_trial_service(db_pool: DatabasePool = None) -> TrialService:
+async def get_trial_service() -> TrialService:
     """
     Get or create trial service instance.
 
@@ -143,10 +143,7 @@ async def get_trial_service(db_pool: DatabasePool = None) -> TrialService:
     global _trial_service_instance
 
     if _trial_service_instance is None:
-        if db_pool is None:
-            from src.db.connection_pool import db_pool as default_pool
-            db_pool = default_pool
-
+        from src.db.connection_pool import db_pool
         _trial_service_instance = TrialService(db_pool)
 
     return _trial_service_instance

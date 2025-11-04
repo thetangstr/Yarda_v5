@@ -10,13 +10,15 @@
  * - TC-UI-1.2: Show TrialExhaustedModal when blocked
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useUserStore } from '@/store/userStore';
 import { generationAPI, getErrorMessage } from '@/lib/api';
 import TrialExhaustedModal from '@/components/TrialExhaustedModal';
 import TrialCounter from '@/components/TrialCounter';
+import TokenBalance from '@/components/TokenBalance';
+import TokenPurchaseModal from '@/components/TokenPurchaseModal';
 
 const AREA_OPTIONS = [
   { value: 'front_yard', label: 'Front Yard' },
@@ -50,7 +52,9 @@ export default function GeneratePage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTrialExhaustedModal, setShowTrialExhaustedModal] = useState(false);
+  const [showTokenPurchaseModal, setShowTokenPurchaseModal] = useState(false);
   const [generationStatus, setGenerationStatus] = useState<string | null>(null);
+  const [tokenBalance, setTokenBalance] = useState<number | null>(null);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -58,6 +62,33 @@ export default function GeneratePage() {
       router.push('/login');
     }
   }, [isAuthenticated, router]);
+
+  // Fetch token balance
+  const fetchTokenBalance = useCallback(async () => {
+    if (!isAuthenticated) return;
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/tokens/balance`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setTokenBalance(data.balance);
+      }
+    } catch (err) {
+      console.error('Error fetching token balance:', err);
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    fetchTokenBalance();
+  }, [fetchTokenBalance]);
 
   const canGenerate = (): boolean => {
     if (!user) return false;
@@ -73,8 +104,11 @@ export default function GeneratePage() {
       return true;
     }
 
-    // 3. Token balance > 0 (would need to fetch from API)
-    // For now, assume no tokens if trial is 0
+    // 3. Token balance > 0
+    if (tokenBalance !== null && tokenBalance > 0) {
+      return true;
+    }
+
     return false;
   };
 
@@ -89,7 +123,11 @@ export default function GeneratePage() {
       return null; // Can generate
     }
 
-    return 'You have no trial credits remaining';
+    if (tokenBalance !== null && tokenBalance > 0) {
+      return null; // Can generate
+    }
+
+    return 'You have no credits available. Purchase tokens to continue.';
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -167,6 +205,11 @@ export default function GeneratePage() {
         updateTrialRemaining(user.trial_remaining - 1);
       }
 
+      // Refresh token balance if payment method was token
+      if (response.payment_method === 'token') {
+        fetchTokenBalance();
+      }
+
       // Redirect to generation details page (or poll for completion)
       setTimeout(() => {
         router.push(`/generations/${response.id}`);
@@ -207,8 +250,11 @@ export default function GeneratePage() {
       <nav className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">Yarda</h1>
-          <div data-testid="navbar-trial-counter">
-            <TrialCounter variant="compact" />
+          <div className="flex items-center gap-4">
+            <TokenBalance variant="compact" autoRefresh={true} />
+            <div data-testid="navbar-trial-counter">
+              <TrialCounter variant="compact" />
+            </div>
           </div>
         </div>
       </nav>
@@ -365,6 +411,14 @@ export default function GeneratePage() {
             {disabledReason && (
               <div data-testid="disabled-reason" className="p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
                 {disabledReason}
+                {!canGenerate() && (
+                  <button
+                    onClick={() => setShowTokenPurchaseModal(true)}
+                    className="ml-2 text-blue-600 hover:text-blue-700 underline font-medium"
+                  >
+                    Purchase Tokens
+                  </button>
+                )}
               </div>
             )}
 
@@ -384,6 +438,16 @@ export default function GeneratePage() {
       <TrialExhaustedModal
         isOpen={showTrialExhaustedModal}
         onClose={() => setShowTrialExhaustedModal(false)}
+        onPurchaseTokens={() => setShowTokenPurchaseModal(true)}
+      />
+
+      {/* Token Purchase Modal */}
+      <TokenPurchaseModal
+        isOpen={showTokenPurchaseModal}
+        onClose={() => {
+          setShowTokenPurchaseModal(false);
+          fetchTokenBalance(); // Refresh balance when modal closes
+        }}
       />
     </div>
   );

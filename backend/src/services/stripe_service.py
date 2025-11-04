@@ -20,19 +20,21 @@ class StripeService:
     """Service for Stripe API operations."""
 
     def __init__(self):
-        """Initialize Stripe service with API key from environment."""
-        self.api_key = os.getenv("STRIPE_SECRET_KEY")
+        """Initialize Stripe service with API key from settings."""
+        from ..config import settings
+
+        self.api_key = settings.stripe_secret_key
         if not self.api_key:
-            raise ValueError("STRIPE_SECRET_KEY environment variable not set")
+            raise ValueError("STRIPE_SECRET_KEY not found in settings")
 
         stripe.api_key = self.api_key
 
-        self.webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
+        self.webhook_secret = settings.stripe_webhook_secret
         if not self.webhook_secret:
-            raise ValueError("STRIPE_WEBHOOK_SECRET environment variable not set")
+            raise ValueError("STRIPE_WEBHOOK_SECRET not found in settings")
 
         # Frontend URL for redirect
-        self.frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+        self.frontend_url = settings.frontend_url
 
     async def create_checkout_session(
         self,
