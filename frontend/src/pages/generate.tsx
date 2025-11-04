@@ -188,10 +188,8 @@ export default function GeneratePage() {
       return;
     }
 
-    if (!formData.image) {
-      setError('Please upload a property image');
-      return;
-    }
+    // Image upload is now OPTIONAL - backend will fetch from Google Maps if not provided
+    // (especially for front_yard which uses Street View API)
 
     setIsGenerating(true);
     setGenerationStatus('pending');
@@ -202,7 +200,7 @@ export default function GeneratePage() {
         area: formData.area,
         style: formData.style,
         custom_prompt: formData.custom_prompt || undefined,
-        image: formData.image,
+        image: formData.image || undefined, // Optional - backend fetches from Google Maps if not provided
       });
 
       setGenerationStatus(response.status);
