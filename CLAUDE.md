@@ -11,11 +11,11 @@ Yarda AI Landscape Studio - AI-powered landscape design generation with Google M
 ### Deployment Configuration (USE THESE ONLY)
 
 **Frontend (Vercel)**
-- Project ID: `prj_W7SLVv5JY9WdkheZwem8rr0IcLmf`
-- Project Name: `yard-web-app`
-- Team: `team_fQ2HzGl0RS5yvezvCFP7Vjtm` (thetangstrs-projects)
-- Production: https://yarda.pro
-- Preview: https://yard-web-app-git-master-thetangstrs-projects.vercel.app
+- Project ID: `prj_H82uxC9rqafgCvhSaKYEZm5GskNn`
+- Project Name: `yarda-v5-frontend`
+- Team: `team_VKfqq7FT5jFRbV7UQ5K1YEFR` (thetangstrs-projects)
+- Production: tbd
+- Preview: https://yarda-v5-frontend-git-003-google-ma-fbe974-thetangstrs-projects.vercel.app
 
 **Backend (Railway)**
 - Project ID: `7a8f9bcb-a265-4c34-82d2-c9c3655d26bf`
