@@ -41,6 +41,11 @@ export default function AuthCallback() {
               .eq('id', session.user.id)
               .single();
 
+            // Extract Google profile data
+            const googleMetadata = session.user.user_metadata;
+            const avatarUrl = googleMetadata?.avatar_url || googleMetadata?.picture;
+            const fullName = googleMetadata?.full_name || googleMetadata?.name;
+
             if (userError) {
               console.error('Error fetching user data:', userError);
               // User might not be synced yet, use default values
@@ -53,9 +58,11 @@ export default function AuthCallback() {
                 subscription_tier: 'free',
                 subscription_status: 'inactive',
                 created_at: session.user.created_at,
+                avatar_url: avatarUrl,
+                full_name: fullName,
               } as any);
             } else {
-              // Use data from our users table
+              // Use data from our users table + Google profile data
               setUser({
                 id: userData.id,
                 email: userData.email,
@@ -65,6 +72,8 @@ export default function AuthCallback() {
                 subscription_tier: userData.subscription_tier,
                 subscription_status: userData.subscription_status,
                 created_at: userData.created_at,
+                avatar_url: avatarUrl,
+                full_name: fullName,
               } as any);
             }
 

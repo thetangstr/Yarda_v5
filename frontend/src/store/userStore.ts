@@ -18,6 +18,8 @@ export interface User {
   subscription_status: 'inactive' | 'active' | 'past_due' | 'cancelled';
   stripe_customer_id?: string;
   stripe_subscription_id?: string;
+  avatar_url?: string;
+  full_name?: string;
 }
 
 export interface TokenBalance {
