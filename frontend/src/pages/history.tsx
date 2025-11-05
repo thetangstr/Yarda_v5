@@ -38,8 +38,8 @@ export default function HistoryPage() {
 
       try {
         setLoading(true);
-        const response = await generationAPI.list(50, 0);
-        setGenerations(response.generations);
+        const response = await generationAPI.list({ limit: 50, page: 1 });
+        setGenerations(response.data);
         setTotal(response.total);
       } catch (err) {
         const errorMessage = getErrorMessage(err);
