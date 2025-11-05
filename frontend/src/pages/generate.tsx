@@ -22,18 +22,17 @@ import TokenPurchaseModal from '@/components/TokenPurchaseModal';
 
 const AREA_OPTIONS = [
   { value: 'front_yard', label: 'Front Yard' },
-  { value: 'back_yard', label: 'Back Yard' },
+  { value: 'backyard', label: 'Backyard' },
+  { value: 'walkway', label: 'Walkway' },
   { value: 'side_yard', label: 'Side Yard' },
-  { value: 'full_property', label: 'Full Property' },
 ];
 
 const STYLE_OPTIONS = [
-  { value: 'modern_minimalist', label: 'Modern Minimalist' },
-  { value: 'tropical_paradise', label: 'Tropical Paradise' },
-  { value: 'zen_garden', label: 'Zen Garden' },
-  { value: 'cottage_garden', label: 'Cottage Garden' },
-  { value: 'desert_landscape', label: 'Desert Landscape' },
-  { value: 'formal_garden', label: 'Formal Garden' },
+  { value: 'modern_minimalist', label: 'Modern Minimalist', description: 'Clean lines and minimal plantings' },
+  { value: 'california_native', label: 'California Native', description: 'Drought-resistant native plants' },
+  { value: 'japanese_zen', label: 'Japanese Zen', description: 'Zen garden with rocks and bamboo' },
+  { value: 'english_garden', label: 'English Garden', description: 'Lush flowers and romantic pathways' },
+  { value: 'desert_landscape', label: 'Desert Landscape', description: 'Cacti, succulents, and xeriscaping' },
 ];
 
 export default function GeneratePage() {
@@ -41,14 +40,11 @@ export default function GeneratePage() {
   const { user, isAuthenticated, updateTrialRemaining } = useUserStore();
 
   const [formData, setFormData] = useState({
-    address: '',
+    address: '22054 clearwood ct cupertino 95014',
     area: 'front_yard',
     style: 'modern_minimalist',
     custom_prompt: '',
-    image: null as File | null,
   });
-
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTrialExhaustedModal, setShowTrialExhaustedModal] = useState(false);
@@ -137,34 +133,6 @@ export default function GeneratePage() {
     return 'You have no credits available. Purchase tokens to continue.';
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        setError('Please upload an image file');
-        return;
-      }
-
-      // Validate file size (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        setError('Image must be less than 10MB');
-        return;
-      }
-
-      setFormData((prev) => ({ ...prev, image: file }));
-
-      // Create preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-
-      setError(null);
-    }
-  };
-
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
@@ -200,7 +168,7 @@ export default function GeneratePage() {
         area: formData.area,
         style: formData.style,
         custom_prompt: formData.custom_prompt || undefined,
-        image: formData.image ?? undefined, // Optional - backend fetches from Google Maps if not provided
+        // No image - backend will auto-fetch from Google Maps
       });
 
       setGenerationStatus(response.status);
@@ -319,31 +287,6 @@ export default function GeneratePage() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                 placeholder="123 Main Street, San Francisco, CA"
               />
-            </div>
-
-            {/* Image Upload */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Property Image
-              </label>
-              <div className="flex items-center gap-4">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  disabled={isDisabled}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-              </div>
-              {imagePreview && (
-                <div className="mt-4">
-                  <img
-                    src={imagePreview}
-                    alt="Property preview"
-                    className="w-full h-64 object-cover rounded-lg"
-                  />
-                </div>
-              )}
             </div>
 
             {/* Area Selection */}
