@@ -46,7 +46,7 @@ export default function Home() {
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Link
-                  href="/register"
+                  href="/start"
                   className="btn-primary text-center text-lg px-8 py-4"
                 >
                   Start Free Trial
@@ -263,7 +263,7 @@ export default function Home() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              href="/register"
+              href="/start"
               className="bg-white text-brand-green hover:bg-brand-cream font-bold text-lg px-8 py-4 rounded-lg transition-colors duration-200 text-center"
             >
               Get Started Free
