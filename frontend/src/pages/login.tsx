@@ -22,6 +22,7 @@ import GoogleSignInButton from '@/components/GoogleSignInButton';
 export default function LoginPage() {
   const router = useRouter();
   const { setUser, setAccessToken } = useUserStore();
+  const [activeTab, setActiveTab] = useState<'login' | 'signup'>('signup');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
