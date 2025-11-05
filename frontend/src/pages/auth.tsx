@@ -120,7 +120,7 @@ export default function AuthPage() {
 
         // Save access token and user data using Zustand (it handles localStorage automatically)
         setAccessToken(response.access_token);
-        setUser(response.user); // Trust zustand's type definitions
+        setUser(response.user as any); // API response type differs from store type
 
         // Check if there's a pending address
         try {
