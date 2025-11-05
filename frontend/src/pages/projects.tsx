@@ -11,13 +11,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useUserStore } from '@/store/userStore';
 import Navigation from '@/components/Navigation';
-import type { Project } from '@/types';
 import { generationAPI } from '@/lib/api';
 
 export default function ProjectsPage() {
   const router = useRouter();
   const { isAuthenticated } = useUserStore();
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'completed' | 'processing' | 'failed'>('all');
@@ -48,9 +47,9 @@ export default function ProjectsPage() {
       });
 
       // Transform generations to projects
-      const transformedProjects: Project[] = response.data.map((gen) => ({
+      const transformedProjects = response.data.map((gen) => ({
         ...gen,
-        title: gen.metadata?.address || `Design ${gen.id.slice(0, 8)}`,
+        title: gen.metadata?.address || gen.address || `Design ${gen.id.slice(0, 8)}`,
         image_url: gen.image_urls && gen.image_urls.length > 0 ? gen.image_urls[0] : undefined
       }));
 
