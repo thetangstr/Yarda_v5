@@ -117,7 +117,6 @@ class TokenService:
                     """
                     UPDATE users_token_accounts u
                     SET balance = u.balance - 1,
-                        total_spent = u.total_spent + 1,
                         updated_at = NOW()
                     WHERE u.user_id = $1
                 """,
@@ -168,7 +167,6 @@ class TokenService:
                     """
                     UPDATE users_token_accounts u
                     SET balance = u.balance + 1,
-                        total_spent = GREATEST(u.total_spent - 1, 0),
                         updated_at = NOW()
                     WHERE u.user_id = $1
                     RETURNING balance
@@ -197,10 +195,8 @@ class TokenService:
                     """
                     INSERT INTO users_token_accounts (
                         user_id,
-                        balance,
-                        total_purchased,
-                        total_spent
-                    ) VALUES ($1, $2, 0, 0)
+                        balance
+                    ) VALUES ($1, $2)
                 """,
                     user_id,
                     initial_balance,
@@ -276,7 +272,6 @@ class TokenService:
                         """
                         UPDATE users_token_accounts u
                         SET balance = u.balance + $2,
-                            total_purchased = u.total_purchased + $2,
                             updated_at = NOW()
                         WHERE u.user_id = $1
                     """,
