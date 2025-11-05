@@ -77,7 +77,6 @@ async def get_current_user(
             id,
             email,
             email_verified,
-            firebase_uid,
             trial_remaining,
             trial_used,
             subscription_tier,
@@ -98,11 +97,15 @@ async def get_current_user(
         id=user_row["id"],
         email=user_row["email"],
         email_verified=user_row["email_verified"],
-        firebase_uid=user_row["firebase_uid"],
+        firebase_uid=None,  # Firebase deprecated, using Supabase Auth
         trial_remaining=user_row["trial_remaining"],
         trial_used=user_row["trial_used"],
         subscription_tier=user_row["subscription_tier"],
         subscription_status=user_row["subscription_status"],
+        stripe_customer_id=None,  # Not in minimal schema
+        stripe_subscription_id=None,  # Not in minimal schema
+        current_period_end=None,  # Not in minimal schema
+        cancel_at_period_end=False,  # Not in minimal schema
         created_at=user_row["created_at"],
         updated_at=user_row["updated_at"]
     )
@@ -162,7 +165,6 @@ async def get_optional_user(
             id,
             email,
             email_verified,
-            firebase_uid,
             trial_remaining,
             trial_used,
             subscription_tier,
@@ -180,11 +182,15 @@ async def get_optional_user(
         id=user_row["id"],
         email=user_row["email"],
         email_verified=user_row["email_verified"],
-        firebase_uid=user_row["firebase_uid"],
+        firebase_uid=None,  # Firebase deprecated, using Supabase Auth
         trial_remaining=user_row["trial_remaining"],
         trial_used=user_row["trial_used"],
         subscription_tier=user_row["subscription_tier"],
         subscription_status=user_row["subscription_status"],
+        stripe_customer_id=None,  # Not in minimal schema
+        stripe_subscription_id=None,  # Not in minimal schema
+        current_period_end=None,  # Not in minimal schema
+        cancel_at_period_end=False,  # Not in minimal schema
         created_at=user_row["created_at"],
         updated_at=user_row["updated_at"]
     )
