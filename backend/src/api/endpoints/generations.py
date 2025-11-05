@@ -425,20 +425,16 @@ async def create_generation(
                 payment_type,
                 tokens_deducted,
                 address,
-                style,
-                request_params,
-                image_source
+                request_params
             ) VALUES (
                 $1,
                 'pending',
                 $2,
                 $3,
                 $4,
-                $5,
-                $6::jsonb,
-                $7
+                $5::jsonb
             ) RETURNING id
-        """, user.id, payment_method, 1 if payment_method == 'token' else 0, address, style, request_params_json, image_source.value)
+        """, user.id, payment_method, 1 if payment_method == 'token' else 0, address, request_params_json)
 
         # Step 4: Process generation asynchronously (TODO: Use background task)
         # For now, we'll return pending status and process later
