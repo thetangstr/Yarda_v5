@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     # Database
     database_url: str
 
+    # Supabase Auth
+    supabase_url: str
+    supabase_service_role_key: str
+
     # Stripe
     stripe_secret_key: str
     stripe_publishable_key: str

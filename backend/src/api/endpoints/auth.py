@@ -17,6 +17,7 @@ import hashlib
 
 from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.responses import JSONResponse
+from supabase import create_client, Client
 
 from src.models.user import (
     UserRegisterRequest,
@@ -29,6 +30,12 @@ from src.models.user import (
 from src.services.trial_service import get_trial_service, TrialService
 from src.db.connection_pool import db_pool
 from src.config import settings
+
+# Initialize Supabase Admin client (service role has full access)
+supabase: Client = create_client(
+    settings.supabase_url,
+    settings.supabase_service_role_key
+)
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -96,37 +103,40 @@ async def register(
         HTTPException 500: Database error
     """
     try:
-        # Check if email already exists
-        existing_user = await db_pool.fetchrow("""
-            SELECT id FROM users WHERE email = $1
-        """, request.email)
+        # Create user in Supabase Auth (auth.users table)
+        # This will automatically trigger the database sync to public.users
+        try:
+            auth_response = supabase.auth.admin.create_user({
+                "email": request.email,
+                "password": request.password,
+                "email_confirm": False,  # Require email verification
+                "user_metadata": {
+                    "registration_source": "email_password"
+                }
+            })
 
-        if existing_user:
+            if not auth_response.user:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to create user in authentication system"
+                )
+
+            user_id = auth_response.user.id
+
+        except Exception as e:
+            error_message = str(e)
+            # Check if it's a duplicate email error
+            if "already registered" in error_message.lower() or "already exists" in error_message.lower():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="An account with this email already exists"
+                )
+            # Re-raise other errors
+            print(f"Supabase Auth error: {e}")
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="An account with this email already exists"
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to register user"
             )
-
-        # Hash password
-        password_hash = hash_password(request.password)
-
-        # Create user with trial credits
-        user_id = await db_pool.fetchval("""
-            INSERT INTO users (
-                email,
-                password_hash,
-                firebase_uid,
-                email_verified,
-                trial_remaining,
-                trial_used,
-                subscription_tier,
-                subscription_status,
-                created_at,
-                updated_at
-            ) VALUES (
-                $1, $2, $3, false, 3, 0, 'free', 'inactive', NOW(), NOW()
-            ) RETURNING id
-        """, request.email, password_hash, f"temp_{request.email}")
 
         # Generate verification token
         token = generate_verification_token()
@@ -340,10 +350,36 @@ async def login(request: LoginRequest):
         HTTPException 500: Database error
     """
     try:
-        # Hash provided password
-        password_hash = hash_password(request.password)
+        # Authenticate with Supabase Auth
+        try:
+            auth_response = supabase.auth.sign_in_with_password({
+                "email": request.email,
+                "password": request.password
+            })
 
-        # Fetch user
+            if not auth_response.user:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid email or password"
+                )
+
+            user_id = auth_response.user.id
+
+        except Exception as e:
+            error_message = str(e)
+            # Check for invalid credentials error
+            if "invalid" in error_message.lower() or "credentials" in error_message.lower():
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid email or password"
+                )
+            print(f"Supabase Auth login error: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to login"
+            )
+
+        # Fetch user profile from public.users table (synced by trigger)
         user = await db_pool.fetchrow("""
             SELECT
                 id,
@@ -355,17 +391,18 @@ async def login(request: LoginRequest):
                 subscription_status,
                 created_at
             FROM users
-            WHERE email = $1 AND password_hash = $2
-        """, request.email, password_hash)
+            WHERE id = $1
+        """, user_id)
 
         if not user:
+            # User authenticated but profile not synced yet (edge case)
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid email or password"
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="User profile not found. Please try again."
             )
 
-        # Generate access token (use JWT in production)
-        # For now, use user_id as token since get_current_user expects UUID
+        # Use user_id as access token (since get_current_user expects UUID)
+        # TODO: Use proper JWT tokens in production
         access_token = str(user["id"])
 
         return LoginResponse(
