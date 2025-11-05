@@ -22,7 +22,7 @@ interface Project {
 
 export default function ProjectsPage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useUserStore();
+  const { isAuthenticated } = useUserStore();
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 

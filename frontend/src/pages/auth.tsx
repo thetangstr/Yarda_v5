@@ -36,42 +36,47 @@ export default function AuthPage() {
     setIsLoading(true);
 
     try {
-      let response;
-
       if (activeTab === 'signup') {
-        response = await authAPI.register({
+        // Register only creates the user, then redirect to login
+        await authAPI.register({
           email: formData.email,
           password: formData.password,
         });
+        // Switch to login tab after successful registration
+        setActiveTab('login');
+        setError(null);
+        setIsLoading(false);
+        return;
       } else {
-        response = await authAPI.login({
+        // Login returns access_token and user
+        const response = await authAPI.login({
           email: formData.email,
           password: formData.password,
         });
+
+        // Save access token and user data
+        setAccessToken(response.access_token);
+        setUser(response.user as any);
+
+        // Save to localStorage
+        const userStorage = localStorage.getItem('user-storage');
+        if (userStorage) {
+          const storage = JSON.parse(userStorage);
+          storage.state.accessToken = response.access_token;
+          localStorage.setItem('user-storage', JSON.stringify(storage));
+        }
+        localStorage.setItem('access_token', response.access_token);
+
+        // Check if there's a pending address
+        const pendingAddress = sessionStorage.getItem('pending_address');
+        if (pendingAddress) {
+          sessionStorage.removeItem('pending_address');
+        }
+
+        // Redirect
+        const redirect = (router.query.redirect as string) || '/generate';
+        router.push(redirect);
       }
-
-      // Save access token and user data
-      setAccessToken(response.access_token);
-      setUser(response.user as any);
-
-      // Save to localStorage
-      const userStorage = localStorage.getItem('user-storage');
-      if (userStorage) {
-        const storage = JSON.parse(userStorage);
-        storage.state.accessToken = response.access_token;
-        localStorage.setItem('user-storage', JSON.stringify(storage));
-      }
-      localStorage.setItem('access_token', response.access_token);
-
-      // Check if there's a pending address
-      const pendingAddress = sessionStorage.getItem('pending_address');
-      if (pendingAddress) {
-        sessionStorage.removeItem('pending_address');
-      }
-
-      // Redirect
-      const redirect = (router.query.redirect as string) || '/generate';
-      router.push(redirect);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
