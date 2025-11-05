@@ -80,7 +80,7 @@ export default function ProjectsPage() {
     setPage(1); // Reset to page 1
   };
 
-  const getStatusBadge = (status: Project['status']) => {
+  const getStatusBadge = (status: 'pending' | 'processing' | 'completed' | 'failed') => {
     switch (status) {
       case 'completed':
         return (
