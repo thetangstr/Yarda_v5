@@ -48,7 +48,7 @@ export default function ProjectsPage() {
       });
 
       // Transform generations to projects
-      const transformedProjects: Project[] = response.data.map((gen: Generation) => ({
+      const transformedProjects: Project[] = response.data.map((gen) => ({
         ...gen,
         title: gen.metadata?.address || `Design ${gen.id.slice(0, 8)}`,
         image_url: gen.image_urls && gen.image_urls.length > 0 ? gen.image_urls[0] : undefined
