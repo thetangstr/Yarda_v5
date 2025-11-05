@@ -40,7 +40,7 @@ export default function GeneratePage() {
   const { user, isAuthenticated, updateTrialRemaining } = useUserStore();
 
   const [formData, setFormData] = useState({
-    address: '22054 clearwood ct cupertino 95014',
+    address: '',
     area: 'front_yard',
     style: 'modern_minimalist',
     custom_prompt: '',
