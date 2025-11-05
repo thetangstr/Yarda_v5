@@ -5,37 +5,109 @@
  * Shows address input and generates free design.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+
+const BeforeAfterSlider = dynamic(() => import('@/components/BeforeAfterSlider'), {
+  ssr: false,
+  loading: () => (
+    <div className="aspect-[4/3] bg-brand-sage flex items-center justify-center rounded-2xl">
+      <div className="text-center">
+        <svg className="animate-spin h-8 w-8 mx-auto text-brand-green mb-2" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <p className="text-sm text-brand-dark-green">Loading comparison...</p>
+      </div>
+    </div>
+  ),
+});
 
 export default function StartPage() {
   const router = useRouter();
   const [address, setAddress] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [submitTimeout, setSubmitTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (submitTimeout) clearTimeout(submitTimeout);
+    };
+  }, [submitTimeout]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
     if (!address.trim()) {
+      setError('Please enter a valid address');
+      return;
+    }
+
+    // Basic address validation (street number + street name)
+    const addressPattern = /\d+.*[a-zA-Z]/;
+    if (!addressPattern.test(address)) {
+      setError('Please enter a complete street address (e.g., 123 Main St, Anytown, USA)');
       return;
     }
 
     setIsLoading(true);
 
-    // Store address and redirect to generate page
-    sessionStorage.setItem('pending_address', address);
+    // Add timeout protection (30 seconds)
+    const timeout = setTimeout(() => {
+      setIsLoading(false);
+      setError('Request timed out. Please try again.');
+    }, 30000);
 
-    // Redirect to login if not authenticated, otherwise to generate
-    router.push('/login?redirect=/generate');
+    setSubmitTimeout(timeout);
+
+    try {
+      // Store address safely with try-catch
+      try {
+        sessionStorage.setItem('pending_address', address);
+      } catch (storageError) {
+        console.warn('SessionStorage unavailable:', storageError);
+        // Continue anyway, address can be re-entered
+      }
+
+      // Redirect to auth with redirect param, or directly to generate if authenticated
+      router.push('/auth?redirect=/generate');
+    } catch (err) {
+      if (submitTimeout) clearTimeout(submitTimeout);
+      setError('Something went wrong. Please try again.');
+      console.error('Submit error:', err);
+    } finally {
+      setIsLoading(false);
+      if (submitTimeout) clearTimeout(submitTimeout);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-sage to-brand-cream">
       <Head>
-        <title>Get Your Free Design - Yarda AI</title>
-        <meta name="description" content="Get your free landscape design in seconds" />
+        <title>Get Your Free Landscape Design - Yarda AI</title>
+        <meta name="description" content="Transform your outdoor space with AI-powered landscape design. Enter your address and get 3 free professional yard designs in minutes. No credit card required." />
+
+        {/* Open Graph (Facebook, LinkedIn) */}
+        <meta property="og:title" content="Get Your Free Landscape Design - Yarda AI" />
+        <meta property="og:description" content="AI-powered landscape design in minutes. Start with 3 free designs." />
+        <meta property="og:type" content="website" />
+        <meta property="og:image" content="/images/yellow-house-after.jpg" />
+
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Get Your Free Landscape Design - Yarda AI" />
+        <meta name="twitter:description" content="AI-powered landscape design in minutes" />
+        <meta name="twitter:image" content="/images/yellow-house-after.jpg" />
+
+        {/* Preload critical images for better performance */}
+        <link rel="preload" as="image" href="/images/yellow-house-before.jpg" />
+        <link rel="preload" as="image" href="/images/yellow-house-after.jpg" />
       </Head>
 
       {/* Simple Header */}
@@ -57,15 +129,13 @@ export default function StartPage() {
       <div className="max-w-lg mx-auto px-4 py-12">
         {/* Hero Section */}
         <div className="text-center mb-8">
-          <div className="mb-6 rounded-2xl overflow-hidden shadow-2xl">
-            <img
-              src="/images/hero-yard.jpg"
-              alt="Beautiful landscaped yard"
-              className="w-full h-64 object-cover"
-              onError={(e) => {
-                // Fallback if image doesn't exist
-                e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%234F8B62" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" fill="white" font-size="24" font-family="sans-serif"%3EYour Dream Yard%3C/text%3E%3C/svg%3E';
-              }}
+          <div className="mb-6">
+            <BeforeAfterSlider
+              beforeImage="/images/yellow-house-before.jpg"
+              afterImage="/images/yellow-house-after.jpg"
+              beforeAlt="Yellow house with basic landscaping"
+              afterAlt="Yellow house with enhanced colorful flower beds and landscaping"
+              className="w-full"
             />
           </div>
 
@@ -83,13 +153,27 @@ export default function StartPage() {
 
         {/* Address Input Form */}
         <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} aria-label="Property address form">
+            {/* Error Display */}
+            {error && (
+              <div
+                id="address-error"
+                role="alert"
+                className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-start gap-2"
+              >
+                <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{error}</span>
+              </div>
+            )}
+
             <div className="mb-4">
               <label htmlFor="address" className="block text-sm font-medium text-neutral-700 mb-2">
                 Your Property Address:
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" aria-hidden="true">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -99,10 +183,17 @@ export default function StartPage() {
                   type="text"
                   id="address"
                   value={address}
-                  onChange={(e) => setAddress(e.target.value)}
+                  onChange={(e) => {
+                    setAddress(e.target.value);
+                    setError(null); // Clear error on input
+                  }}
                   placeholder="123 Main Street, Anytown, USA 12345"
                   className="w-full pl-10 pr-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-brand-green focus:border-transparent text-base"
                   required
+                  aria-required="true"
+                  aria-invalid={error ? 'true' : 'false'}
+                  aria-describedby={error ? 'address-error' : undefined}
+                  autoComplete="street-address"
                 />
               </div>
             </div>
@@ -111,6 +202,8 @@ export default function StartPage() {
               type="submit"
               disabled={isLoading || !address.trim()}
               className="w-full bg-brand-green hover:bg-brand-dark-green text-white font-semibold py-4 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl text-base"
+              aria-busy={isLoading}
+              aria-label="Generate free landscape design"
             >
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">

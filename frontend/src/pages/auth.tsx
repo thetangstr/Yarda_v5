@@ -9,9 +9,24 @@ import React, { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import GoogleSignInButton from '@/components/GoogleSignInButton';
+import dynamic from 'next/dynamic';
 import { authAPI, getErrorMessage } from '@/lib/api';
 import { useUserStore } from '@/store/userStore';
+
+const GoogleSignInButton = dynamic(() => import('@/components/GoogleSignInButton'), {
+  ssr: false,
+  loading: () => (
+    <button
+      type="button"
+      disabled
+      className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-white border-2 border-gray-300 opacity-50 cursor-wait font-medium text-gray-700"
+    >
+      <span>Loading...</span>
+    </button>
+  ),
+});
+
+type PasswordStrength = 'weak' | 'medium' | 'strong' | null;
 
 export default function AuthPage() {
   const router = useRouter();
@@ -23,16 +38,63 @@ export default function AuthPage() {
   });
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState<PasswordStrength>(null);
+  const [validationErrors, setValidationErrors] = useState<{
+    email?: string;
+    password?: string;
+  }>({});
+
+  const checkPasswordStrength = (pwd: string): PasswordStrength => {
+    if (pwd.length < 6) return 'weak';
+    if (pwd.length < 10 || !/[A-Z]/.test(pwd) || !/[0-9]/.test(pwd)) return 'medium';
+    return 'strong';
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setError(null);
+    setValidationErrors({});
+
+    // Update password strength indicator for signup
+    if (name === 'password' && activeTab === 'signup') {
+      setPasswordStrength(checkPasswordStrength(value));
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const errors: typeof validationErrors = {};
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.email) {
+      errors.email = 'Email is required';
+    } else if (!emailRegex.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+
+    // Password validation
+    if (!formData.password) {
+      errors.password = 'Password is required';
+    } else if (activeTab === 'signup' && formData.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setValidationErrors({});
+
+    // Validate form before submission
+    if (!validateForm()) {
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -45,6 +107,8 @@ export default function AuthPage() {
         // Switch to login tab after successful registration
         setActiveTab('login');
         setError(null);
+        setPasswordStrength(null);
+        setFormData({ email: formData.email, password: '' }); // Clear password but keep email
         setIsLoading(false);
         return;
       } else {
@@ -54,23 +118,18 @@ export default function AuthPage() {
           password: formData.password,
         });
 
-        // Save access token and user data
+        // Save access token and user data using Zustand (it handles localStorage automatically)
         setAccessToken(response.access_token);
-        setUser(response.user as any);
-
-        // Save to localStorage
-        const userStorage = localStorage.getItem('user-storage');
-        if (userStorage) {
-          const storage = JSON.parse(userStorage);
-          storage.state.accessToken = response.access_token;
-          localStorage.setItem('user-storage', JSON.stringify(storage));
-        }
-        localStorage.setItem('access_token', response.access_token);
+        setUser(response.user); // Trust zustand's type definitions
 
         // Check if there's a pending address
-        const pendingAddress = sessionStorage.getItem('pending_address');
-        if (pendingAddress) {
-          sessionStorage.removeItem('pending_address');
+        try {
+          const pendingAddress = sessionStorage.getItem('pending_address');
+          if (pendingAddress) {
+            sessionStorage.removeItem('pending_address');
+          }
+        } catch (storageError) {
+          console.warn('SessionStorage unavailable:', storageError);
         }
 
         // Redirect
@@ -123,9 +182,18 @@ export default function AuthPage() {
         {/* Auth Card */}
         <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
           {/* Tabs */}
-          <div className="flex gap-2 mb-6 bg-gray-100 p-1 rounded-lg">
+          <div className="flex gap-2 mb-6 bg-gray-100 p-1 rounded-lg" role="tablist" aria-label="Authentication options">
             <button
-              onClick={() => setActiveTab('signup')}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'signup'}
+              aria-controls="auth-form-content"
+              onClick={() => {
+                setActiveTab('signup');
+                setError(null);
+                setValidationErrors({});
+                setPasswordStrength(null);
+              }}
               className={`flex-1 py-2 px-4 rounded-md font-semibold text-sm transition-all ${
                 activeTab === 'signup'
                   ? 'bg-white text-brand-green shadow'
@@ -135,7 +203,16 @@ export default function AuthPage() {
               Sign Up
             </button>
             <button
-              onClick={() => setActiveTab('login')}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'login'}
+              aria-controls="auth-form-content"
+              onClick={() => {
+                setActiveTab('login');
+                setError(null);
+                setValidationErrors({});
+                setPasswordStrength(null);
+              }}
               className={`flex-1 py-2 px-4 rounded-md font-semibold text-sm transition-all ${
                 activeTab === 'login'
                   ? 'bg-white text-brand-green shadow'
@@ -147,20 +224,8 @@ export default function AuthPage() {
           </div>
 
           {/* Social Sign In */}
-          <div className="space-y-3 mb-6">
+          <div className="mb-6">
             <GoogleSignInButton />
-
-            {/* Apple Sign In - Placeholder */}
-            <button
-              type="button"
-              disabled
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-black text-white font-medium opacity-50 cursor-not-allowed"
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
-              </svg>
-              Sign {activeTab === 'signup' ? 'up' : 'in'} with Apple
-            </button>
           </div>
 
           {/* Divider */}
@@ -174,7 +239,13 @@ export default function AuthPage() {
           </div>
 
           {/* Email/Password Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form
+            id="auth-form-content"
+            role="tabpanel"
+            aria-label={activeTab === 'signup' ? 'Sign up form' : 'Log in form'}
+            onSubmit={handleSubmit}
+            className="space-y-4"
+          >
             {error && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
                 {error}
@@ -194,35 +265,88 @@ export default function AuthPage() {
                 required
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent text-base"
                 placeholder="Enter your email"
+                aria-invalid={validationErrors.email ? 'true' : 'false'}
+                aria-describedby={validationErrors.email ? 'email-error' : undefined}
+                autoComplete="email"
               />
+              {/* Validation Error */}
+              {validationErrors.email && (
+                <p id="email-error" role="alert" className="text-xs text-red-600 mt-1">
+                  {validationErrors.email}
+                </p>
+              )}
             </div>
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
-                Password
+                Password {activeTab === 'signup' && '(min. 6 characters)'}
               </label>
               <div className="relative">
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   id="password"
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent text-base"
-                  placeholder="Create a password"
+                  minLength={activeTab === 'signup' ? 6 : undefined}
+                  className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent text-base"
+                  placeholder={activeTab === 'signup' ? 'Create a secure password' : 'Enter your password'}
+                  aria-invalid={validationErrors.password ? 'true' : 'false'}
+                  aria-describedby={validationErrors.password ? 'password-error' : activeTab === 'signup' && passwordStrength ? 'password-strength' : undefined}
+                  autoComplete={activeTab === 'signup' ? 'new-password' : 'current-password'}
                 />
                 <button
                   type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  aria-label="Toggle password visibility"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-green rounded"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
+                  {showPassword ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
                 </button>
               </div>
+
+              {/* Password Strength Indicator (Signup only) */}
+              {activeTab === 'signup' && formData.password && passwordStrength && (
+                <div id="password-strength" className="mt-2">
+                  <div className="flex gap-1">
+                    <div className={`h-1 flex-1 rounded transition-colors ${
+                      passwordStrength === 'weak' ? 'bg-red-500' :
+                      passwordStrength === 'medium' ? 'bg-yellow-500' :
+                      'bg-green-500'
+                    }`} />
+                    <div className={`h-1 flex-1 rounded transition-colors ${
+                      passwordStrength === 'medium' || passwordStrength === 'strong' ?
+                        passwordStrength === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
+                        : 'bg-gray-200'
+                    }`} />
+                    <div className={`h-1 flex-1 rounded transition-colors ${
+                      passwordStrength === 'strong' ? 'bg-green-500' : 'bg-gray-200'
+                    }`} />
+                  </div>
+                  <p className="text-xs text-gray-600 mt-1">
+                    {passwordStrength === 'weak' && 'Password is too weak'}
+                    {passwordStrength === 'medium' && 'Password strength: Medium'}
+                    {passwordStrength === 'strong' && 'Strong password!'}
+                  </p>
+                </div>
+              )}
+
+              {/* Validation Error */}
+              {validationErrors.password && (
+                <p id="password-error" role="alert" className="text-xs text-red-600 mt-1">
+                  {validationErrors.password}
+                </p>
+              )}
             </div>
 
             <button

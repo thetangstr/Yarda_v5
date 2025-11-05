@@ -167,9 +167,20 @@ export const generationAPI = {
     return response.data;
   },
 
-  list: async (limit = 20, offset = 0): Promise<{ generations: Generation[]; total: number }> => {
+  list: async (params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    sort?: string;
+  }): Promise<{ data: Generation[]; total: number; has_more: boolean; page: number; limit: number }> => {
+    const { page = 1, limit = 20, status, sort } = params || {};
     const response = await apiClient.get('/generations/', {
-      params: { limit, offset },
+      params: {
+        page,
+        limit,
+        status,
+        sort,
+      },
     });
     return response.data;
   },

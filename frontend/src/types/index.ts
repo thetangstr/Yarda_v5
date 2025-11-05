@@ -1,73 +1,75 @@
 /**
- * Core TypeScript Types
- * Feature: 003-google-maps-integration
- * Purpose: Shared type definitions for landscape generation
+ * Shared TypeScript types for Yarda AI frontend
  */
 
-/**
- * Source of property image used for generation
- */
-export type ImageSource = 'user_upload' | 'google_street_view' | 'google_satellite';
+export interface User {
+  id: string;
+  email: string;
+  email_verified: boolean;
+  trial_remaining: number;
+  trial_used: number;
+  subscription_tier: 'free' | 'pro' | 'enterprise';
+  subscription_status: 'active' | 'inactive' | 'cancelled' | 'past_due';
+  created_at: string;
+  avatar_url?: string;
+  full_name?: string;
+}
 
-/**
- * Status of landscape generation
- */
-export type GenerationStatus = 'pending' | 'processing' | 'completed' | 'failed';
-
-/**
- * Payment method for generation
- */
-export type PaymentType = 'trial' | 'token' | 'subscription';
-
-/**
- * Landscape area type
- */
-export type LandscapeArea = 'front_yard' | 'back_yard' | 'side_yard' | 'full_property';
-
-/**
- * Generation record
- */
 export interface Generation {
   id: string;
-  userId: string;
-  status: GenerationStatus;
-  paymentType: PaymentType;
-  tokensDeducted: number;
-  address?: string;
-  imageUrl?: string;
-  requestParams: {
-    area: LandscapeArea;
-    style: string;
-    customPrompt?: string;
+  user_id: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  image_urls: string[];
+  metadata: {
+    address?: string;
+    area?: string;
+    style?: string;
+    prompt?: string;
+    [key: string]: any;
   };
-  imageSource: ImageSource;
-  resultUrl?: string;
-  errorMessage?: string;
-  createdAt: string;
-  completedAt?: string;
+  created_at: string;
+  updated_at: string;
+  error_message?: string;
 }
 
-/**
- * Request for creating a new generation
- */
-export interface GenerationCreateRequest {
-  address: string;
-  area: LandscapeArea;
-  style: string;
-  customPrompt?: string;
-  paymentType: PaymentType;
-  image?: File; // Optional: user-uploaded image
+export interface Project extends Generation {
+  title: string;
+  image_url?: string;
 }
 
-/**
- * Response from generation endpoint
- */
-export interface GenerationResponse {
+export interface TokenTransaction {
   id: string;
-  status: GenerationStatus;
-  imageUrl?: string;
-  imageSource: ImageSource;
-  resultUrl?: string;
-  errorMessage?: string;
-  createdAt: string;
+  user_id: string;
+  amount: number;
+  transaction_type: 'purchase' | 'usage' | 'refund' | 'bonus';
+  balance_after: number;
+  created_at: string;
+  stripe_payment_intent_id?: string;
+}
+
+export interface Subscription {
+  id: string;
+  user_id: string;
+  stripe_subscription_id: string;
+  status: 'active' | 'cancelled' | 'past_due' | 'trialing';
+  plan_name: string;
+  plan_amount: number;
+  current_period_start: string;
+  current_period_end: string;
+  cancel_at_period_end: boolean;
+}
+
+export interface ApiError {
+  message: string;
+  code?: string;
+  status?: number;
+  details?: any;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  page: number;
+  limit: number;
+  total: number;
+  has_more: boolean;
 }

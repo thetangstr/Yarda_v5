@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * Google Sign-In Button Component
  *

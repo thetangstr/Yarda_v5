@@ -11,20 +11,19 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useUserStore } from '@/store/userStore';
 import Navigation from '@/components/Navigation';
-
-interface Project {
-  id: string;
-  title: string;
-  status: 'completed' | 'processing' | 'pending' | 'failed';
-  created_at: string;
-  image_url?: string;
-}
+import type { Generation, Project } from '@/types';
+import { generationAPI } from '@/lib/api';
 
 export default function ProjectsPage() {
   const router = useRouter();
   const { isAuthenticated } = useUserStore();
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'all' | 'completed' | 'processing' | 'failed'>('all');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -32,25 +31,55 @@ export default function ProjectsPage() {
       return;
     }
 
-    // TODO: Fetch actual projects from API
-    // For now, show mock data
-    setProjects([
-      {
-        id: '1',
-        title: 'Front Yard Makeover',
-        status: 'completed',
-        created_at: 'June 15, 2024',
-        image_url: '/images/project-1.jpg'
-      },
-      {
-        id: '2',
-        title: 'Backyard Patio Idea',
-        status: 'processing',
-        created_at: 'June 12, 2024',
-      }
-    ]);
-    setIsLoading(false);
-  }, [isAuthenticated, router]);
+    fetchProjects();
+  }, [isAuthenticated, router, filter, sortBy, page]);
+
+  const fetchProjects = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Call real API endpoint
+      const response = await generationAPI.list({
+        page,
+        limit: 12,
+        status: filter !== 'all' ? filter : undefined,
+        sort: sortBy === 'newest' ? 'created_at:desc' : 'created_at:asc'
+      });
+
+      // Transform generations to projects
+      const transformedProjects: Project[] = response.data.map((gen: Generation) => ({
+        ...gen,
+        title: gen.metadata?.address || `Design ${gen.id.slice(0, 8)}`,
+        image_url: gen.image_urls && gen.image_urls.length > 0 ? gen.image_urls[0] : undefined
+      }));
+
+      // Append for pagination or replace for new filter
+      setProjects(prev => page === 1 ? transformedProjects : [...prev, ...transformedProjects]);
+      setHasMore(response.has_more || false);
+    } catch (err) {
+      console.error('Failed to fetch projects:', err);
+      setError('Failed to load projects. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLoadMore = () => {
+    if (!isLoading && hasMore) {
+      setPage(prev => prev + 1);
+    }
+  };
+
+  const handleFilterChange = (newFilter: typeof filter) => {
+    setFilter(newFilter);
+    setPage(1); // Reset to page 1
+  };
+
+  const handleSortChange = (newSort: typeof sortBy) => {
+    setSortBy(newSort);
+    setPage(1); // Reset to page 1
+  };
 
   const getStatusBadge = (status: Project['status']) => {
     switch (status) {
@@ -112,30 +141,117 @@ export default function ProjectsPage() {
           </Link>
         </div>
 
-        {/* Projects Grid */}
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <svg className="w-8 h-8 animate-spin text-brand-green" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-          </div>
-        ) : projects.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow">
-            <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-            </svg>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">No Projects Yet</h2>
-            <p className="text-gray-600 mb-6">Start your first landscape design project</p>
-            <Link
-              href="/generate"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-brand-green text-white font-semibold rounded-lg hover:bg-brand-dark-green transition-colors"
+        {/* Filters Bar */}
+        <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between bg-white p-4 rounded-lg shadow">
+          {/* Status Filter */}
+          <div className="flex items-center gap-2">
+            <label htmlFor="filter" className="text-sm font-medium text-gray-700">
+              Status:
+            </label>
+            <select
+              id="filter"
+              value={filter}
+              onChange={(e) => handleFilterChange(e.target.value as typeof filter)}
+              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:border-transparent"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              <option value="all">All Projects</option>
+              <option value="completed">Completed</option>
+              <option value="processing">Processing</option>
+              <option value="failed">Failed</option>
+            </select>
+          </div>
+
+          {/* Sort */}
+          <div className="flex items-center gap-2">
+            <label htmlFor="sort" className="text-sm font-medium text-gray-700">
+              Sort by:
+            </label>
+            <select
+              id="sort"
+              value={sortBy}
+              onChange={(e) => handleSortChange(e.target.value as typeof sortBy)}
+              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:border-transparent"
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+            </select>
+          </div>
+
+          {/* Results Count */}
+          {!isLoading && (
+            <div className="text-sm text-gray-600">
+              {projects.length} {projects.length === 1 ? 'project' : 'projects'}
+            </div>
+          )}
+        </div>
+
+        {/* Error State */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center gap-3">
+              <svg className="w-5 h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Create Your First Project
-            </Link>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-red-800">{error}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setError(null);
+                  fetchProjects();
+                }}
+                className="text-sm text-red-600 hover:text-red-800 font-medium"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Projects Grid */}
+        {isLoading && page === 1 ? (
+          // Skeleton loading for initial page load
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <div key={n} className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
+                <div className="aspect-video bg-gray-200" />
+                <div className="p-4">
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
+                  <div className="h-3 bg-gray-200 rounded w-1/2 mb-4" />
+                  <div className="h-10 bg-gray-200 rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : projects.length === 0 && !error ? (
+          // Enhanced empty state
+          <div className="text-center py-16 bg-white rounded-lg shadow">
+            <div className="max-w-md mx-auto px-4">
+              <svg className="w-20 h-20 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-2">No Projects Yet</h2>
+              <p className="text-gray-600 mb-6">
+                Start your landscape design journey! Create your first project and see your outdoor space transformed with AI.
+              </p>
+              <Link
+                href="/start"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-brand-green text-white font-semibold rounded-lg hover:bg-brand-dark-green transition-colors shadow-md hover:shadow-lg"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Create Your First Project
+              </Link>
+
+              {/* Optional: Show tutorial link */}
+              <div className="mt-8">
+                <p className="text-sm text-gray-500 mb-3">Not sure where to start?</p>
+                <Link href="/how-it-works" className="text-sm text-brand-green hover:underline">
+                  Watch a quick tutorial →
+                </Link>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -172,7 +288,13 @@ export default function ProjectsPage() {
                 {/* Project Details */}
                 <div className="p-4">
                   <h3 className="font-semibold text-gray-900 mb-1">{project.title}</h3>
-                  <p className="text-sm text-gray-500 mb-4">Created on {project.created_at}</p>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Created {new Date(project.created_at).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </p>
 
                   <div className="flex items-center gap-2">
                     <Link
@@ -194,6 +316,29 @@ export default function ProjectsPage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Load More Button */}
+        {hasMore && !isLoading && !error && (
+          <div className="text-center mt-8">
+            <button
+              onClick={handleLoadMore}
+              disabled={isLoading}
+              className="px-6 py-3 bg-white border-2 border-brand-green text-brand-green font-semibold rounded-lg hover:bg-brand-green hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? 'Loading...' : 'Load More Projects'}
+            </button>
+          </div>
+        )}
+
+        {/* Loading indicator for pagination */}
+        {isLoading && page > 1 && (
+          <div className="flex items-center justify-center py-8">
+            <svg className="w-6 h-6 animate-spin text-brand-green" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
           </div>
         )}
       </div>
