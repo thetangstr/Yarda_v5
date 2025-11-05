@@ -183,10 +183,11 @@ export default function GeneratePage() {
         fetchTokenBalance();
       }
 
-      // Redirect to generation details page (or poll for completion)
-      setTimeout(() => {
-        router.push(`/generations/${response.id}`);
-      }, 2000);
+      // TODO: Create generation details page at /generations/[id]
+      // For now, keep user on generate page to see status
+      // setTimeout(() => {
+      //   router.push(`/generations/${response.id}`);
+      // }, 2000);
     } catch (err) {
       const errorMessage = getErrorMessage(err);
       setError(errorMessage);
