@@ -24,10 +24,11 @@ interface NavigationProps {
 
 export default function Navigation({ transparent = false }: NavigationProps) {
   const router = useRouter();
-  const { isAuthenticated } = useUserStore();
+  const { isAuthenticated, user, logout } = useUserStore();
   const { subscription } = useSubscriptionStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   // Check if user has active pro subscription
   const isProUser = subscription?.status === 'active' && subscription?.plan_name === 'Monthly Pro';
@@ -41,6 +42,25 @@ export default function Navigation({ transparent = false }: NavigationProps) {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Close profile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (profileMenuOpen && !target.closest('.profile-menu-container')) {
+        setProfileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [profileMenuOpen]);
+
+  const handleLogout = async () => {
+    logout();
+    setProfileMenuOpen(false);
+    router.push('/');
+  };
 
   const isActive = (path: string) => router.pathname === path;
 
@@ -113,18 +133,95 @@ export default function Navigation({ transparent = false }: NavigationProps) {
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
             {isAuthenticated ? (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 profile-menu-container relative">
                 {isProUser && (
                   <span className="text-xs font-semibold text-brand-green bg-brand-sage px-3 py-1 rounded-full">
                     Monthly Pro
                   </span>
                 )}
-                <Link
-                  href="/account"
-                  className="btn-primary px-4 py-2 text-sm"
+
+                {/* Profile Avatar Button */}
+                <button
+                  onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                  className="flex items-center gap-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
+                  aria-label="Profile menu"
                 >
-                  Account
-                </Link>
+                  {user?.avatar_url ? (
+                    <img
+                      src={user.avatar_url}
+                      alt={user.full_name || user.email}
+                      className="w-9 h-9 rounded-full border-2 border-brand-green object-cover"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-brand-green text-white flex items-center justify-center font-semibold text-sm">
+                      {user?.email?.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </button>
+
+                {/* Dropdown Menu */}
+                {profileMenuOpen && (
+                  <div className="absolute right-0 top-12 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
+                    {/* User Info */}
+                    <div className="px-4 py-3 border-b border-gray-200">
+                      <p className="text-sm font-semibold text-gray-900 truncate">
+                        {user?.full_name || user?.email}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {user?.email}
+                      </p>
+                    </div>
+
+                    {/* Menu Items */}
+                    <div className="py-1">
+                      <Link
+                        href="/generate"
+                        onClick={() => setProfileMenuOpen(false)}
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-brand-sage transition-colors"
+                      >
+                        <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                        </svg>
+                        Dashboard
+                      </Link>
+
+                      <Link
+                        href="/history"
+                        onClick={() => setProfileMenuOpen(false)}
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-brand-sage transition-colors"
+                      >
+                        <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
+                        My Files
+                      </Link>
+
+                      <Link
+                        href="/account"
+                        onClick={() => setProfileMenuOpen(false)}
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-brand-sage transition-colors"
+                      >
+                        <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        Account Settings
+                      </Link>
+                    </div>
+
+                    {/* Logout */}
+                    <div className="border-t border-gray-200 py-1">
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <>
