@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useUserStore } from '@/store/userStore';
 import Navigation from '@/components/Navigation';
-import type { Generation, Project } from '@/types';
+import type { Project } from '@/types';
 import { generationAPI } from '@/lib/api';
 
 export default function ProjectsPage() {
