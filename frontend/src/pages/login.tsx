@@ -279,7 +279,6 @@ export default function LoginPage() {
         <div className="mt-6">
           <GoogleSignInButton
             disabled={isLoading}
-            redirectTo={`${window.location.origin}/auth/callback${router.query.redirect ? `?redirect=${router.query.redirect}` : ''}`}
           />
         </div>
 
