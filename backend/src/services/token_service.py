@@ -47,9 +47,14 @@ class TokenService:
         async with self.db_pool.acquire() as conn:
             row = await conn.fetchrow(
                 """
-                SELECT balance, total_purchased, total_spent
-                FROM users_token_accounts
-                WHERE user_id = $1
+                SELECT
+                    uta.balance,
+                    COALESCE(SUM(CASE WHEN utt.type IN ('purchase', 'auto_reload', 'refund') THEN utt.amount ELSE 0 END), 0) as total_purchased,
+                    COALESCE(SUM(CASE WHEN utt.type = 'deduction' THEN ABS(utt.amount) ELSE 0 END), 0) as total_spent
+                FROM users_token_accounts uta
+                LEFT JOIN users_token_transactions utt ON uta.id = utt.token_account_id
+                WHERE uta.user_id = $1
+                GROUP BY uta.id, uta.balance
             """,
                 user_id,
             )
