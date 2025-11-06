@@ -65,7 +65,7 @@ async def get_payment_status(
         active_payment_method = "none"
         can_generate = False
 
-        if subscription_info and subscription_info.get('status') == 'active':
+        if subscription_info and subscription_info.status == 'active':
             active_payment_method = "subscription"
             can_generate = True
         elif trial_remaining > 0:
@@ -80,8 +80,8 @@ async def get_payment_status(
             trial_remaining=trial_remaining,
             trial_used=trial_used,
             token_balance=token_balance,
-            subscription_tier=subscription_info.get('tier') if subscription_info else None,
-            subscription_status=subscription_info.get('status') if subscription_info else None,
+            subscription_tier=subscription_info.tier if subscription_info else None,
+            subscription_status=subscription_info.status if subscription_info else None,
             can_generate=can_generate
         )
 

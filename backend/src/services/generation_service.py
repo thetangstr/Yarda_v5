@@ -90,7 +90,7 @@ class GenerationService:
         try:
             # Step 1: Check for active subscription (highest priority)
             subscription_status = await self.subscription_service.get_subscription_status(user_id)
-            if subscription_status and subscription_status.get('status') == 'active':
+            if subscription_status and subscription_status.status == 'active':
                 # Active subscription - no deduction needed
                 return (
                     True,
