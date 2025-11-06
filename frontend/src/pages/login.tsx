@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { authAPI, getErrorMessage } from '@/lib/api';
 import { useUserStore } from '@/store/userStore';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
+import GoogleOneTap from '@/components/GoogleOneTap';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -117,6 +118,13 @@ export default function LoginPage() {
           content="Sign in to your Yarda account to generate AI-powered landscape designs"
         />
       </Head>
+
+      {/* Google One Tap - auto sign-in for returning users */}
+      <GoogleOneTap
+        clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''}
+        autoSelect={true}
+        cancelOnTapOutside={true}
+      />
 
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-8">
         {/* Header */}
