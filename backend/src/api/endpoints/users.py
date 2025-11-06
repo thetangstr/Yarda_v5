@@ -55,8 +55,13 @@ async def get_payment_status(
         # Get trial balance
         trial_remaining, trial_used = await trial_service.get_trial_balance(user_id)
 
-        # Get token balance
-        token_balance, _, _ = await token_service.get_token_balance(user_id)
+        # Get token balance (handle missing token account gracefully)
+        try:
+            token_balance, _, _ = await token_service.get_token_balance(user_id)
+        except Exception as e:
+            # Token account may not exist yet - default to 0
+            print(f"Warning: Could not fetch token balance: {e}")
+            token_balance = 0
 
         # Get subscription status (handle missing subscriptions table gracefully)
         subscription_info = None
