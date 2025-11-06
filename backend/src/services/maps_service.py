@@ -440,7 +440,7 @@ class MapsService:
                 street_view_bytes = await self.fetch_street_view_image(coords)
 
                 if street_view_bytes:
-                    image_source = "google_street_view"
+                    image_source = "street_view"  # Changed from "google_street_view" to match DB constraint
                     logger.info(
                         "street_view_image_retrieved",
                         address=address,
