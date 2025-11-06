@@ -109,7 +109,7 @@ async def register(
             auth_response = supabase.auth.admin.create_user({
                 "email": request.email,
                 "password": request.password,
-                "email_confirm": False,  # Require email verification
+                "email_confirm": True,  # Auto-confirm for development (set to False with proper email service)
                 "user_metadata": {
                     "registration_source": "email_password"
                 }
