@@ -42,10 +42,11 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ) -> User:
     """
-    Extract and validate current user from JWT token.
+    Extract and validate current user from JWT token or user ID.
 
-    In production, validate JWT signature and expiry.
-    For now, we'll use a simple token lookup.
+    Supports two token types:
+    1. UUID tokens (for email/password login - returns user_id as token)
+    2. Supabase JWT tokens (for Google OAuth - returns JWT access_token)
 
     Args:
         credentials: HTTP Bearer token from Authorization header
@@ -57,19 +58,36 @@ async def get_current_user(
         HTTPException 401: Invalid or expired token
     """
     token = credentials.credentials
+    user_id = None
 
-    # TODO: Validate JWT token in production
-    # For now, do simple database lookup by token (stored during login)
-    # In production: decode JWT, verify signature, check expiry
-
-    # Placeholder: Assume token is user_id (replace with JWT validation)
+    # Try to parse as UUID first (for email/password login compatibility)
     try:
         user_id = UUID(token)
     except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication token"
-        )
+        # Not a UUID, try to validate as Supabase JWT token
+        from supabase import create_client
+        from src.config import settings
+
+        try:
+            # Initialize Supabase client to validate JWT
+            supabase = create_client(settings.supabase_url, settings.supabase_service_role_key)
+
+            # Verify JWT and get user
+            user_response = supabase.auth.get_user(token)
+
+            if user_response and user_response.user:
+                user_id = UUID(user_response.user.id)
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid authentication token"
+                )
+        except Exception as e:
+            print(f"JWT validation error: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication token"
+            )
 
     # Fetch user from database
     user_row = await db_pool.fetchrow("""
