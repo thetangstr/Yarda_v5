@@ -58,8 +58,13 @@ async def get_payment_status(
         # Get token balance
         token_balance, _, _ = await token_service.get_token_balance(user_id)
 
-        # Get subscription status
-        subscription_info = await subscription_service.get_subscription_status(user_id)
+        # Get subscription status (handle missing subscriptions table gracefully)
+        subscription_info = None
+        try:
+            subscription_info = await subscription_service.get_subscription_status(user_id)
+        except Exception as e:
+            # Subscriptions table may not exist yet - default to None
+            print(f"Warning: Could not fetch subscription status: {e}")
 
         # Determine active payment method (hierarchy: subscription > trial > token > none)
         active_payment_method = "none"
