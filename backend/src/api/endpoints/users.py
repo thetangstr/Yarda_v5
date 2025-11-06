@@ -9,7 +9,7 @@ Endpoints:
 from uuid import UUID
 from fastapi import APIRouter, HTTPException, Depends, status
 
-from src.models.user import PaymentStatusResponse
+from src.models.user import PaymentStatusResponse, User
 from src.services.trial_service import TrialService, get_trial_service
 from src.services.token_service import TokenService
 from src.services.subscription_service import SubscriptionService
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 @router.get("/payment-status", response_model=PaymentStatusResponse)
 async def get_payment_status(
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     trial_service: TrialService = Depends(get_trial_service),
 ) -> PaymentStatusResponse:
     """
@@ -45,7 +45,7 @@ async def get_payment_status(
     - FR-019: Display active payment method in generate button
     - FR-020: Show trial credits remaining prominently
     """
-    user_id = current_user["id"]
+    user_id = current_user.id
 
     try:
         # Initialize services
