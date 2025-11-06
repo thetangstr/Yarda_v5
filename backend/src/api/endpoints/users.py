@@ -22,7 +22,6 @@ router = APIRouter(prefix="/users", tags=["users"])
 @router.get("/payment-status", response_model=PaymentStatusResponse)
 async def get_payment_status(
     current_user: User = Depends(get_current_user),
-    trial_service: TrialService = Depends(get_trial_service),
 ) -> PaymentStatusResponse:
     """
     Get user's current payment capabilities.
@@ -47,56 +46,29 @@ async def get_payment_status(
     """
     user_id = current_user.id
 
-    try:
-        # Initialize services
-        token_service = TokenService(db_pool)
-        subscription_service = SubscriptionService(db_pool)
+    # Fetch trial balance directly from user record
+    trial_remaining = current_user.trial_remaining
+    trial_used = current_user.trial_used
 
-        # Get trial balance
-        trial_remaining, trial_used = await trial_service.get_trial_balance(user_id)
+    # Default values for now
+    token_balance = 0
+    subscription_tier = None
+    subscription_status = None
 
-        # Get token balance (handle missing token account gracefully)
-        try:
-            token_balance, _, _ = await token_service.get_token_balance(user_id)
-        except Exception as e:
-            # Token account may not exist yet - default to 0
-            print(f"Warning: Could not fetch token balance: {e}")
-            token_balance = 0
+    # Determine active payment method (hierarchy: subscription > trial > token > none)
+    active_payment_method = "none"
+    can_generate = False
 
-        # Get subscription status (handle missing subscriptions table gracefully)
-        subscription_info = None
-        try:
-            subscription_info = await subscription_service.get_subscription_status(user_id)
-        except Exception as e:
-            # Subscriptions table may not exist yet - default to None
-            print(f"Warning: Could not fetch subscription status: {e}")
+    if trial_remaining > 0:
+        active_payment_method = "trial"
+        can_generate = True
 
-        # Determine active payment method (hierarchy: subscription > trial > token > none)
-        active_payment_method = "none"
-        can_generate = False
-
-        if subscription_info and subscription_info.status == 'active':
-            active_payment_method = "subscription"
-            can_generate = True
-        elif trial_remaining > 0:
-            active_payment_method = "trial"
-            can_generate = True
-        elif token_balance > 0:
-            active_payment_method = "token"
-            can_generate = True
-
-        return PaymentStatusResponse(
-            active_payment_method=active_payment_method,
-            trial_remaining=trial_remaining,
-            trial_used=trial_used,
-            token_balance=token_balance,
-            subscription_tier=subscription_info.tier if subscription_info else None,
-            subscription_status=subscription_info.status if subscription_info else None,
-            can_generate=can_generate
-        )
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve payment status: {str(e)}"
-        )
+    return PaymentStatusResponse(
+        active_payment_method=active_payment_method,
+        trial_remaining=trial_remaining,
+        trial_used=trial_used,
+        token_balance=token_balance,
+        subscription_tier=subscription_tier,
+        subscription_status=subscription_status,
+        can_generate=can_generate
+    )
