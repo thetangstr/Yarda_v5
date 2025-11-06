@@ -16,10 +16,12 @@ export default function AuthCallback() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let authSubscription: { unsubscribe: () => void } | null = null;
+
     const handleCallback = async () => {
       try {
         // Listen for auth state changes - this is the proper way to handle OAuth callbacks
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
           console.log('Auth state change:', event, session);
 
           if (event === 'SIGNED_IN' && session) {
@@ -83,25 +85,18 @@ export default function AuthCallback() {
               }
             }
 
-            // Clean up subscription
-            subscription.unsubscribe();
-
             // Redirect to the generate page or intended destination
             const redirectTo = router.query.redirect as string || '/generate';
             router.push(redirectTo);
-          } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
-            subscription.unsubscribe();
-            setError('Authentication failed');
-            setTimeout(() => {
-              router.push('/login');
-            }, 2000);
           }
         });
 
-        // Also try to get existing session (for page refreshes)
+        authSubscription = data.subscription;
+
+        // Also try to get existing session (for page refreshes or direct navigation with existing session)
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
-          // Trigger the same logic
+          // Already have a session, process it
           setAccessToken(session.access_token);
 
           const { data: userData } = await supabase
@@ -128,12 +123,13 @@ export default function AuthCallback() {
 
           const redirectTo = router.query.redirect as string || '/generate';
           router.push(redirectTo);
+        } else if (!window.location.hash && !window.location.search.includes('code=')) {
+          // No session and no OAuth callback parameters - redirect to login
+          console.log('No session found, redirecting to login');
+          setTimeout(() => {
+            router.push('/login');
+          }, 2000);
         }
-
-        // Cleanup function
-        return () => {
-          subscription?.unsubscribe();
-        };
       } catch (err: any) {
         console.error('OAuth callback error:', err);
         setError(err.message || 'Authentication failed');
@@ -146,6 +142,13 @@ export default function AuthCallback() {
     };
 
     handleCallback();
+
+    // Cleanup function - MUST be returned directly from useEffect
+    return () => {
+      if (authSubscription) {
+        authSubscription.unsubscribe();
+      }
+    };
   }, [router, setUser, setAccessToken]);
 
   if (error) {
