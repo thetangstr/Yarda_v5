@@ -285,7 +285,7 @@ class GenerationService:
                     area_data['area'],
                     area_data['style'],
                     area_data.get('custom_prompt'),
-                    'not_started',
+                    'pending',  # Changed from 'not_started' to match DB constraint
                     0
                 )
                 area_ids.append(area_id)
