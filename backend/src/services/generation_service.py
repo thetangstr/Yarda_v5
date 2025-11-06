@@ -16,6 +16,7 @@ Requirements:
 """
 
 import asyncio
+import json
 from datetime import datetime
 from typing import Optional, List, Tuple, Dict, Any
 from uuid import UUID
@@ -257,7 +258,7 @@ class GenerationService:
             """,
                 user_id,
                 address,
-                {"address": address, "areas": areas},  # Store complete request
+                json.dumps({"address": address, "areas": areas}),  # Store complete request as JSON
                 "pending",
                 payment_method.value,
                 num_areas,
