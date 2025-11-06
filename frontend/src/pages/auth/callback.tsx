@@ -17,85 +17,125 @@ export default function AuthCallback() {
 
   useEffect(() => {
     const handleCallback = async () => {
-      let session = null;
-
       try {
-        // Get the session from the URL hash
-        const { data, error: sessionError } = await supabase.auth.getSession();
+        // Listen for auth state changes - this is the proper way to handle OAuth callbacks
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+          console.log('Auth state change:', event, session);
 
-        if (sessionError) {
-          throw sessionError;
-        }
+          if (event === 'SIGNED_IN' && session) {
+            // Store the access token
+            setAccessToken(session.access_token);
 
-        session = data.session;
+            // Fetch user data from our users table
+            if (session.user) {
+              // Wait a moment for the database trigger to sync the user
+              await new Promise(resolve => setTimeout(resolve, 500));
 
+              const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+
+              // Extract Google profile data
+              const googleMetadata = session.user.user_metadata;
+              const avatarUrl = googleMetadata?.avatar_url || googleMetadata?.picture;
+              const fullName = googleMetadata?.full_name || googleMetadata?.name;
+
+              if (userError) {
+                console.error('Error fetching user data:', userError);
+                // User might not be synced yet, use default values
+                setUser({
+                  id: session.user.id,
+                  email: session.user.email!,
+                  email_verified: session.user.email_confirmed_at !== null,
+                  trial_remaining: 3,
+                  trial_used: 0,
+                  subscription_tier: 'free',
+                  subscription_status: 'inactive',
+                  created_at: session.user.created_at,
+                  avatar_url: avatarUrl,
+                  full_name: fullName,
+                } as any);
+              } else {
+                // Use data from our users table + Google profile data
+                setUser({
+                  id: userData.id,
+                  email: userData.email,
+                  email_verified: userData.email_verified,
+                  trial_remaining: userData.trial_remaining,
+                  trial_used: userData.trial_used,
+                  subscription_tier: userData.subscription_tier,
+                  subscription_status: userData.subscription_status,
+                  created_at: userData.created_at,
+                  avatar_url: avatarUrl,
+                  full_name: fullName,
+                } as any);
+              }
+
+              // Store in localStorage for persistence
+              localStorage.setItem('access_token', session.access_token);
+              const userStorage = localStorage.getItem('user-storage');
+              if (userStorage) {
+                const storage = JSON.parse(userStorage);
+                storage.state.accessToken = session.access_token;
+                localStorage.setItem('user-storage', JSON.stringify(storage));
+              }
+            }
+
+            // Clean up subscription
+            subscription.unsubscribe();
+
+            // Redirect to the generate page or intended destination
+            const redirectTo = router.query.redirect as string || '/generate';
+            router.push(redirectTo);
+          } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+            subscription.unsubscribe();
+            setError('Authentication failed');
+            setTimeout(() => {
+              router.push('/login');
+            }, 2000);
+          }
+        });
+
+        // Also try to get existing session (for page refreshes)
+        const { data: { session } } = await supabase.auth.getSession();
         if (session) {
-          // Store the access token
+          // Trigger the same logic
           setAccessToken(session.access_token);
 
-          // Fetch user data from our users table
-          if (session.user) {
-            const { data: userData, error: userError } = await supabase
-              .from('users')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
+          const { data: userData } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
 
-            // Extract Google profile data
+          if (userData) {
             const googleMetadata = session.user.user_metadata;
-            const avatarUrl = googleMetadata?.avatar_url || googleMetadata?.picture;
-            const fullName = googleMetadata?.full_name || googleMetadata?.name;
-
-            if (userError) {
-              console.error('Error fetching user data:', userError);
-              // User might not be synced yet, use default values
-              setUser({
-                id: session.user.id,
-                email: session.user.email!,
-                email_verified: session.user.email_confirmed_at !== null,
-                trial_remaining: 3,
-                trial_used: 0,
-                subscription_tier: 'free',
-                subscription_status: 'inactive',
-                created_at: session.user.created_at,
-                avatar_url: avatarUrl,
-                full_name: fullName,
-              } as any);
-            } else {
-              // Use data from our users table + Google profile data
-              setUser({
-                id: userData.id,
-                email: userData.email,
-                email_verified: userData.email_verified,
-                trial_remaining: userData.trial_remaining,
-                trial_used: userData.trial_used,
-                subscription_tier: userData.subscription_tier,
-                subscription_status: userData.subscription_status,
-                created_at: userData.created_at,
-                avatar_url: avatarUrl,
-                full_name: fullName,
-              } as any);
-            }
-
-            // Store in localStorage for persistence
-            localStorage.setItem('access_token', session.access_token);
-            const userStorage = localStorage.getItem('user-storage');
-            if (userStorage) {
-              const storage = JSON.parse(userStorage);
-              storage.state.accessToken = session.access_token;
-              localStorage.setItem('user-storage', JSON.stringify(storage));
-            }
+            setUser({
+              id: userData.id,
+              email: userData.email,
+              email_verified: userData.email_verified,
+              trial_remaining: userData.trial_remaining,
+              trial_used: userData.trial_used,
+              subscription_tier: userData.subscription_tier,
+              subscription_status: userData.subscription_status,
+              created_at: userData.created_at,
+              avatar_url: googleMetadata?.avatar_url || googleMetadata?.picture,
+              full_name: googleMetadata?.full_name || googleMetadata?.name,
+            } as any);
           }
 
-          // Redirect to the generate page or intended destination
           const redirectTo = router.query.redirect as string || '/generate';
           router.push(redirectTo);
-        } else {
-          throw new Error('No session found');
         }
+
+        // Cleanup function
+        return () => {
+          subscription?.unsubscribe();
+        };
       } catch (err: any) {
         console.error('OAuth callback error:', err);
-        console.error('Session state:', session);
         setError(err.message || 'Authentication failed');
 
         // Redirect to login after a delay
