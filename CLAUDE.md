@@ -274,3 +274,7 @@ cd frontend && vercel env add VARIABLE_NAME production
 - Created `users` table with auth.users sync trigger
 - Updated all environment variables to use correct project IDs
 - Fixed CORS to support Vercel preview deployments
+
+## Active Technologies
+- TypeScript 5.6.3 (Frontend), Python 3.11+ (Backend) (004-generation-flow)
+- PostgreSQL 17 (Supabase) with atomic operations via row-level locking (004-generation-flow)

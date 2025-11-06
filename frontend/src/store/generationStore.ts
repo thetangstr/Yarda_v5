@@ -1,10 +1,17 @@
 /**
- * Generation state management using Zustand
+ * Generation state management using Zustand with localStorage persistence
  *
+ * Feature: 004-generation-flow
  * Manages landscape design generation state, progress, and results.
+ * Persists current generation state to localStorage for progress recovery on page refresh.
+ *
+ * Requirements:
+ * - FR-010: Progress persists across page refresh
+ * - FR-014: Background processing continues during page refresh
  */
 
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 export type YardAreaType = 'front_yard' | 'backyard' | 'walkway' | 'side_yard';
 export type LandscapeStyle =
@@ -63,59 +70,72 @@ interface GenerationState {
   clearCurrentGeneration: () => void;
 }
 
-export const useGenerationStore = create<GenerationState>((set) => ({
-  // Initial state
-  currentGeneration: null,
-  generationHistory: [],
-  isGenerating: false,
-
-  // Actions
-  setCurrentGeneration: (generation) =>
-    set({
-      currentGeneration: generation,
-      isGenerating: !!generation,
-    }),
-
-  updateGenerationProgress: (generationId, progress) =>
-    set((state) => {
-      if (state.currentGeneration?.generation_id === generationId) {
-        return {
-          currentGeneration: {
-            ...state.currentGeneration,
-            progress,
-          },
-        };
-      }
-      return state;
-    }),
-
-  updateAreaStatus: (generationId, areaId, status, progress) =>
-    set((state) => {
-      if (state.currentGeneration?.generation_id === generationId) {
-        const updatedAreas = state.currentGeneration.areas.map((area) =>
-          area.area_id === areaId
-            ? { ...area, status, progress: progress ?? area.progress }
-            : area
-        );
-
-        return {
-          currentGeneration: {
-            ...state.currentGeneration,
-            areas: updatedAreas,
-          },
-        };
-      }
-      return state;
-    }),
-
-  addGenerationToHistory: (generation) =>
-    set((state) => ({
-      generationHistory: [generation, ...state.generationHistory],
-    })),
-
-  clearCurrentGeneration: () =>
-    set({
+export const useGenerationStore = create<GenerationState>()(
+  persist(
+    (set) => ({
+      // Initial state
       currentGeneration: null,
+      generationHistory: [],
       isGenerating: false,
+
+      // Actions
+      setCurrentGeneration: (generation) =>
+        set({
+          currentGeneration: generation,
+          isGenerating: !!generation,
+        }),
+
+      updateGenerationProgress: (generationId, progress) =>
+        set((state) => {
+          if (state.currentGeneration?.generation_id === generationId) {
+            return {
+              currentGeneration: {
+                ...state.currentGeneration,
+                progress,
+              },
+            };
+          }
+          return state;
+        }),
+
+      updateAreaStatus: (generationId, areaId, status, progress) =>
+        set((state) => {
+          if (state.currentGeneration?.generation_id === generationId) {
+            const updatedAreas = state.currentGeneration.areas.map((area) =>
+              area.area_id === areaId
+                ? { ...area, status, progress: progress ?? area.progress }
+                : area
+            );
+
+            return {
+              currentGeneration: {
+                ...state.currentGeneration,
+                areas: updatedAreas,
+              },
+            };
+          }
+          return state;
+        }),
+
+      addGenerationToHistory: (generation) =>
+        set((state) => ({
+          generationHistory: [generation, ...state.generationHistory],
+        })),
+
+      clearCurrentGeneration: () =>
+        set({
+          currentGeneration: null,
+          isGenerating: false,
+        }),
     }),
-}));
+    {
+      name: 'yarda-generation-storage', // localStorage key
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        // Only persist currentGeneration and isGenerating (not history)
+        currentGeneration: state.currentGeneration,
+        isGenerating: state.isGenerating,
+      }),
+    }
+  )
+);

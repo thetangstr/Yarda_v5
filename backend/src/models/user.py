@@ -228,3 +228,46 @@ class PasswordResetConfirm(BaseModel):
 # Type aliases for authorization
 SubscriptionTier = str  # 'free', '7day_pass', 'per_property', 'monthly_pro'
 SubscriptionStatus = str  # 'inactive', 'active', 'past_due', 'cancelled'
+
+
+# ============================================================================
+# Payment Status Models (Feature: 004-generation-flow)
+# ============================================================================
+
+class PaymentStatusResponse(BaseModel):
+    """
+    User's current payment capabilities for generation flow.
+
+    Feature: 004-generation-flow
+    Endpoint: GET /v1/users/payment-status
+    Requirements: FR-007 (payment hierarchy), FR-019 (payment display)
+    """
+    active_payment_method: str = Field(
+        description="Currently active payment method (hierarchy: subscription > trial > token > none)",
+        examples=["subscription", "trial", "token", "none"]
+    )
+    trial_remaining: int = Field(
+        ge=0,
+        description="Trial credits remaining (3 on registration)"
+    )
+    trial_used: int = Field(
+        ge=0,
+        description="Trial credits used"
+    )
+    token_balance: int = Field(
+        ge=0,
+        description="Purchased tokens available"
+    )
+    subscription_tier: Optional[str] = Field(
+        None,
+        description="Subscription tier (e.g. 'monthly_pro')",
+        examples=["monthly_pro", None]
+    )
+    subscription_status: Optional[str] = Field(
+        None,
+        description="Subscription status (active/past_due/cancelled)",
+        examples=["active", "past_due", None]
+    )
+    can_generate: bool = Field(
+        description="Whether user has any payment method available"
+    )

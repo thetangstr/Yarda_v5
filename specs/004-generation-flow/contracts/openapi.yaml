@@ -1,0 +1,684 @@
+openapi: 3.0.3
+info:
+  title: Yarda AI - Generation Flow API
+  description: |
+    API endpoints for the landscape design generation flow feature.
+
+    **Feature**: Generation Flow Interface
+    **Feature Branch**: `004-generation-flow`
+    **Created**: 2025-11-06
+
+    ## Overview
+
+    This API enables users to generate AI-powered landscape designs by:
+    1. Providing property address or uploading images
+    2. Selecting yard areas (front, back, walkway, etc.)
+    3. Choosing design styles (modern, native, zen, etc.)
+    4. Tracking real-time generation progress
+    5. Managing payment methods (trial credits, tokens, subscriptions)
+
+    ## Authentication
+
+    All endpoints require Bearer token authentication:
+    ```
+    Authorization: Bearer <jwt_token>
+    ```
+
+    Token obtained from Supabase Auth login flow.
+
+    ## Payment Authorization Hierarchy
+
+    The system checks payment methods in this order:
+    1. **Subscription** (unlimited if active) → proceed
+    2. **Trial Credits** (3 free on registration) → deduct 1 per area
+    3. **Tokens** (purchased via Stripe) → deduct 1 per area
+    4. **None** → 403 Forbidden with upgrade CTA
+
+    ## Rate Limiting
+
+    - Max 5 concurrent generation requests per user
+    - Additional requests receive 429 Too Many Requests
+  version: 1.0.0
+  contact:
+    name: Yarda AI Support
+    url: https://yarda.ai/support
+
+servers:
+  - url: https://yarda-api-production.up.railway.app/v1
+    description: Production API
+  - url: http://localhost:8000/v1
+    description: Local Development
+
+tags:
+  - name: Generations
+    description: Create and track landscape design generations
+  - name: Payment Status
+    description: Query user's payment capabilities
+
+paths:
+  /generations:
+    post:
+      tags:
+        - Generations
+      summary: Create a new generation request
+      description: |
+        Initiates landscape design generation for one or more yard areas.
+
+        **Process**:
+        1. Validates payment authorization (subscription → trial → token)
+        2. Deducts payment atomically (all areas upfront)
+        3. Retrieves property imagery (Street View or user upload)
+        4. Creates generation request in database
+        5. Queues background tasks for parallel processing
+        6. Returns request_id for status polling
+
+        **Payment Deduction** (FR-008):
+        - Atomic operation using row-level locking
+        - Total cost = number of selected areas
+        - Automatic refund if generation fails (FR-011)
+
+        **Performance** (SC-003):
+        - Multi-area requests process in parallel
+        - Target: <90 seconds for 3 areas
+      operationId: createGeneration
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - areas
+                - style
+              properties:
+                address:
+                  type: string
+                  description: Property address for Street View imagery. Required if 'image' not provided.
+                  example: "1600 Amphitheatre Parkway, Mountain View, CA 94043"
+                  maxLength: 500
+                image:
+                  type: string
+                  format: binary
+                  description: User-uploaded property image. Required if 'address' not provided.
+                areas:
+                  type: array
+                  description: Yard areas to generate designs for (1-4 areas, 1 token each)
+                  items:
+                    type: string
+                    enum:
+                      - front_yard
+                      - backyard
+                      - walkway
+                      - side_yard
+                      - patio
+                      - pool_area
+                  minItems: 1
+                  maxItems: 4
+                  example: ["front_yard", "backyard"]
+                style:
+                  type: string
+                  description: Design style to apply to all selected areas
+                  enum:
+                    - modern_minimalist
+                    - california_native
+                    - japanese_zen
+                    - english_garden
+                    - desert_landscape
+                    - mediterranean
+                    - tropical
+                    - cottage_garden
+                  example: "modern_minimalist"
+                custom_prompt:
+                  type: string
+                  description: Optional custom instructions for the AI
+                  maxLength: 500
+                  example: "Include drought-tolerant plants and a water feature"
+            encoding:
+              image:
+                contentType: image/jpeg, image/png
+      responses:
+        '201':
+          description: Generation request created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationResponse'
+              examples:
+                singleArea:
+                  summary: Single area generation
+                  value:
+                    id: "a1b2c3d4-e5f6-4a5b-8c7d-9e8f7a6b5c4d"
+                    status: "pending"
+                    total_cost: 1
+                    payment_method: "trial"
+                    areas:
+                      - area: "front_yard"
+                        status: "pending"
+                        progress_percentage: 0
+                    created_at: "2025-11-06T12:00:00Z"
+                    estimated_completion: "2025-11-06T12:01:00Z"
+                multiArea:
+                  summary: Multi-area generation
+                  value:
+                    id: "f7e8d9c0-b1a2-4d5e-8f7a-6b5c4d3e2f1a"
+                    status: "pending"
+                    total_cost: 3
+                    payment_method: "token"
+                    areas:
+                      - area: "front_yard"
+                        status: "pending"
+                        progress_percentage: 0
+                      - area: "backyard"
+                        status: "pending"
+                        progress_percentage: 0
+                      - area: "walkway"
+                        status: "pending"
+                        progress_percentage: 0
+                    created_at: "2025-11-06T12:00:00Z"
+                    estimated_completion: "2025-11-06T12:01:30Z"
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                noAddressOrImage:
+                  summary: Missing address or image
+                  value:
+                    error: "validation_error"
+                    message: "Either 'address' or 'image' must be provided"
+                invalidAddress:
+                  summary: Address cannot be geocoded
+                  value:
+                    error: "invalid_address"
+                    message: "Unable to find address. Please verify the address or upload a photo manually."
+                noStreetView:
+                  summary: Street View unavailable
+                  value:
+                    error: "street_view_unavailable"
+                    message: "Street View imagery not available for this address. Please upload a photo manually."
+                invalidArea:
+                  summary: Invalid area type
+                  value:
+                    error: "validation_error"
+                    message: "Invalid area type. Must be one of: front_yard, backyard, walkway, side_yard, patio, pool_area"
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "unauthorized"
+                message: "Invalid or expired authentication token"
+        '403':
+          description: Insufficient payment method
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                noPaymentMethod:
+                  summary: No payment method available
+                  value:
+                    error: "insufficient_payment"
+                    message: "No payment method available. Purchase tokens or subscribe to Monthly Pro."
+                    trial_remaining: 0
+                    token_balance: 0
+                    subscription_status: null
+                    upgrade_url: "https://yarda.ai/pricing"
+                insufficientTokens:
+                  summary: Not enough tokens
+                  value:
+                    error: "insufficient_tokens"
+                    message: "You need 3 tokens but only have 1. Purchase more tokens to continue."
+                    required_tokens: 3
+                    available_tokens: 1
+                    upgrade_url: "https://yarda.ai/pricing"
+        '429':
+          description: Too many concurrent requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "rate_limit_exceeded"
+                message: "You have 5 generations in progress. Please wait for one to complete."
+                max_concurrent: 5
+                current_active: 5
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "internal_error"
+                message: "Generation failed due to system error. Your credit has been refunded automatically."
+                refunded_amount: 3
+
+  /generations/{id}:
+    get:
+      tags:
+        - Generations
+      summary: Get generation status and progress
+      description: |
+        Retrieves current status and progress for a generation request.
+
+        **Polling Pattern** (from research.md):
+        - Frontend should poll every 2 seconds
+        - Stop polling when status = 'completed' or 'failed'
+        - Use localStorage to store request_id for recovery
+
+        **Progress Recovery** (FR-012):
+        - If user refreshes page, resume polling with stored request_id
+        - Backend persists all status updates
+
+        **Performance** (SC-001, SC-003):
+        - Single-area: expect completion in 30-60 seconds
+        - Multi-area (3 areas): expect completion in <90 seconds
+      operationId: getGenerationStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Generation request ID
+          schema:
+            type: string
+            format: uuid
+          example: "a1b2c3d4-e5f6-4a5b-8c7d-9e8f7a6b5c4d"
+      responses:
+        '200':
+          description: Generation status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationStatusResponse'
+              examples:
+                pending:
+                  summary: Generation pending (just created)
+                  value:
+                    id: "a1b2c3d4-e5f6-4a5b-8c7d-9e8f7a6b5c4d"
+                    status: "pending"
+                    areas:
+                      - area: "front_yard"
+                        status: "pending"
+                        progress_percentage: 0
+                        status_message: "Queued for processing..."
+                    created_at: "2025-11-06T12:00:00Z"
+                    updated_at: "2025-11-06T12:00:00Z"
+                processing:
+                  summary: Generation in progress
+                  value:
+                    id: "a1b2c3d4-e5f6-4a5b-8c7d-9e8f7a6b5c4d"
+                    status: "processing"
+                    areas:
+                      - area: "front_yard"
+                        status: "processing"
+                        progress_percentage: 65
+                        status_message: "Generating landscape design..."
+                        current_stage: "generating_design"
+                    created_at: "2025-11-06T12:00:00Z"
+                    updated_at: "2025-11-06T12:00:35Z"
+                    estimated_completion: "2025-11-06T12:01:00Z"
+                completed:
+                  summary: Generation completed
+                  value:
+                    id: "a1b2c3d4-e5f6-4a5b-8c7d-9e8f7a6b5c4d"
+                    status: "completed"
+                    areas:
+                      - area: "front_yard"
+                        status: "completed"
+                        progress_percentage: 100
+                        status_message: "Design complete!"
+                        image_url: "https://blob.vercel-storage.com/generations/front-yard-abc123.jpg"
+                        completed_at: "2025-11-06T12:00:58Z"
+                    created_at: "2025-11-06T12:00:00Z"
+                    updated_at: "2025-11-06T12:00:58Z"
+                    completed_at: "2025-11-06T12:00:58Z"
+                    total_duration_seconds: 58
+                partialFailed:
+                  summary: Some areas failed
+                  value:
+                    id: "f7e8d9c0-b1a2-4d5e-8f7a-6b5c4d3e2f1a"
+                    status: "partial_failed"
+                    areas:
+                      - area: "front_yard"
+                        status: "completed"
+                        progress_percentage: 100
+                        image_url: "https://blob.vercel-storage.com/generations/front-yard-abc123.jpg"
+                        completed_at: "2025-11-06T12:00:55Z"
+                      - area: "backyard"
+                        status: "completed"
+                        progress_percentage: 100
+                        image_url: "https://blob.vercel-storage.com/generations/backyard-def456.jpg"
+                        completed_at: "2025-11-06T12:00:58Z"
+                      - area: "walkway"
+                        status: "failed"
+                        progress_percentage: 40
+                        status_message: "AI generation timeout. Credit refunded."
+                        error_message: "Gemini API timeout after 60 seconds"
+                    created_at: "2025-11-06T12:00:00Z"
+                    updated_at: "2025-11-06T12:01:30Z"
+                    refunded_amount: 1
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Generation request not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "not_found"
+                message: "Generation request not found or you don't have access"
+
+  /users/payment-status:
+    get:
+      tags:
+        - Payment Status
+      summary: Get user's payment capabilities
+      description: |
+        Returns user's current payment status including trial credits, token balance, and subscription info.
+
+        **Payment Hierarchy** (FR-007):
+        1. Subscription (unlimited if active)
+        2. Trial credits (3 free on registration)
+        3. Token balance (purchased via Stripe)
+
+        **UI Display** (FR-019):
+        - Show trial credits remaining prominently
+        - Show token balance if no trial credits
+        - Show "Active Subscription" badge if subscribed
+        - Show "Purchase Required" CTA if none available
+      operationId: getPaymentStatus
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Payment status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentStatusResponse'
+              examples:
+                trialUser:
+                  summary: New user with trial credits
+                  value:
+                    active_payment_method: "trial"
+                    trial_remaining: 3
+                    trial_used: 0
+                    token_balance: 0
+                    subscription_status: null
+                    can_generate: true
+                tokenUser:
+                  summary: User with purchased tokens
+                  value:
+                    active_payment_method: "token"
+                    trial_remaining: 0
+                    trial_used: 3
+                    token_balance: 50
+                    subscription_status: null
+                    can_generate: true
+                subscriber:
+                  summary: Monthly Pro subscriber
+                  value:
+                    active_payment_method: "subscription"
+                    trial_remaining: 0
+                    trial_used: 3
+                    token_balance: 25
+                    subscription_tier: "monthly_pro"
+                    subscription_status: "active"
+                    subscription_renewal_date: "2025-12-06T00:00:00Z"
+                    can_generate: true
+                noPayment:
+                  summary: No payment method available
+                  value:
+                    active_payment_method: "none"
+                    trial_remaining: 0
+                    trial_used: 3
+                    token_balance: 0
+                    subscription_status: null
+                    can_generate: false
+                    upgrade_url: "https://yarda.ai/pricing"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase Auth JWT token
+
+  schemas:
+    GenerationResponse:
+      type: object
+      description: Response after creating a generation request
+      required:
+        - id
+        - status
+        - total_cost
+        - payment_method
+        - areas
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique generation request identifier
+          example: "a1b2c3d4-e5f6-4a5b-8c7d-9e8f7a6b5c4d"
+        status:
+          type: string
+          enum: [pending, processing, completed, partial_failed, failed]
+          description: Overall generation status
+          example: "pending"
+        total_cost:
+          type: integer
+          description: Total tokens/credits deducted (equals number of areas)
+          example: 3
+        payment_method:
+          type: string
+          enum: [trial, token, subscription]
+          description: Payment method used for this generation
+          example: "trial"
+        areas:
+          type: array
+          description: List of areas being generated
+          items:
+            $ref: '#/components/schemas/AreaStatus'
+        created_at:
+          type: string
+          format: date-time
+          description: When the request was created
+          example: "2025-11-06T12:00:00Z"
+        estimated_completion:
+          type: string
+          format: date-time
+          description: Estimated completion time (based on 60 sec per area)
+          example: "2025-11-06T12:01:30Z"
+
+    GenerationStatusResponse:
+      type: object
+      description: Current status and progress of a generation request
+      required:
+        - id
+        - status
+        - areas
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Generation request identifier
+        status:
+          type: string
+          enum: [pending, processing, completed, partial_failed, failed]
+          description: Overall status
+        areas:
+          type: array
+          description: Status for each area
+          items:
+            $ref: '#/components/schemas/AreaStatus'
+        created_at:
+          type: string
+          format: date-time
+          description: Request creation time
+        updated_at:
+          type: string
+          format: date-time
+          description: Last status update time
+        completed_at:
+          type: string
+          format: date-time
+          description: Completion time (if completed)
+        total_duration_seconds:
+          type: integer
+          description: Total processing time (if completed)
+          example: 58
+        estimated_completion:
+          type: string
+          format: date-time
+          description: Estimated completion time (if still processing)
+        refunded_amount:
+          type: integer
+          description: Number of credits/tokens refunded (if any areas failed)
+          example: 1
+
+    AreaStatus:
+      type: object
+      description: Status and progress for a specific yard area
+      required:
+        - area
+        - status
+        - progress_percentage
+      properties:
+        area:
+          type: string
+          enum: [front_yard, backyard, walkway, side_yard, patio, pool_area]
+          description: Area identifier
+          example: "front_yard"
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+          description: Area generation status
+          example: "processing"
+        progress_percentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Progress percentage (0-100)
+          example: 65
+        status_message:
+          type: string
+          description: Human-readable status message
+          example: "Generating landscape design..."
+          maxLength: 200
+        current_stage:
+          type: string
+          enum: [queued, retrieving_imagery, analyzing_property, generating_design, applying_style, finalizing, complete]
+          description: Current processing stage
+          example: "generating_design"
+        image_url:
+          type: string
+          format: uri
+          description: URL of generated image (when completed)
+          example: "https://blob.vercel-storage.com/generations/front-yard-abc123.jpg"
+        completed_at:
+          type: string
+          format: date-time
+          description: Completion timestamp (if completed)
+        error_message:
+          type: string
+          description: Error details (if failed)
+          example: "AI generation timeout after 60 seconds"
+
+    PaymentStatusResponse:
+      type: object
+      description: User's current payment capabilities
+      required:
+        - active_payment_method
+        - trial_remaining
+        - trial_used
+        - token_balance
+        - can_generate
+      properties:
+        active_payment_method:
+          type: string
+          enum: [subscription, trial, token, none]
+          description: Currently active payment method (hierarchy: subscription > trial > token)
+          example: "trial"
+        trial_remaining:
+          type: integer
+          minimum: 0
+          description: Trial credits remaining
+          example: 3
+        trial_used:
+          type: integer
+          minimum: 0
+          description: Trial credits used
+          example: 0
+        token_balance:
+          type: integer
+          minimum: 0
+          description: Purchased tokens available
+          example: 0
+        subscription_tier:
+          type: string
+          enum: [monthly_pro, annual_pro]
+          description: Subscription tier (if subscribed)
+          example: "monthly_pro"
+        subscription_status:
+          type: string
+          enum: [active, past_due, canceled, trialing, incomplete]
+          description: Subscription status (if subscribed)
+          example: "active"
+        subscription_renewal_date:
+          type: string
+          format: date-time
+          description: Next renewal date (if subscribed)
+          example: "2025-12-06T00:00:00Z"
+        can_generate:
+          type: boolean
+          description: Whether user can generate designs
+          example: true
+        upgrade_url:
+          type: string
+          format: uri
+          description: URL to purchase tokens or subscribe (if can_generate = false)
+          example: "https://yarda.ai/pricing"
+
+    Error:
+      type: object
+      description: Error response
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code
+          example: "insufficient_payment"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "No payment method available. Purchase tokens or subscribe to Monthly Pro."
+        details:
+          type: object
+          description: Additional error context
+          additionalProperties: true

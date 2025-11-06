@@ -22,8 +22,19 @@ from src.models.user import User
 from src.api.dependencies import get_current_user, require_verified_email
 from src.services.trial_service import get_trial_service, TrialService
 from src.services.token_service import TokenService
+from src.services.subscription_service import SubscriptionService
+from src.services.generation_service import GenerationService
+from src.services.gemini_client import GeminiClient
+from src.services.storage_service import BlobStorageService
 from src.services.maps_service import MapsService, MapsServiceError
-from src.models.generation import ImageSource
+from src.models.generation import (
+    ImageSource,
+    CreateGenerationRequest,
+    MultiAreaGenerationResponse,
+    AreaStatusResponse,
+    GenerationStatus,
+    AreaStatus
+)
 from src.db.connection_pool import db_pool
 import structlog
 
@@ -196,6 +207,161 @@ async def refund_payment(
     except Exception as e:
         print(f"Payment refund error: {e}")
         # Log but don't raise - refund failure shouldn't block error response
+
+
+@router.post("/multi", response_model=MultiAreaGenerationResponse, status_code=status.HTTP_201_CREATED)
+async def create_multi_area_generation(
+    request: CreateGenerationRequest,
+    user: User = Depends(require_verified_email),
+    trial_service: TrialService = Depends(get_trial_service)
+):
+    """
+    Create multi-area landscape generation request (Feature 004-generation-flow).
+
+    This endpoint implements the new generation flow that supports 1-5 areas per request.
+    Payment is deducted atomically BEFORE Street View retrieval.
+
+    **Payment Hierarchy** (FR-007):
+    1. Active subscription → unlimited generations (NO DEDUCTION)
+    2. Trial credits → limited generations (DEDUCT N TRIALS, N = number of areas)
+    3. Token balance → pay-per-use (DEDUCT N TOKENS)
+
+    **Workflow**:
+    1. Validate request (address, areas uniqueness, 1-5 areas)
+    2. Authorize and deduct payment atomically
+    3. Create generation record + generation_areas records
+    4. Retrieve Street View imagery (if available)
+    5. Store source image metadata in generation_source_images
+    6. Return generation ID with status='pending'
+    7. Background worker processes generation asynchronously
+
+    **Requirements**:
+    - FR-008: Atomic payment deduction BEFORE generation
+    - FR-001: Address validation via Google Maps Geocoding API
+    - FR-060: Multi-area support (1-5 areas, 1 credit each)
+    - FR-011: Automatic refund on failure
+    - FR-010: Progress persists across page refresh (via polling)
+
+    Args:
+        request: CreateGenerationRequest with address and areas list
+        user: Current authenticated user
+        trial_service: Trial service for checking trial balance
+
+    Returns:
+        MultiAreaGenerationResponse with generation ID, status, and area details
+
+    Raises:
+        HTTPException 400: Invalid address, duplicate areas, or validation error
+        HTTPException 403: Insufficient payment (no trial/token/subscription)
+        HTTPException 500: Generation creation failed
+    """
+    try:
+        # Step 1: Convert AreaRequest models to dicts for GenerationService
+        areas_data = [
+            {
+                'area': area.area.value,
+                'style': area.style.value,
+                'custom_prompt': area.custom_prompt
+            }
+            for area in request.areas
+        ]
+
+        # Step 2: Initialize services
+        token_service = TokenService(db_pool)
+        subscription_service = SubscriptionService(db_pool)
+        gemini_client = GeminiClient()
+        storage_service = BlobStorageService()
+
+        generation_service = GenerationService(
+            db_pool=db_pool,
+            gemini_client=gemini_client,
+            storage_service=storage_service,
+            trial_service=trial_service,
+            token_service=token_service,
+            subscription_service=subscription_service
+        )
+
+        # Step 3: Call GenerationService.create_generation() - handles payment + Street View
+        success, generation_id, error_message, generation_data = await generation_service.create_generation(
+            user_id=user.id,
+            address=request.address,
+            areas=areas_data
+        )
+
+        if not success:
+            # Generation creation failed (payment or Street View retrieval)
+            logger.error(
+                "generation_creation_failed",
+                user_id=str(user.id),
+                address=request.address,
+                error=error_message
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=error_message
+            )
+
+        # Step 4: Fetch created generation_areas for response
+        areas_response = []
+        for area_id in generation_data['area_ids']:
+            area_record = await db_pool.fetchrow("""
+                SELECT
+                    id,
+                    area_type,
+                    style,
+                    status,
+                    progress,
+                    current_stage,
+                    status_message,
+                    image_url,
+                    error_message,
+                    completed_at
+                FROM generation_areas
+                WHERE id = $1
+            """, UUID(area_id))
+
+            if area_record:
+                areas_response.append(AreaStatusResponse(
+                    id=area_record['id'],
+                    area=area_record['area_type'],
+                    style=area_record['style'],
+                    status=AreaStatus(area_record['status']),
+                    progress=area_record['progress'],
+                    current_stage=area_record['current_stage'],
+                    status_message=area_record['status_message'],
+                    image_url=area_record['image_url'],
+                    error_message=area_record['error_message'],
+                    completed_at=area_record['completed_at']
+                ))
+
+        # Step 5: Return MultiAreaGenerationResponse
+        return MultiAreaGenerationResponse(
+            id=generation_id,
+            status=GenerationStatus.PENDING,
+            total_cost=generation_data['total_cost'],
+            payment_method=generation_data['payment_method'],
+            areas=areas_response,
+            created_at=generation_data['created_at'],
+            start_processing_at=None,
+            completed_at=None,
+            estimated_completion=None,
+            error_message=None
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            "unexpected_generation_error",
+            user_id=str(user.id),
+            address=request.address,
+            error=str(e),
+            exc_info=True
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create generation: {str(e)}"
+        )
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
@@ -507,20 +673,39 @@ async def list_generations(
     }
 
 
-@router.get("/{generation_id}")
+@router.get("/{generation_id}", response_model=MultiAreaGenerationResponse)
 async def get_generation(
     generation_id: UUID,
     user: User = Depends(get_current_user)
 ):
     """
-    Get specific generation details.
+    Get generation status and details (Feature 004-generation-flow).
+
+    This endpoint is polled by the frontend to track generation progress.
+    Returns complete generation state including per-area progress.
+
+    **Polling Strategy** (FR-010):
+    - Frontend polls every 2 seconds while status is 'pending' or 'processing'
+    - Stops polling when status is 'completed', 'partial_failed', or 'failed'
+    - Progress persists in localStorage via Zustand store
+
+    **Status Values**:
+    - pending: Payment deducted, generation queued
+    - processing: Background worker is generating designs
+    - completed: All areas completed successfully
+    - partial_failed: Some areas completed, some failed
+    - failed: All areas failed or Street View retrieval failed
+
+    **Requirements**:
+    - FR-010: Progress persists across page refresh
+    - FR-014: Background processing continues during page refresh
 
     Args:
         generation_id: Generation UUID
         user: Current authenticated user
 
     Returns:
-        Generation object with areas and images
+        MultiAreaGenerationResponse with generation status and area details
 
     Raises:
         HTTPException 404: Generation not found
@@ -532,13 +717,13 @@ async def get_generation(
             id,
             user_id,
             status,
-            payment_type,
-            tokens_deducted,
+            payment_type AS payment_method,
+            tokens_deducted AS total_cost,
             address,
             request_params,
-            image_source,
             error_message,
             created_at,
+            start_processing_at,
             completed_at
         FROM generations
         WHERE id = $1
@@ -557,22 +742,50 @@ async def get_generation(
             detail="Not authorized to view this generation"
         )
 
-    # Fetch generation areas
-    areas = await db_pool.fetch("""
+    # Fetch generation areas with complete details
+    areas_records = await db_pool.fetch("""
         SELECT
             id,
             area_type,
+            style,
             status,
             progress,
-            gemini_response_time,
-            output_image_url,
-            error_message
+            current_stage,
+            status_message,
+            image_url,
+            error_message,
+            completed_at
         FROM generation_areas
         WHERE generation_id = $1
         ORDER BY created_at
     """, generation_id)
 
-    return {
-        **dict(generation),
-        "areas": [dict(a) for a in areas]
-    }
+    # Convert to AreaStatusResponse models
+    areas_response = []
+    for area_record in areas_records:
+        areas_response.append(AreaStatusResponse(
+            id=area_record['id'],
+            area=area_record['area_type'],
+            style=area_record['style'],
+            status=AreaStatus(area_record['status']),
+            progress=area_record['progress'],
+            current_stage=area_record['current_stage'],
+            status_message=area_record['status_message'],
+            image_url=area_record['image_url'],
+            error_message=area_record['error_message'],
+            completed_at=area_record['completed_at']
+        ))
+
+    # Return MultiAreaGenerationResponse
+    return MultiAreaGenerationResponse(
+        id=generation['id'],
+        status=GenerationStatus(generation['status']),
+        total_cost=generation['total_cost'] if generation['total_cost'] else len(areas_response),
+        payment_method=generation['payment_method'],
+        areas=areas_response,
+        created_at=generation['created_at'],
+        start_processing_at=generation['start_processing_at'],
+        completed_at=generation['completed_at'],
+        estimated_completion=None,  # TODO: Calculate based on average processing time
+        error_message=generation['error_message']
+    )

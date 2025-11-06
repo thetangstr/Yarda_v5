@@ -1,14 +1,14 @@
 """
 Generation Model
-Feature: 003-google-maps-integration
-Purpose: Landscape generation records with image source tracking
+Feature: 004-generation-flow (extends 003-google-maps-integration)
+Purpose: Landscape generation records with multi-area support and progress tracking
 """
 
 from enum import Enum
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 
 
 class ImageSource(str, Enum):
@@ -18,12 +18,54 @@ class ImageSource(str, Enum):
     GOOGLE_SATELLITE = "google_satellite"
 
 
+class YardArea(str, Enum):
+    """Type of yard area for landscape generation"""
+    FRONT_YARD = "front_yard"
+    BACKYARD = "backyard"
+    WALKWAY = "walkway"
+    SIDE_YARD = "side_yard"
+    PATIO = "patio"
+    POOL_AREA = "pool_area"
+
+
+class DesignStyle(str, Enum):
+    """Landscape design style options"""
+    MODERN_MINIMALIST = "modern_minimalist"
+    CALIFORNIA_NATIVE = "california_native"
+    JAPANESE_ZEN = "japanese_zen"
+    ENGLISH_GARDEN = "english_garden"
+    DESERT_LANDSCAPE = "desert_landscape"
+    MEDITERRANEAN = "mediterranean"
+    TROPICAL_RESORT = "tropical_resort"
+
+
 class GenerationStatus(str, Enum):
-    """Status of landscape generation"""
+    """Status of landscape generation (multi-area request)"""
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    PARTIAL_FAILED = "partial_failed"  # Some areas succeeded, some failed
+    FAILED = "failed"
+
+
+class AreaStatus(str, Enum):
+    """Status of individual area within multi-area generation"""
+    NOT_STARTED = "not_started"
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETED = "completed"
     FAILED = "failed"
+
+
+class ProcessingStage(str, Enum):
+    """Detailed progress tracking for area generation"""
+    QUEUED = "queued"
+    RETRIEVING_IMAGERY = "retrieving_imagery"
+    ANALYZING_PROPERTY = "analyzing_property"
+    GENERATING_DESIGN = "generating_design"
+    APPLYING_STYLE = "applying_style"
+    FINALIZING = "finalizing"
+    COMPLETE = "complete"
 
 
 class PaymentType(str, Enum):
@@ -76,6 +118,106 @@ class GenerationResponse(BaseModel):
     result_url: Optional[str]
     error_message: Optional[str]
     created_at: datetime
+
+    class Config:
+        orm_mode = True
+        use_enum_values = True
+
+
+# ============================================================================
+# Multi-Area Generation Models (Feature: 004-generation-flow)
+# ============================================================================
+
+class AreaRequest(BaseModel):
+    """Request model for individual yard area within multi-area generation"""
+    area: YardArea = Field(description="Type of yard area to generate")
+    style: DesignStyle = Field(description="Design style for this area")
+    custom_prompt: Optional[str] = Field(
+        None,
+        max_length=500,
+        description="Optional custom prompt for this area (max 500 characters)"
+    )
+
+
+class AreaStatusResponse(BaseModel):
+    """Progress tracking for individual area within multi-area generation"""
+    id: UUID = Field(description="Unique identifier for this area")
+    area: YardArea = Field(description="Type of yard area")
+    style: DesignStyle = Field(description="Design style applied")
+    status: AreaStatus = Field(description="Current status of this area")
+    progress: int = Field(ge=0, le=100, description="Progress percentage (0-100)")
+    current_stage: Optional[ProcessingStage] = Field(
+        None,
+        description="Current processing stage"
+    )
+    status_message: Optional[str] = Field(
+        None,
+        description="User-facing progress message"
+    )
+    image_url: Optional[str] = Field(None, description="Generated design image URL")
+    error_message: Optional[str] = Field(None, description="Error message if failed")
+    completed_at: Optional[datetime] = Field(None, description="Completion timestamp")
+
+    class Config:
+        orm_mode = True
+        use_enum_values = True
+
+
+class CreateGenerationRequest(BaseModel):
+    """
+    Request model for creating multi-area generation
+
+    Supports both single-area and multi-area generation requests.
+    Payment method is determined by backend based on user's subscription/token/trial status.
+    """
+    address: str = Field(
+        min_length=5,
+        max_length=200,
+        description="Full property address for imagery retrieval"
+    )
+    areas: List[AreaRequest] = Field(
+        min_items=1,
+        max_items=5,
+        description="List of yard areas to generate (1-5 areas)"
+    )
+
+    @validator('areas')
+    def validate_unique_areas(cls, areas):
+        """Ensure no duplicate area types in request"""
+        area_types = [area.area for area in areas]
+        if len(area_types) != len(set(area_types)):
+            raise ValueError("Duplicate area types not allowed in single generation request")
+        return areas
+
+
+class MultiAreaGenerationResponse(BaseModel):
+    """
+    Response model for multi-area generation request
+
+    Includes overall status and per-area progress tracking.
+    """
+    id: UUID = Field(description="Unique generation request ID")
+    status: GenerationStatus = Field(description="Overall generation status")
+    total_cost: int = Field(ge=1, description="Total cost in credits/tokens")
+    payment_method: PaymentType = Field(description="Payment method used (trial/token/subscription)")
+    areas: List[AreaStatusResponse] = Field(description="Status for each requested area")
+    created_at: datetime = Field(description="Request creation timestamp")
+    start_processing_at: Optional[datetime] = Field(
+        None,
+        description="When processing started"
+    )
+    completed_at: Optional[datetime] = Field(
+        None,
+        description="When all areas completed (or request failed)"
+    )
+    estimated_completion: Optional[datetime] = Field(
+        None,
+        description="Estimated completion time (for pending/processing status)"
+    )
+    error_message: Optional[str] = Field(
+        None,
+        description="Overall error message (for failed status)"
+    )
 
     class Config:
         orm_mode = True

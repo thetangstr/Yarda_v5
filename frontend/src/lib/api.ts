@@ -5,6 +5,12 @@
  */
 
 import axios, { AxiosInstance, AxiosError } from 'axios';
+import type {
+  CreateGenerationRequest as MultiAreaCreateRequest,
+  GenerationResponse as MultiAreaResponse,
+  GenerationStatusResponse as MultiAreaStatusResponse,
+  PaymentStatusResponse,
+} from '@/types/generation';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -187,6 +193,76 @@ export const generationAPI = {
 
   get: async (generationId: string): Promise<Generation> => {
     const response = await apiClient.get(`/generations/${generationId}`);
+    return response.data;
+  },
+};
+
+// ============================================================================
+// Multi-Area Generation APIs (Feature 004-generation-flow)
+// ============================================================================
+
+/**
+ * T030: Multi-area generation API for Feature 004-generation-flow
+ * Supports 1-5 areas per request with atomic payment deduction
+ */
+export const generationsAPI = {
+  /**
+   * T030: Create multi-area generation request
+   * POST /generations/multi
+   *
+   * @param request - CreateGenerationRequest with address and areas
+   * @returns MultiAreaResponse with generation ID and per-area status
+   */
+  create: async (request: MultiAreaCreateRequest): Promise<MultiAreaResponse> => {
+    // Convert areas array to AreaRequest format expected by backend
+    const requestBody = {
+      address: request.address,
+      areas: request.areas.map((area) => ({
+        area: area,
+        style: request.style,
+        custom_prompt: request.custom_prompt,
+      })),
+    };
+
+    const response = await apiClient.post('/generations/multi', requestBody);
+    return response.data;
+  },
+
+  /**
+   * T031: Get generation status for polling
+   * GET /generations/{id}
+   *
+   * Frontend polls this endpoint every 2 seconds to track progress
+   *
+   * @param generationId - Generation UUID
+   * @returns MultiAreaStatusResponse with overall status and per-area progress
+   */
+  getStatus: async (generationId: string): Promise<MultiAreaStatusResponse> => {
+    const response = await apiClient.get(`/generations/${generationId}`);
+    return response.data;
+  },
+};
+
+// ============================================================================
+// Payment Status APIs (Feature 004-generation-flow)
+// ============================================================================
+
+/**
+ * T032: Payment status API for Feature 004-generation-flow
+ * Provides payment method hierarchy and user capabilities
+ */
+export const paymentAPI = {
+  /**
+   * T032: Get user's payment status and capabilities
+   * GET /users/payment-status
+   *
+   * Returns payment hierarchy (subscription > trial > token > none)
+   * and whether user can generate designs
+   *
+   * @returns PaymentStatusResponse with active_payment_method and balances
+   */
+  getStatus: async (): Promise<PaymentStatusResponse> => {
+    const response = await apiClient.get('/users/payment-status');
     return response.data;
   },
 };

@@ -383,9 +383,11 @@ class MapsService:
         self,
         address: str,
         area: str
-    ) -> Tuple[Optional[bytes], Optional[bytes], str]:
+    ) -> Tuple[Optional[bytes], Optional[StreetViewMetadata], Optional[bytes], str]:
         """
         Main method: Get property images with automatic fallback.
+
+        Feature: 004-generation-flow (T011)
 
         Workflow:
         1. Geocode address → coordinates
@@ -398,17 +400,73 @@ class MapsService:
 
         Args:
             address: Full street address
-            area: Landscape area (front_yard, back_yard, side_yard, full_property)
+            area: Landscape area (front_yard, backyard, walkway, side_yard, patio, pool_area)
 
         Returns:
-            Tuple of (street_view_bytes | None, satellite_bytes | None, image_source)
-            At least one will be non-None, or raises error
+            Tuple of (street_view_bytes, street_view_metadata, satellite_bytes, image_source)
+            - street_view_bytes: Street View image bytes or None
+            - street_view_metadata: Metadata with pano_id or None
+            - satellite_bytes: Satellite image bytes or None
+            - image_source: 'google_street_view', 'google_satellite', or 'user_upload'
+            At least one image will be non-None, or raises error
 
         Raises:
             MapsServiceError: If no imagery available or API error
         """
-        # TODO: Implement in T042
-        raise NotImplementedError("To be implemented in T042")
+        logger.info("get_property_images_start", address=address, area=area)
+
+        # Step 1: Geocode address
+        coords = await self.geocode_address(address)
+        if not coords:
+            raise MapsServiceError(
+                "invalid_address",
+                f"Unable to geocode address: {address}"
+            )
+
+        logger.info("address_geocoded", lat=coords.lat, lng=coords.lng)
+
+        street_view_bytes = None
+        street_view_metadata = None
+        satellite_bytes = None
+        image_source = "google_satellite"  # Default fallback
+
+        # Step 2: Check Street View metadata (FREE API call)
+        try:
+            metadata = await self.get_street_view_metadata(coords)
+
+            # Step 3: Fetch Street View if available (PAID: $0.007)
+            if metadata.status == "OK":
+                street_view_metadata = metadata
+                street_view_bytes = await self.fetch_street_view_image(coords)
+
+                if street_view_bytes:
+                    image_source = "google_street_view"
+                    logger.info(
+                        "street_view_image_retrieved",
+                        address=address,
+                        pano_id=metadata.pano_id,
+                        size_bytes=len(street_view_bytes)
+                    )
+
+        except MapsServiceError as e:
+            logger.warning(
+                "street_view_retrieval_failed",
+                address=address,
+                error=str(e)
+            )
+
+        # Step 4: Fetch satellite image as fallback (PAID: TBD)
+        # For MVP (US1), we only support Street View
+        # Satellite imagery will be implemented in Phase 6
+
+        if not street_view_bytes:
+            raise MapsServiceError(
+                "no_imagery_available",
+                f"No Street View imagery available for address: {address}. "
+                "Please try a different address or upload a photo manually."
+            )
+
+        return (street_view_bytes, street_view_metadata, satellite_bytes, image_source)
 
     async def _retry_with_backoff(self, func, max_retries: int = 3, base_delay: int = 2):
         """

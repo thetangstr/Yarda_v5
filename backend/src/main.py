@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import settings
 from src.db.connection_pool import db_pool
-from src.api.endpoints import auth, generations, tokens, webhooks, subscriptions
+from src.api.endpoints import auth, generations, tokens, webhooks, subscriptions, users
 
 
 @asynccontextmanager
@@ -57,6 +57,7 @@ app.add_middleware(
 
 # Register routers
 app.include_router(auth.router)
+app.include_router(users.router)  # NEW: User profile and payment status endpoints
 app.include_router(generations.router)
 app.include_router(tokens.router)
 app.include_router(webhooks.router)
