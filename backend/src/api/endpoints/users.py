@@ -49,8 +49,8 @@ async def get_payment_status(
 
     try:
         # Initialize services
-        token_service = TokenService(db_pool)
-        subscription_service = SubscriptionService(db_pool)
+        token_service = TokenService(db_pool._pool)
+        subscription_service = SubscriptionService(db_pool._pool)
 
         # Get trial balance
         trial_remaining, trial_used = await trial_service.get_trial_balance(user_id)
