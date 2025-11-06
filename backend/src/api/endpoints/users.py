@@ -14,7 +14,7 @@ from src.services.trial_service import TrialService, get_trial_service
 from src.services.token_service import TokenService
 from src.services.subscription_service import SubscriptionService
 from src.db.connection_pool import db_pool
-from src.api.middleware.auth import get_current_user
+from src.api.dependencies import get_current_user
 
 router = APIRouter(prefix="/users", tags=["users"])
 
