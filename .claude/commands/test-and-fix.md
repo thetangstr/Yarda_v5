@@ -240,6 +240,43 @@ For each CUJ or test case in scope:
 
 #### Step 2: Execute Test Scenario
 
+**CRITICAL: Form Interaction Tests (Added 2025-11-08)**
+
+Before running CUJ-specific tests, ALWAYS run these interaction tests:
+
+```typescript
+// TC-FORM-INTERACTION-1: Address Input Persistence
+1. Navigate to {frontend_url}/generate
+2. Type "123 Main" in address field
+3. Wait for autocomplete suggestions
+4. Click first autocomplete suggestion (selects full address)
+5. ✅ ASSERT: Input value is full address (e.g., "123 Main St, City, State, ZIP")
+6. Click on "Front Yard" area selector
+7. ✅ ASSERT: Address input STILL shows full address (NOT "123 Main")
+8. Click on "Back Yard" area selector
+9. ✅ ASSERT: Address input STILL shows full address
+10. Take screenshot: "address-persistence-after-interaction.png"
+11. If FAILED: Report bug "Address reverts after area selection"
+
+// TC-FORM-VALIDATION-1: Backend Accepts Frontend Enum Values
+1. Navigate to {frontend_url}/generate
+2. Fill form with valid data:
+   - Address: "1600 Amphitheatre Parkway, Mountain View, CA"
+   - Area: front_yard
+   - Style: modern_minimalist (or any frontend default style)
+3. Open Network tab (monitor API calls)
+4. Click "Generate Design"
+5. Wait for POST /generations/multi request
+6. ✅ ASSERT: HTTP status is 200 or 201 (NOT 422)
+7. If 422:
+   - Capture request payload
+   - Capture response error details
+   - Take screenshot: "422-validation-error.png"
+   - Report bug: "Frontend-backend enum mismatch"
+8. ✅ ASSERT: Response includes generation_id
+9. Take screenshot: "form-submission-success.png"
+```
+
 **Example: CUJ-8 Phase 2 Features (TC-UX-1)**
 
 ```typescript
@@ -262,9 +299,10 @@ For each CUJ or test case in scope:
 12. Click "Generate"
 13. Open Network tab → Verify API request
 14. Check payload includes: preservation_strength: 0.8
-15. Take screenshot: "preservation-api-request.png"
-16. Navigate to progress page
-17. Verify preservation strength displayed in UI
+15. ✅ ASSERT: HTTP status is 200/201 (NOT 422)
+16. Take screenshot: "preservation-api-request.png"
+17. Navigate to progress page
+18. Verify preservation strength displayed in UI
 ```
 
 **Example: CUJ-1 Trial Flow (TC-E2E-1)**
