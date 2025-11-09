@@ -179,6 +179,15 @@ export const AddressInput: React.FC<AddressInputProps> = ({
     };
   }, [isLoaded, onChange]);
 
+  // Sync Google Places input with React state (fix for autocomplete not respecting controlled component)
+  // This ensures when parent re-renders (e.g., area selection), Google Places input stays in sync
+  useEffect(() => {
+    if (inputRef.current && inputRef.current.value !== value) {
+      console.log('[AddressInput] Syncing Google Places input with React state:', value);
+      inputRef.current.value = value;
+    }
+  }, [value]);
+
   return (
     <div className={className}>
       <label htmlFor="address" className="block text-sm font-medium text-neutral-900 mb-2">
