@@ -229,16 +229,138 @@ lsof -ti:3000 | xargs kill
 
 ### Phase 2: E2E Test Execution (30-90 min)
 
-For each CUJ or test case in scope:
+**CRITICAL: This phase MUST execute actual Playwright tests, not just document them.**
 
-#### Step 1: Pre-Test Setup
-- Launch browser using Playwright MCP
-- Navigate to frontend URL (environment-specific)
-- Clear cookies/storage if needed
-- Take baseline screenshot
-- Verify page loads correctly
+#### Step 1: Identify Test Files for Execution
 
-#### Step 2: Execute Test Scenario
+Map CUJs to existing Playwright test files:
+
+```bash
+# Available test files in frontend/tests/e2e/:
+- generation-flow-v2.spec.ts         # CUJ-7, CUJ-8 (v2 generation flow)
+- comprehensive-generation-test.spec.ts  # CUJ-7 (complete generation)
+- trial-user-registration.spec.ts    # CUJ-1 (trial registration)
+- token-purchase.spec.ts             # CUJ-2 (token purchase)
+- purchase-flow.spec.ts              # CUJ-2 (Stripe checkout)
+- staging-manual-test.spec.ts        # Staging environment tests
+- uat-comprehensive-verification.spec.ts  # Full UAT suite
+```
+
+**Test Mapping:**
+- CUJ-1 (Trial Flow) → trial-user-registration.spec.ts
+- CUJ-2 (Token Purchase) → token-purchase.spec.ts, purchase-flow.spec.ts
+- CUJ-7 (Generation Flow) → comprehensive-generation-test.spec.ts
+- CUJ-8 (Phase 2 UX) → generation-flow-v2.spec.ts
+- All CUJs → uat-comprehensive-verification.spec.ts
+
+#### Step 2: Execute Playwright Tests
+
+**For Local Environment:**
+```bash
+cd frontend
+npx playwright test [test-file] --config=playwright.config.ts --project=chromium
+```
+
+**For Staging Environment:**
+```bash
+cd frontend
+npx playwright test [test-file] --config=playwright.config.staging.ts --project=chromium-staging
+```
+
+**Test Execution Strategy:**
+
+1. **Run Critical Form Interaction Tests First** (Added 2025-11-09):
+   ```bash
+   # These tests catch fundamental bugs before running CUJ-specific tests
+   npx playwright test -g "TC-FORM-INTERACTION-1|TC-FORM-VALIDATION-1"
+   ```
+
+2. **Run CUJ-Specific Tests**:
+   - If `cuj` parameter specified: Run only that CUJ's test file
+   - If no `cuj` parameter: Run all test files sequentially
+
+3. **Use JSON Reporter for Parsing Results**:
+   ```bash
+   npx playwright test --reporter=json --output=test-results.json
+   ```
+
+4. **Capture Screenshots and Traces**:
+   - Configure Playwright to save screenshots on failure
+   - Save traces for debugging failed tests
+   - Organize by environment and timestamp
+
+#### Step 3: Parse Test Results
+
+After Playwright execution completes:
+
+1. **Read JSON test results**:
+   ```typescript
+   const results = JSON.parse(fs.readFileSync('test-results.json'));
+   ```
+
+2. **Extract metrics**:
+   - Total tests run
+   - Passed tests
+   - Failed tests
+   - Skipped tests
+   - Execution duration
+
+3. **Identify failures**:
+   - Test name
+   - Error message
+   - Stack trace
+   - Screenshots
+   - Line number
+
+#### Step 4: Generate Test Report
+
+Create `TEST_SESSION_{env}_{timestamp}.md` with:
+
+```markdown
+## Test Execution Results
+
+**Environment:** {env}
+**Date:** {timestamp}
+**Total Duration:** {duration}
+
+### Summary
+- ✅ Passed: {passed}/{total} ({percentage}%)
+- ❌ Failed: {failed}/{total}
+- ⏭️ Skipped: {skipped}/{total}
+
+### Test Results by CUJ
+
+#### CUJ-1: Trial Flow
+- File: trial-user-registration.spec.ts
+- Status: ✅ PASSED (or ❌ FAILED)
+- Duration: 45.2s
+- Tests:
+  - ✅ TC-E2E-1-1: User registration
+  - ✅ TC-E2E-1-2: First generation
+  - ❌ TC-E2E-1-3: Trial exhaustion (Error: ...)
+
+[Repeat for each CUJ]
+
+### Failed Tests Details
+
+[For each failed test, include:]
+- Test name
+- Error message
+- Screenshot path
+- Trace file path
+- Suggested fix
+```
+
+#### Step 5: Update TEST_PLAN.md
+
+Mark test cases as ✅ PASSED or ❌ FAILED with environment and date:
+
+```markdown
+- ✅ TC-E2E-1: PASSED (local, 2025-11-09)
+- ❌ TC-E2E-2: FAILED (staging, 2025-11-09)
+```
+
+#### Step 6: Execute Test Scenarios (Documentation for Manual Reference)
 
 **CRITICAL: Form Interaction Tests (Added 2025-11-08)**
 
