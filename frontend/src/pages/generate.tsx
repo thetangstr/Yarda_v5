@@ -73,7 +73,6 @@ export default function GeneratePageV2() {
   const [areaResults, setAreaResults] = useState<AreaResultWithProgress[]>([]);
   const [overallStatus, setOverallStatus] = useState<'pending' | 'processing' | 'completed' | 'failed' | 'partial'>('pending');
   const [error, setError] = useState<UserFacingError | null>(null);
-  const [timedOut, setTimedOut] = useState(false);
 
   // Refs for cleanup and scrolling
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -131,7 +130,6 @@ export default function GeneratePageV2() {
     // Update state
     setGenerationPhase('progress');
     setError(null);
-    setTimedOut(false);
     startPolling(generationId);
 
     // Show success toast
@@ -255,7 +253,6 @@ export default function GeneratePageV2() {
       onTimeout: () => {
         console.warn('[Generate] Polling timeout after 5 minutes');
 
-        setTimedOut(true);
         setPollingTimeout(true);
         setOverallStatus('failed');
         stopPolling();
@@ -294,7 +291,6 @@ export default function GeneratePageV2() {
 
     // Clear error state
     setError(null);
-    setTimedOut(false);
 
     // Show retry toast
     toast.info('Retrying...');
@@ -321,7 +317,6 @@ export default function GeneratePageV2() {
     setAreaResults([]);
     setOverallStatus('pending');
     setError(null);
-    setTimedOut(false);
     resetPolling();
     resetForm();
     clearGenerationFromLocalStorage();
