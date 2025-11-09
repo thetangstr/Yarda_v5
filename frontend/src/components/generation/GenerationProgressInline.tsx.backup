@@ -1,0 +1,250 @@
+/**
+ * GenerationProgressInline Component (Feature 005 - V2 Port)
+ *
+ * Displays real-time generation progress inline on the generate page.
+ * Updates every 2 seconds via polling from parent component.
+ *
+ * Features:
+ * - Per-area progress indicators
+ * - Status messages (pending, processing, completed, failed)
+ * - Visual progress bars (0-100%)
+ * - Framer Motion animations
+ *
+ * User Story: US1 (P1) - Single-page generation experience
+ */
+
+'use client';
+
+import { motion, AnimatePresence } from 'framer-motion';
+import type { AreaResultWithProgress } from '@/types/generation';
+import { ANIMATION_DURATION, ANIMATION_DELAY } from './shared/constants';
+import {
+  getAreaEmoji,
+  getAreaDisplayName,
+  getStatusText,
+  getStatusColor,
+} from './shared/utils';
+
+export interface GenerationProgressInlineProps {
+  /** Array of area results with progress information */
+  areas: AreaResultWithProgress[];
+  /** Overall generation status */
+  overallStatus: 'pending' | 'processing' | 'completed' | 'failed' | 'partial';
+  /** Optional custom className */
+  className?: string;
+}
+
+export default function GenerationProgressInline({
+  areas,
+  overallStatus,
+  className = '',
+}: GenerationProgressInlineProps) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: ANIMATION_DURATION.fast }}
+      className={`w-full max-w-4xl mx-auto ${className}`}
+      data-testid="generation-progress"
+    >
+      {/* Header */}
+      <div key="progress-header" className="mb-6 text-center">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          Creating Your Landscape Design
+        </h2>
+        <p className="text-gray-600" data-testid="progress-status">
+          {overallStatus === 'processing'
+            ? 'This may take 1-2 minutes...'
+            : overallStatus === 'completed'
+              ? 'Design complete!'
+              : overallStatus === 'failed'
+                ? 'Design creation failed'
+                : 'Starting design creation...'}
+        </p>
+      </div>
+
+      {/* Progress Cards */}
+      <div key="progress-cards" className="space-y-4">
+        <AnimatePresence mode="popLayout">
+          {areas.map((area, index) => (
+            <motion.div
+              key={area.areaId}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ delay: index * ANIMATION_DELAY.short, duration: ANIMATION_DURATION.fast }}
+              className="bg-white rounded-lg shadow-md p-6 border border-gray-200"
+              data-testid={`progress-area-${area.areaId}`}
+            >
+              {/* Area Header */}
+              <div key={`${area.areaId}-header`} className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <span className="text-3xl">{getAreaEmoji(area.areaId)}</span>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {getAreaDisplayName(area.areaId)}
+                    </h3>
+                    <p className={`text-sm font-medium ${getStatusColor(area.status)}`}>
+                      {getStatusText(area.status)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Status Icon */}
+                <div>
+                  {area.status === 'completed' ? (
+                    <svg
+                      className="w-8 h-8 text-green-500"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  ) : area.status === 'failed' ? (
+                    <svg
+                      className="w-8 h-8 text-red-500"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  ) : area.status === 'processing' ? (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ repeat: Infinity, duration: ANIMATION_DURATION.spinner, ease: 'linear' }}
+                    >
+                      <svg
+                        className="w-8 h-8 text-blue-500"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        />
+                      </svg>
+                    </motion.div>
+                  ) : null}
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              {area.status !== 'failed' && (
+                <div key={`${area.areaId}-progress-bar`} className="w-full bg-gray-200 rounded-full h-2.5">
+                  <motion.div
+                    className={`h-2.5 rounded-full ${
+                      area.status === 'completed'
+                        ? 'bg-green-600'
+                        : area.status === 'processing'
+                          ? 'bg-blue-600'
+                          : 'bg-gray-400'
+                    }`}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${area.progress}%` }}
+                    transition={{ duration: ANIMATION_DURATION.fast }}
+                  />
+                </div>
+              )}
+
+              {/* Thumbnail Preview - Show Google Maps image when available */}
+              {area.imageUrl && (
+                <motion.div
+                  key={`${area.areaId}-thumbnail`}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: ANIMATION_DURATION.fast }}
+                  className="mt-4"
+                >
+                  <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200">
+                    <img
+                      src={area.imageUrl}
+                      alt={`${getAreaDisplayName(area.areaId)} thumbnail`}
+                      className="w-full h-full object-cover"
+                    />
+                    {area.status === 'processing' && (
+                      <div className="absolute inset-0 bg-blue-500 bg-opacity-10 flex items-center justify-center">
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ repeat: Infinity, duration: ANIMATION_DURATION.spinnerSlow, ease: 'linear' }}
+                          className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full"
+                        />
+                      </div>
+                    )}
+                    <div className="absolute bottom-2 left-2 right-2">
+                      <div className="bg-black bg-opacity-60 backdrop-blur-sm rounded px-2 py-1">
+                        <p className="text-xs text-white font-medium">
+                          {area.status === 'completed' ? '✓ Design Complete' : '🎨 Processing...'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Error Message */}
+              {area.error && (
+                <motion.div
+                  key={`${area.areaId}-error`}
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md"
+                >
+                  <p className="text-sm text-red-800">{area.error}</p>
+                </motion.div>
+              )}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
+      {/* Loading Indicator */}
+      {(overallStatus === 'pending' || overallStatus === 'processing') && (
+        <motion.div
+          key="loading-indicator"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mt-6 text-center"
+        >
+          <div className="inline-flex items-center space-x-2 text-gray-600">
+            <motion.div
+              key="dot-1"
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ repeat: Infinity, duration: ANIMATION_DURATION.pulse }}
+              className="w-2 h-2 bg-blue-500 rounded-full"
+            />
+            <motion.div
+              key="dot-2"
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ repeat: Infinity, duration: ANIMATION_DURATION.pulse, delay: ANIMATION_DELAY.medium }}
+              className="w-2 h-2 bg-blue-500 rounded-full"
+            />
+            <motion.div
+              key="dot-3"
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ repeat: Infinity, duration: ANIMATION_DURATION.pulse, delay: ANIMATION_DELAY.long }}
+              className="w-2 h-2 bg-blue-500 rounded-full"
+            />
+          </div>
+        </motion.div>
+      )}
+    </motion.div>
+  );
+}

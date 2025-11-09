@@ -21,7 +21,6 @@ export enum YardArea {
   FrontYard = 'front_yard',
   Backyard = 'backyard',
   Walkway = 'walkway',
-  SideYard = 'side_yard',
   Patio = 'patio',
   PoolArea = 'pool_area',
 }
@@ -36,8 +35,7 @@ export enum DesignStyle {
   EnglishGarden = 'english_garden',
   DesertLandscape = 'desert_landscape',
   Mediterranean = 'mediterranean',
-  Tropical = 'tropical',
-  CottageGarden = 'cottage_garden',
+  TropicalResort = 'tropical_resort',
 }
 
 /**
@@ -165,6 +163,16 @@ export interface CreateGenerationRequest {
    * Max length: 500 characters
    */
   custom_prompt?: string;
+
+  /**
+   * Preservation strength (v2 enhancement)
+   * Controls transformation intensity
+   * 0.0-0.4: Dramatic transformation
+   * 0.4-0.6: Balanced transformation (default)
+   * 0.6-1.0: Subtle refinement
+   * Default: 0.5
+   */
+  preservation_strength?: number;
 }
 
 // ============================================================================
@@ -248,9 +256,30 @@ export interface GenerationResponse {
  */
 export interface AreaStatus {
   /**
+   * Area record ID
+   */
+  id: string;
+
+  /**
    * Yard area identifier
    */
   area: YardArea;
+
+  /**
+   * Design style for this area
+   */
+  style: DesignStyle;
+
+  /**
+   * Custom prompt for this area
+   */
+  custom_prompt?: string;
+
+  /**
+   * Preservation strength for this area (v2 enhancement)
+   * 0.0-1.0, default 0.5
+   */
+  preservation_strength?: number;
 
   /**
    * Current status
@@ -260,7 +289,13 @@ export interface AreaStatus {
   /**
    * Progress percentage (0-100)
    */
-  progress_percentage: number;
+  progress?: number;
+
+  /**
+   * Legacy field name for progress
+   * @deprecated Use progress instead
+   */
+  progress_percentage?: number;
 
   /**
    * Human-readable status message
@@ -322,9 +357,29 @@ export interface GenerationStatusResponse {
   id: string;
 
   /**
+   * User ID who created this generation
+   */
+  user_id?: string;
+
+  /**
    * Overall status
    */
   status: GenerationStatus;
+
+  /**
+   * Property address
+   */
+  address?: string;
+
+  /**
+   * Payment method used
+   */
+  payment_method: PaymentMethod;
+
+  /**
+   * Total cost in tokens/credits
+   */
+  total_cost: number;
 
   /**
    * Status for each area
@@ -339,7 +394,12 @@ export interface GenerationStatusResponse {
   /**
    * Last update timestamp (ISO 8601)
    */
-  updated_at: string;
+  updated_at?: string;
+
+  /**
+   * Processing start timestamp (ISO 8601)
+   */
+  start_processing_at?: string;
 
   /**
    * Completion timestamp (ISO 8601)
@@ -360,10 +420,25 @@ export interface GenerationStatusResponse {
   estimated_completion?: string;
 
   /**
+   * Error message if generation failed
+   */
+  error_message?: string;
+
+  /**
    * Number of credits/tokens refunded
    * Only present if any areas failed
    */
   refunded_amount?: number;
+
+  /**
+   * Source images (Street View/Satellite) for the property
+   * Used to display reference imagery while generation is in progress
+   */
+  source_images?: Array<{
+    image_type: 'street_view' | 'satellite' | 'user_upload';
+    image_url: string;
+    pano_id?: string;
+  }>;
 }
 
 /**
@@ -638,3 +713,242 @@ export const canUserGenerate = (payment: PaymentStatusResponse): boolean => {
 export const hasActiveSubscription = (payment: PaymentStatusResponse): boolean => {
   return payment.subscription_status === SubscriptionStatus.Active;
 };
+
+// ============================================================================
+// Type Aliases for Backwards Compatibility
+// ============================================================================
+
+/**
+ * Alias for DesignStyle (used in some components)
+ */
+export type LandscapeStyle = DesignStyle;
+
+// ============================================================================
+// V2 Generation Flow Types (Feature 005)
+// ============================================================================
+
+/**
+ * Suggested prompt option for a yard area
+ *
+ * @example
+ * ```typescript
+ * const prompt: SuggestedPrompt = {
+ *   id: 'front_yard_1',
+ *   text: 'colorful flower beds with seasonal blooms',
+ *   emoji: '🌸',
+ *   selected: false,
+ *   areaId: 'front_yard'
+ * };
+ * ```
+ */
+export interface SuggestedPrompt {
+  /**
+   * Unique identifier: {area_id}_{index}
+   */
+  id: string;
+
+  /**
+   * Prompt suggestion text (20-80 characters)
+   */
+  text: string;
+
+  /**
+   * Emoji indicator based on keywords
+   */
+  emoji: string;
+
+  /**
+   * Whether this prompt is currently selected
+   */
+  selected: boolean;
+
+  /**
+   * Parent yard area ID
+   */
+  areaId: string;
+}
+
+/**
+ * Yard area with suggested prompts and custom prompt state
+ * Used in v2-style SuperMinimal components
+ *
+ * @example
+ * ```typescript
+ * const area: YardAreaWithPrompts = {
+ *   id: 'front_yard',
+ *   name: 'Front Yard',
+ *   emoji: '🏠',
+ *   selected: true,
+ *   customPrompt: 'colorful flower beds, modern minimalist landscaping',
+ *   suggestedPrompts: [...]
+ * };
+ * ```
+ */
+export interface YardAreaWithPrompts {
+  /**
+   * Area identifier
+   */
+  id: string;
+
+  /**
+   * Display name
+   */
+  name: string;
+
+  /**
+   * Emoji visual identifier
+   */
+  emoji: string;
+
+  /**
+   * Whether user has selected this area
+   */
+  selected: boolean;
+
+  /**
+   * User's custom prompt (comma-separated if from suggested prompts)
+   */
+  customPrompt: string;
+
+  /**
+   * Available prompt suggestions (5 per area)
+   */
+  suggestedPrompts: SuggestedPrompt[];
+}
+
+/**
+ * Design style with selection order tracking
+ * Used in v2-style numbered selection indicators
+ *
+ * @example
+ * ```typescript
+ * const style: StyleWithSelection = {
+ *   id: 'modern_minimalist',
+ *   name: 'Modern Minimalist',
+ *   description: 'Clean lines, simple plantings',
+ *   emoji: '🏠',
+ *   selected: true,
+ *   selectionOrder: 1
+ * };
+ * ```
+ */
+export interface StyleWithSelection {
+  /**
+   * Style identifier (snake_case)
+   */
+  id: string;
+
+  /**
+   * Display name
+   */
+  name: string;
+
+  /**
+   * Brief description (50-150 chars)
+   */
+  description: string;
+
+  /**
+   * Emoji visual identifier
+   */
+  emoji: string;
+
+  /**
+   * Whether user has selected this style
+   */
+  selected: boolean;
+
+  /**
+   * Selection order number (1-3), null if not selected
+   */
+  selectionOrder: number | null;
+}
+
+/**
+ * Area result with progress tracking
+ * Extended from AreaStatus for v2 polling
+ *
+ * @example
+ * ```typescript
+ * const result: AreaResultWithProgress = {
+ *   areaId: 'front_yard',
+ *   status: 'completed',
+ *   imageUrl: 'https://vercel-blob.com/abc123.jpg',
+ *   error: null,
+ *   progress: 100
+ * };
+ * ```
+ */
+export interface AreaResultWithProgress {
+  /**
+   * Reference to yard area
+   */
+  areaId: string;
+
+  /**
+   * Individual area status
+   */
+  status: AreaGenerationStatus;
+
+  /**
+   * Generated image URL (null until completed)
+   */
+  imageUrl: string | null;
+
+  /**
+   * Source images (Street View/Satellite) - shown while generating
+   */
+  sourceImages?: Array<{
+    image_type: 'street_view' | 'satellite' | 'user_upload';
+    image_url: string;
+    pano_id?: string;
+  }>;
+
+  /**
+   * Failure reason (null if successful)
+   */
+  error: string | null;
+
+  /**
+   * Percentage complete (0-100)
+   */
+  progress: number;
+}
+
+/**
+ * localStorage recovery data structure
+ * Minimal data to recover interrupted generations
+ *
+ * @example
+ * ```typescript
+ * // Save on generation start
+ * const recovery: LocalStorageRecovery = {
+ *   requestId: 'uuid',
+ *   areas: ['front_yard', 'back_yard'],
+ *   address: '123 Main St',
+ *   savedAt: new Date().toISOString()
+ * };
+ * localStorage.setItem('yarda_active_request_id', recovery.requestId);
+ * ```
+ */
+export interface LocalStorageRecovery {
+  /**
+   * UUID of active generation
+   */
+  requestId: string;
+
+  /**
+   * Selected area IDs
+   */
+  areas: string[];
+
+  /**
+   * Property address
+   */
+  address: string;
+
+  /**
+   * ISO timestamp when saved
+   */
+  savedAt: string;
+}

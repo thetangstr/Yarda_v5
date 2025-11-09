@@ -14,8 +14,9 @@ Requirements:
 
 from uuid import UUID
 from typing import List, Optional, Dict, Any, Tuple
+import asyncio
 
-from fastapi import APIRouter, HTTPException, Depends, status, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, Depends, status, UploadFile, File, Form, BackgroundTasks
 from fastapi.responses import JSONResponse
 
 from src.models.user import User
@@ -212,6 +213,7 @@ async def refund_payment(
 @router.post("/multi", response_model=MultiAreaGenerationResponse, status_code=status.HTTP_201_CREATED)
 async def create_multi_area_generation(
     request: CreateGenerationRequest,
+    background_tasks: BackgroundTasks,
     user: User = Depends(require_verified_email),
     trial_service: TrialService = Depends(get_trial_service)
 ):
@@ -256,17 +258,29 @@ async def create_multi_area_generation(
         HTTPException 500: Generation creation failed
     """
     try:
+        # DEBUG: Log generation request start
+        print(f"\n{'='*80}")
+        print(f"🚀 CREATE MULTI-AREA GENERATION STARTED")
+        print(f"{'='*80}")
+        print(f"User: {user.email}")
+        print(f"Address: {request.address}")
+        print(f"Number of areas: {len(request.areas)}")
+        for i, area in enumerate(request.areas):
+            print(f"  Area {i+1}: {area.area.value} - {area.style.value}")
+
         # Step 1: Convert AreaRequest models to dicts for GenerationService
         areas_data = [
             {
                 'area': area.area.value,
                 'style': area.style.value,
-                'custom_prompt': area.custom_prompt
+                'custom_prompt': area.custom_prompt,
+                'preservation_strength': area.preservation_strength
             }
             for area in request.areas
         ]
 
         # Step 2: Initialize services
+        print(f"✅ STEP 1: Initializing services...")
         token_service = TokenService(db_pool)
         subscription_service = SubscriptionService(db_pool)
         gemini_client = GeminiClient()
@@ -282,13 +296,21 @@ async def create_multi_area_generation(
         )
 
         # Step 3: Call GenerationService.create_generation() - handles payment + Street View
+        print(f"✅ STEP 2: Calling generation_service.create_generation()...")
         success, generation_id, error_message, generation_data = await generation_service.create_generation(
             user_id=user.id,
             address=request.address,
             areas=areas_data
         )
+        print(f"   Result - Success: {success}, Generation ID: {generation_id}")
+        print(f"   Error: {error_message}")
+        if generation_data:
+            print(f"   Generation data keys: {list(generation_data.keys())}")
+            if 'street_view_bytes' in generation_data:
+                print(f"   Street View bytes: {len(generation_data['street_view_bytes'])} bytes")
 
         if not success:
+            print(f"❌ STEP 2 FAILED: {error_message}")
             # Generation creation failed (payment or Street View retrieval)
             logger.error(
                 "generation_creation_failed",
@@ -300,6 +322,114 @@ async def create_multi_area_generation(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=error_message
             )
+
+        # Step 3.5: Start background task to process generation (Gemini API call)
+        # This runs async so we can return immediately with status='pending'
+        async def process_areas_background():
+            """Background task to process all areas for this generation"""
+            try:
+                logger.info(
+                    "background_generation_started",
+                    generation_id=str(generation_id),
+                    num_areas=len(generation_data['area_ids'])
+                )
+
+                # Get Street View bytes from generation_data
+                street_view_bytes = generation_data.get('street_view_bytes')
+                if not street_view_bytes:
+                    logger.error("No street_view_bytes available for processing")
+                    return
+
+                # Upload Street View image to Vercel Blob storage
+                try:
+                    street_view_url = await storage_service.upload_image(
+                        image_data=street_view_bytes,
+                        filename=f"streetview_{generation_id}.jpg",
+                        content_type="image/jpeg"
+                    )
+
+                    # Update generation_source_images with actual URL
+                    await db_pool.execute("""
+                        UPDATE generation_source_images
+                        SET image_url = $1
+                        WHERE generation_id = $2 AND image_type = 'street_view'
+                    """, street_view_url, generation_id)
+
+                    logger.info(
+                        "street_view_uploaded",
+                        generation_id=str(generation_id),
+                        url=street_view_url
+                    )
+                except Exception as e:
+                    logger.error(
+                        "street_view_upload_failed",
+                        generation_id=str(generation_id),
+                        error=str(e)
+                    )
+                    # Continue processing even if Street View upload fails
+
+                # Process each area sequentially
+                for area_id_str in generation_data['area_ids']:
+                    area_id = UUID(area_id_str)
+
+                    # Fetch area details from database
+                    area_record = await db_pool.fetchrow("""
+                        SELECT area_type, style, custom_prompt
+                        FROM generation_areas
+                        WHERE id = $1
+                    """, area_id)
+
+                    if not area_record:
+                        logger.error(f"Area {area_id} not found")
+                        continue
+
+                    # Call process_generation for this area
+                    success, error = await generation_service.process_generation(
+                        generation_id=generation_id,
+                        area_id=area_id,
+                        user_id=user.id,
+                        input_image_bytes=street_view_bytes,
+                        address=request.address,
+                        area_type=area_record['area_type'],
+                        style=area_record['style'],
+                        custom_prompt=area_record['custom_prompt'],
+                        payment_method=generation_data['payment_method'],
+                        preservation_strength=0.5  # Default for now
+                    )
+
+                    if not success:
+                        logger.error(
+                            "area_generation_failed",
+                            area_id=str(area_id),
+                            error=error
+                        )
+                    else:
+                        logger.info(
+                            "area_generation_completed",
+                            area_id=str(area_id)
+                        )
+
+                logger.info(
+                    "background_generation_completed",
+                    generation_id=str(generation_id)
+                )
+            except Exception as e:
+                logger.error(
+                    "background_generation_error",
+                    generation_id=str(generation_id),
+                    error=str(e),
+                    exc_info=True
+                )
+
+        # Spawn background task using FastAPI's BackgroundTasks
+        logger.info(
+            "about_to_spawn_background_task",
+            generation_id=str(generation_id),
+            has_street_view=bool(generation_data.get('street_view_bytes')),
+            num_areas=len(generation_data['area_ids'])
+        )
+        background_tasks.add_task(process_areas_background)
+        logger.info("background_task_added_to_fastapi_queue")
 
         # Step 4: Fetch created generation_areas for response
         areas_response = []
@@ -410,40 +540,25 @@ async def create_generation(
     token_service = TokenService(db_pool)
 
     try:
+        # DEBUG: Log generation request start
+        print(f"\n{'='*80}")
+        print(f"🚀 GENERATION REQUEST STARTED")
+        print(f"{'='*80}")
+        print(f"User: {user.email}")
+        print(f"Address: {address}")
+        print(f"Area: {area}")
+        print(f"Style: {style}")
+        print(f"Has custom image: {image is not None}")
+
         # Step 1: Check authorization hierarchy (subscription FIRST)
+        # NOTE: This only validates that user HAS credits - does not deduct yet
         payment_method = await check_authorization_hierarchy(user, trial_service)
-        print(f"User {user.email} authorized with payment_method={payment_method}")
+        print(f"✅ STEP 1: Authorization Check")
+        print(f"   Payment Method: {payment_method}")
 
-        # Step 2: Deduct payment BEFORE Gemini API call (unless subscription)
-        success, error_msg, auto_reload_info = await deduct_payment(
-            user.id,
-            payment_method,
-            trial_service,
-            token_service,
-            f"Landscape generation for {address}"
-        )
-
-        if not success:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=error_msg
-            )
-
-        if payment_method == 'subscription':
-            print(f"Subscription user {user.email} - no payment deducted (unlimited)")
-        else:
-            print(f"Payment deducted successfully for user {user.email}")
-
-        # TODO (T073): Handle auto-reload trigger
-        # If auto_reload_info is not None, we should:
-        # 1. Create Stripe Payment Intent for auto-reload amount
-        # 2. Process payment automatically (requires saved payment method)
-        # 3. Webhook will credit tokens when payment succeeds
-        # For now, we just log it - actual Stripe integration pending
-        if auto_reload_info:
-            print(f"Auto-reload would be triggered: {auto_reload_info}")
-            # NOTE: In production, this would initiate a Stripe charge
-            # using the user's saved payment method
+        # Step 2: Payment is now deducted in background task AFTER image is successfully saved
+        # This ensures we don't charge users for failed generations
+        # (See process_areas_background task below)
 
         # Step 3: Handle image source (user upload OR Google Maps retrieval)
         image_source = ImageSource.USER_UPLOAD  # Default
@@ -476,11 +591,13 @@ async def create_generation(
                 maps_service = MapsService()
 
                 # Step 3a: Geocode address to get coordinates
+                print(f"✅ STEP 3a: Geocoding address...")
+                print(f"   Address: {address}")
                 coords = await maps_service.geocode_address(address)
 
                 if coords is None:
-                    # Address could not be geocoded - refund and return error
-                    await refund_payment(user.id, payment_method, trial_service, token_service)
+                    print(f"❌ STEP 3a FAILED: Address could not be geocoded")
+                    # Address could not be geocoded - no payment deducted yet, so no refund needed
                     logger.error(
                         "geocoding_failed",
                         address=address,
@@ -492,11 +609,15 @@ async def create_generation(
                     )
 
                 # Step 3b: Check Street View metadata (FREE request)
+                print(f"✅ STEP 3b: Getting Street View metadata...")
+                print(f"   Coords: lat={coords.lat}, lng={coords.lng}")
                 metadata = await maps_service.get_street_view_metadata(coords)
+                print(f"   Metadata status: {metadata.status}")
+                print(f"   Pano ID: {metadata.pano_id}")
 
                 if metadata.status != "OK":
-                    # No Street View available - refund and return error
-                    await refund_payment(user.id, payment_method, trial_service, token_service)
+                    print(f"❌ STEP 3b FAILED: No Street View available")
+                    # No Street View available - no payment deducted yet, so no refund needed
                     logger.warning(
                         "street_view_unavailable",
                         address=address,
@@ -510,6 +631,7 @@ async def create_generation(
                     )
 
                 # Step 3c: Fetch Street View image (PAID request - $0.007)
+                print(f"✅ STEP 3c: Fetching Street View image...")
                 image_bytes = await maps_service.fetch_street_view_image(
                     coords,
                     size="600x400",
@@ -517,10 +639,11 @@ async def create_generation(
                     heading=0,  # Front-facing view
                     pitch=-10   # Slightly downward angle
                 )
+                print(f"   Image bytes received: {len(image_bytes) if image_bytes else 0} bytes")
 
                 if image_bytes is None:
-                    # Image fetch failed - refund and return error
-                    await refund_payment(user.id, payment_method, trial_service, token_service)
+                    print(f"❌ STEP 3c FAILED: Could not fetch Street View image")
+                    # Image fetch failed - no payment deducted yet, so no refund needed
                     logger.error(
                         "street_view_fetch_failed",
                         address=address,
@@ -549,8 +672,7 @@ async def create_generation(
                 # In production: Upload to S3/GCS and store image_url
 
             except MapsServiceError as e:
-                # Google Maps API error - refund and return error
-                await refund_payment(user.id, payment_method, trial_service, token_service)
+                # Google Maps API error - no payment deducted yet, so no refund needed
                 logger.error(
                     "maps_service_error",
                     error_type=e.error_type,
@@ -564,7 +686,7 @@ async def create_generation(
                 )
         else:
             # No image uploaded AND not front_yard - require manual upload
-            await refund_payment(user.id, payment_method, trial_service, token_service)
+            # No payment deducted yet, so no refund needed
             logger.warning(
                 "image_required_for_area",
                 area=area,
@@ -576,6 +698,7 @@ async def create_generation(
             )
 
         # Step 4: Create generation record with status='pending'
+        print(f"✅ STEP 4: Creating generation record...")
         # Build request_params as JSONB outside query to avoid type inference issues
         import json
         request_params_json = json.dumps({
@@ -601,6 +724,9 @@ async def create_generation(
                 $5::jsonb
             ) RETURNING id
         """, user.id, payment_method, 1 if payment_method == 'token' else 0, address, request_params_json)
+        print(f"   Generation ID: {generation_id}")
+        print(f"   Image source: {image_source.value}")
+        print(f"   Image bytes: {len(image_bytes) if image_bytes else 0} bytes")
 
         # Step 4: Process generation asynchronously (TODO: Use background task)
         # For now, we'll return pending status and process later
@@ -617,9 +743,7 @@ async def create_generation(
     except HTTPException:
         raise
     except Exception as e:
-        # Refund payment if generation setup failed
-        await refund_payment(user.id, payment_method, trial_service, token_service)
-
+        # No payment deducted yet, so no refund needed if generation setup fails
         print(f"Generation creation error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -763,6 +887,11 @@ async def get_generation(
     # Convert to AreaStatusResponse models
     areas_response = []
     for area_record in areas_records:
+        # Convert image_url to image_urls array for frontend compatibility
+        image_urls = []
+        if area_record['image_url']:
+            image_urls.append(area_record['image_url'])
+
         areas_response.append(AreaStatusResponse(
             id=area_record['id'],
             area=area_record['area_type'],
@@ -772,20 +901,68 @@ async def get_generation(
             current_stage=area_record['current_stage'],
             status_message=area_record['status_message'],
             image_url=area_record['image_url'],
+            image_urls=image_urls if image_urls else None,  # Add image_urls array for frontend
             error_message=area_record['error_message'],
             completed_at=area_record['completed_at']
         ))
 
-    # Return MultiAreaGenerationResponse
-    return MultiAreaGenerationResponse(
+    # Fetch source images (Street View/Satellite)
+    print(f"🔍 GET /generations/{generation_id}")
+    source_images_records = await db_pool.fetch("""
+        SELECT image_type, image_url, pano_id
+        FROM generation_source_images
+        WHERE generation_id = $1
+        ORDER BY created_at
+    """, generation_id)
+
+    source_images = []
+    for record in source_images_records:
+        # Include all source images - even pending_upload
+        # For pending_upload, return placeholder that will auto-update when blob upload completes
+        image_url = record['image_url']
+        if image_url == 'pending_upload':
+            # Placeholder image while Street View uploads to Vercel Blob
+            # Client will re-poll and get the real URL once upload completes
+            image_url = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="600" height="400"%3E%3Crect width="600" height="400" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%236b7280" font-size="16"%3ELoading Street View...%3C/text%3E%3C/svg%3E'
+
+        if image_url:
+            source_images.append({
+                'image_type': record['image_type'],
+                'image_url': image_url,
+                'pano_id': record['pano_id']
+            })
+
+    print(f"   DB Records: {len(source_images_records)} source_images found")
+    print(f"   Returning: {len(source_images)} source_images in response")
+    if source_images:
+        for img in source_images:
+            print(f"     - {img['image_type']}: {img['image_url'][:50]}...")
+
+    # Return MultiAreaGenerationResponse with source_images
+    response = MultiAreaGenerationResponse(
         id=generation['id'],
+        user_id=generation['user_id'],
         status=GenerationStatus(generation['status']),
+        address=generation.get('address'),
         total_cost=generation['total_cost'] if generation['total_cost'] else len(areas_response),
         payment_method=generation['payment_method'],
         areas=areas_response,
+        source_images=source_images if source_images else None,
         created_at=generation['created_at'],
         start_processing_at=generation['start_processing_at'],
         completed_at=generation['completed_at'],
         estimated_completion=None,  # TODO: Calculate based on average processing time
         error_message=generation['error_message']
     )
+
+    # DEBUG: Log the actual response being sent to frontend
+    import json
+    try:
+        response_dict = response.model_dump(mode='json')
+        print(f"   ✅ RETURNING RESPONSE with source_images count: {len(response_dict.get('source_images') or [])}")
+        if response_dict.get('source_images'):
+            print(f"      Sample: {json.dumps(response_dict['source_images'][0], indent=2)}")
+    except Exception as e:
+        print(f"   ❌ Error serializing response: {e}")
+
+    return response

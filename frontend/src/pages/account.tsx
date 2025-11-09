@@ -20,15 +20,15 @@ type Tab = 'profile' | 'tokens' | 'auto-reload' | 'subscription';
 
 export default function AccountPage() {
   const router = useRouter();
-  const { user, isAuthenticated, logout } = useUserStore();
+  const { user, isAuthenticated, logout, _hasHydrated } = useUserStore();
   const [activeTab, setActiveTab] = useState<Tab>('profile');
 
-  // Redirect to login if not authenticated
+  // Redirect to login if not authenticated (but wait for hydration first)
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (_hasHydrated && !isAuthenticated) {
       router.push('/login');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, _hasHydrated, router]);
 
   // Handle tab query parameter
   useEffect(() => {
@@ -44,6 +44,18 @@ export default function AccountPage() {
     await logout();
     router.push('/');
   };
+
+  // Show loading while hydrating from localStorage
+  if (!_hasHydrated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated || !user) {
     return null;

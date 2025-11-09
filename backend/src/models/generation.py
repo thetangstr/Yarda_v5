@@ -5,7 +5,7 @@ Purpose: Landscape generation records with multi-area support and progress track
 """
 
 from enum import Enum
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from uuid import UUID
 from datetime import datetime
 from pydantic import BaseModel, Field, validator
@@ -23,20 +23,15 @@ class YardArea(str, Enum):
     FRONT_YARD = "front_yard"
     BACKYARD = "backyard"
     WALKWAY = "walkway"
-    SIDE_YARD = "side_yard"
     PATIO = "patio"
     POOL_AREA = "pool_area"
 
 
 class DesignStyle(str, Enum):
     """Landscape design style options"""
-    MODERN_MINIMALIST = "modern_minimalist"
-    CALIFORNIA_NATIVE = "california_native"
-    JAPANESE_ZEN = "japanese_zen"
-    ENGLISH_GARDEN = "english_garden"
-    DESERT_LANDSCAPE = "desert_landscape"
+    MINIMALIST = "minimalist"
     MEDITERRANEAN = "mediterranean"
-    TROPICAL_RESORT = "tropical_resort"
+    CALIFORNIA_NATIVE = "california_native"
 
 
 class GenerationStatus(str, Enum):
@@ -137,6 +132,12 @@ class AreaRequest(BaseModel):
         max_length=500,
         description="Optional custom prompt for this area (max 500 characters)"
     )
+    preservation_strength: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description="Control transformation intensity: 0.0-0.4 = dramatic, 0.4-0.6 = balanced, 0.6-1.0 = subtle"
+    )
 
 
 class AreaStatusResponse(BaseModel):
@@ -154,7 +155,8 @@ class AreaStatusResponse(BaseModel):
         None,
         description="User-facing progress message"
     )
-    image_url: Optional[str] = Field(None, description="Generated design image URL")
+    image_url: Optional[str] = Field(None, description="Generated design image URL (single)")
+    image_urls: Optional[List[str]] = Field(None, description="Generated design image URLs (array for multi-angle support)")
     error_message: Optional[str] = Field(None, description="Error message if failed")
     completed_at: Optional[datetime] = Field(None, description="Completion timestamp")
 
@@ -197,10 +199,13 @@ class MultiAreaGenerationResponse(BaseModel):
     Includes overall status and per-area progress tracking.
     """
     id: UUID = Field(description="Unique generation request ID")
+    user_id: Optional[UUID] = Field(None, description="User who created this generation")
     status: GenerationStatus = Field(description="Overall generation status")
+    address: Optional[str] = Field(None, description="Property address")
     total_cost: int = Field(ge=1, description="Total cost in credits/tokens")
     payment_method: PaymentType = Field(description="Payment method used (trial/token/subscription)")
     areas: List[AreaStatusResponse] = Field(description="Status for each requested area")
+    source_images: Optional[List[Dict[str, Any]]] = Field(None, description="Source images (Street View/Satellite)")
     created_at: datetime = Field(description="Request creation timestamp")
     start_processing_at: Optional[datetime] = Field(
         None,

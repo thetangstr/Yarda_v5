@@ -32,6 +32,7 @@ interface UserState {
   user: User | null;
   accessToken: string | null;
   isAuthenticated: boolean;
+  _hasHydrated: boolean; // Track if store has loaded from localStorage
 
   // Token/Trial balance
   tokenBalance: TokenBalance | null;
@@ -42,6 +43,7 @@ interface UserState {
   setTokenBalance: (balance: TokenBalance | null) => void;
   updateTrialRemaining: (trial_remaining: number) => void;
   logout: () => void;
+  setHasHydrated: (hasHydrated: boolean) => void;
 }
 
 export const useUserStore = create<UserState>()(
@@ -51,6 +53,7 @@ export const useUserStore = create<UserState>()(
       user: null,
       accessToken: null,
       isAuthenticated: false,
+      _hasHydrated: false,
       tokenBalance: null,
 
       // Actions
@@ -88,6 +91,11 @@ export const useUserStore = create<UserState>()(
           isAuthenticated: false,
           tokenBalance: null,
         }),
+
+      setHasHydrated: (hasHydrated) =>
+        set({
+          _hasHydrated: hasHydrated,
+        }),
     }),
     {
       name: 'user-storage', // localStorage key
@@ -97,6 +105,10 @@ export const useUserStore = create<UserState>()(
         isAuthenticated: state.isAuthenticated,
         tokenBalance: state.tokenBalance,
       }),
+      onRehydrateStorage: () => (state) => {
+        // Called when store finishes rehydrating from localStorage
+        state?.setHasHydrated(true);
+      },
     }
   )
 );

@@ -9,10 +9,14 @@ import type {
   CreateGenerationRequest as MultiAreaCreateRequest,
   GenerationResponse as MultiAreaResponse,
   GenerationStatusResponse as MultiAreaStatusResponse,
+  GenerationStatusResponse,
   PaymentStatusResponse,
 } from '@/types/generation';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+// Debug: Log API URL being used
+console.log('[API Client] Using API_URL:', API_URL);
 
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({
@@ -215,12 +219,14 @@ export const generationsAPI = {
    */
   create: async (request: MultiAreaCreateRequest): Promise<MultiAreaResponse> => {
     // Convert areas array to AreaRequest format expected by backend
+    // v2 enhancement: Include preservation_strength for each area
     const requestBody = {
       address: request.address,
       areas: request.areas.map((area) => ({
         area: area,
         style: request.style,
         custom_prompt: request.custom_prompt,
+        preservation_strength: request.preservation_strength ?? 0.5, // v2 enhancement
       })),
     };
 
@@ -240,6 +246,13 @@ export const generationsAPI = {
   getStatus: async (generationId: string): Promise<MultiAreaStatusResponse> => {
     const response = await apiClient.get(`/generations/${generationId}`);
     return response.data;
+  },
+
+  /**
+   * Alias for getStatus (used by polling hook)
+   */
+  getGeneration: async (generationId: string): Promise<MultiAreaStatusResponse> => {
+    return generationsAPI.getStatus(generationId);
   },
 };
 
@@ -472,5 +485,138 @@ export const getErrorMessage = (error: any): string => {
   }
   return 'An unexpected error occurred';
 };
+
+// ============================================================================
+// Polling Utilities (Feature 005 - V2 Port)
+// ============================================================================
+
+export const POLLING_INTERVAL = 2000; // 2 seconds
+export const POLLING_TIMEOUT = 300000; // 5 minutes
+
+export interface PollingCallbacks {
+  onProgress?: (response: GenerationStatusResponse) => void;
+  onComplete?: (response: GenerationStatusResponse) => void;
+  onError?: (error: any) => void;
+  onTimeout?: () => void;
+}
+
+/**
+ * Polls a generation status endpoint until completion or timeout.
+ *
+ * Strategy (from v2 research):
+ * - Poll every 2 seconds
+ * - Stop when all areas are completed or failed
+ * - Timeout after 5 minutes
+ * - Cancel polling on unmount via returned cleanup function
+ *
+ * @param generationId - Generation UUID to poll
+ * @param callbacks - Event callbacks for progress, completion, error, timeout
+ * @returns Cleanup function to stop polling
+ */
+export function pollGenerationStatus(
+  generationId: string,
+  callbacks: PollingCallbacks
+): () => void {
+  let intervalId: NodeJS.Timeout | null = null;
+  let timeoutId: NodeJS.Timeout | null = null;
+  let cancelled = false;
+
+  const cleanup = () => {
+    cancelled = true;
+    if (intervalId) clearInterval(intervalId);
+    if (timeoutId) clearTimeout(timeoutId);
+  };
+
+  const checkStatus = async () => {
+    if (cancelled) return;
+
+    try {
+      const response = await generationsAPI.getStatus(generationId);
+
+      // Call progress callback
+      if (callbacks.onProgress) {
+        callbacks.onProgress(response);
+      }
+
+      // Check if all areas are done (completed or failed)
+      if (response.areas) {
+        const allDone = response.areas.every(
+          (area: any) => area.status === 'completed' || area.status === 'failed'
+        );
+
+        if (allDone) {
+          cleanup();
+          if (callbacks.onComplete) {
+            callbacks.onComplete(response);
+          }
+        }
+      }
+    } catch (error) {
+      cleanup();
+      if (callbacks.onError) {
+        callbacks.onError(error);
+      }
+    }
+  };
+
+  // Start polling
+  intervalId = setInterval(checkStatus, POLLING_INTERVAL);
+
+  // Set timeout
+  timeoutId = setTimeout(() => {
+    cleanup();
+    if (callbacks.onTimeout) {
+      callbacks.onTimeout();
+    }
+  }, POLLING_TIMEOUT);
+
+  // Initial check (don't wait for first interval)
+  checkStatus();
+
+  return cleanup;
+}
+
+/**
+ * Checks if a generation is complete (all areas done).
+ *
+ * @param response - Generation status response
+ * @returns Boolean indicating if generation is complete
+ */
+export function isGenerationComplete(response: GenerationStatusResponse): boolean {
+  if (!response.areas) return false;
+  return response.areas.every(
+    (area: any) => area.status === 'completed' || area.status === 'failed'
+  );
+}
+
+/**
+ * Gets completion statistics for a generation.
+ *
+ * @param response - Generation status response
+ * @returns Object with completed, failed, pending, and total counts
+ */
+export function getGenerationStats(response: GenerationStatusResponse): {
+  completed: number;
+  failed: number;
+  pending: number;
+  total: number;
+} {
+  if (!response.areas) {
+    return { completed: 0, failed: 0, pending: 0, total: 0 };
+  }
+
+  const completed = response.areas.filter((area: any) => area.status === 'completed').length;
+  const failed = response.areas.filter((area: any) => area.status === 'failed').length;
+  const pending = response.areas.filter(
+    (area: any) => area.status === 'pending' || area.status === 'processing'
+  ).length;
+
+  return {
+    completed,
+    failed,
+    pending,
+    total: response.areas.length,
+  };
+}
 
 export default apiClient;

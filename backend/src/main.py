@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.config import settings
 from src.db.connection_pool import db_pool
 from src.api.endpoints import auth, generations, tokens, webhooks, subscriptions, users
+from src.api.endpoints import debug
 
 
 @asynccontextmanager
@@ -62,6 +63,7 @@ app.include_router(generations.router)
 app.include_router(tokens.router)
 app.include_router(webhooks.router)
 app.include_router(subscriptions.router)  # NEW: Monthly Pro subscription endpoints
+app.include_router(debug.router)  # DEBUG: Admin debug logging endpoints
 
 
 @app.get("/")

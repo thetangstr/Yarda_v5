@@ -6,6 +6,7 @@ Purpose: Integration with Google Maps Platform APIs for property image retrieval
 
 import asyncio
 import os
+import math
 from typing import Optional, Tuple
 from dataclasses import dataclass
 import aiohttp
@@ -37,6 +38,35 @@ class MapsServiceError(Exception):
         self.message = message
         self.retry_after = retry_after
         super().__init__(message)
+
+
+def calculate_heading(from_coords: Coordinates, to_coords: Coordinates) -> int:
+    """
+    Calculate the heading (bearing) from one coordinate to another.
+
+    Args:
+        from_coords: Starting point (camera location)
+        to_coords: Target point (property location)
+
+    Returns:
+        Heading in degrees (0-360), where 0=North, 90=East, 180=South, 270=West
+    """
+    # Convert to radians
+    lat1 = math.radians(from_coords.lat)
+    lat2 = math.radians(to_coords.lat)
+    lng_diff = math.radians(to_coords.lng - from_coords.lng)
+
+    # Calculate bearing using Haversine formula
+    x = math.sin(lng_diff) * math.cos(lat2)
+    y = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(lng_diff)
+
+    bearing_radians = math.atan2(x, y)
+    bearing_degrees = math.degrees(bearing_radians)
+
+    # Normalize to 0-360
+    heading = (bearing_degrees + 360) % 360
+
+    return int(heading)
 
 
 class MapsService:
@@ -203,14 +233,23 @@ class MapsService:
                     # Handle different status codes
                     if status == "OK":
                         location_data = data.get("location", {})
+
+                        # Only create Coordinates if API returned actual camera position data
+                        # that differs from the target coordinates
+                        camera_location = None
+                        if location_data:
+                            camera_lat = location_data.get("lat")
+                            camera_lng = location_data.get("lng")
+                            if camera_lat is not None and camera_lng is not None:
+                                # Check if camera position is different from target
+                                if camera_lat != coords.lat or camera_lng != coords.lng:
+                                    camera_location = Coordinates(lat=camera_lat, lng=camera_lng)
+
                         return StreetViewMetadata(
                             status="OK",
                             pano_id=data.get("pano_id"),
                             date=data.get("date"),
-                            location=Coordinates(
-                                lat=location_data.get("lat", coords.lat),
-                                lng=location_data.get("lng", coords.lng)
-                            ) if location_data else None
+                            location=camera_location
                         )
 
                     elif status == "ZERO_RESULTS":
@@ -437,7 +476,31 @@ class MapsService:
             # Step 3: Fetch Street View if available (PAID: $0.007)
             if metadata.status == "OK":
                 street_view_metadata = metadata
-                street_view_bytes = await self.fetch_street_view_image(coords)
+
+                # Use the Street View camera location from metadata for accurate positioning
+                camera_coords = metadata.location if metadata.location else coords
+
+                # Calculate heading from camera to target property
+                # This ensures the camera points AT the property, not just uses a default heading
+                if metadata.location:
+                    # Always calculate heading to ensure camera points at the target
+                    heading = calculate_heading(camera_coords, coords)
+                    logger.info(
+                        "street_view_heading_calculated",
+                        camera_lat=camera_coords.lat,
+                        camera_lng=camera_coords.lng,
+                        target_lat=coords.lat,
+                        target_lng=coords.lng,
+                        heading=heading
+                    )
+                else:
+                    # If no metadata location, use default heading
+                    heading = 0
+
+                street_view_bytes = await self.fetch_street_view_image(
+                    camera_coords,
+                    heading=heading
+                )
 
                 if street_view_bytes:
                     image_source = "street_view"  # Changed from "google_street_view" to match DB constraint
@@ -445,6 +508,9 @@ class MapsService:
                         "street_view_image_retrieved",
                         address=address,
                         pano_id=metadata.pano_id,
+                        camera_lat=camera_coords.lat,
+                        camera_lng=camera_coords.lng,
+                        heading=heading,
                         size_bytes=len(street_view_bytes)
                     )
 

@@ -1,8 +1,10 @@
 /**
- * Start Page - Simplified Free Design Flow
+ * Start Page - Dual-Mode Landing and Generation
+ *
+ * Shows marketing landing for unauthenticated users,
+ * and full generation flow for authenticated users.
  *
  * Mobile-first design matching the new UI mockups.
- * Shows address input and generates free design.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -10,6 +12,10 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import { useUserStore } from '@/store/userStore';
+import GenerationFormEnhanced from '@/components/generation/GenerationFormEnhanced';
+import TokenBalance from '@/components/TokenBalance';
+import TrialCounter from '@/components/TrialCounter';
 
 const BeforeAfterSlider = dynamic(() => import('@/components/BeforeAfterSlider'), {
   ssr: false,
@@ -28,6 +34,7 @@ const BeforeAfterSlider = dynamic(() => import('@/components/BeforeAfterSlider')
 
 export default function StartPage() {
   const router = useRouter();
+  const { isAuthenticated, _hasHydrated } = useUserStore();
   const [address, setAddress] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,6 +94,62 @@ export default function StartPage() {
     }
   };
 
+  // Show loading while hydrating from localStorage
+  if (!_hasHydrated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If authenticated, show the full generation flow (same as /generate)
+  if (isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Head>
+          <title>Generate Landscape Design - Yarda</title>
+          <meta
+            name="description"
+            content="Create AI-powered landscape design for your property"
+          />
+        </Head>
+
+        {/* Navbar */}
+        <nav className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-gray-900">Yarda</h1>
+            <div className="flex items-center gap-4">
+              <TokenBalance variant="compact" autoRefresh={true} />
+              <div data-testid="trial-counter">
+                <TrialCounter variant="compact" />
+              </div>
+            </div>
+          </div>
+        </nav>
+
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-6 py-12">
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              Generate Landscape Design
+            </h2>
+            <p className="text-gray-600">
+              Enter your property address and choose your design preferences to generate stunning AI-powered landscape designs
+            </p>
+          </div>
+
+          {/* Generation Form Component */}
+          <GenerationFormEnhanced />
+        </div>
+      </div>
+    );
+  }
+
+  // If not authenticated, show marketing landing page
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-sage to-brand-cream">
       <Head>

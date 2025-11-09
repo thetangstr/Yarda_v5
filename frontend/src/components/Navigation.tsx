@@ -82,7 +82,7 @@ export default function Navigation({ transparent = false }: NavigationProps) {
     : 'bg-white shadow-sm';
 
   const textClass = transparent && !scrolled
-    ? 'text-white'
+    ? 'text-neutral-900'  // Dark text for better contrast on cream background
     : 'text-neutral-800';
 
   return (
@@ -93,7 +93,7 @@ export default function Navigation({ transparent = false }: NavigationProps) {
           <Link href="/" className="flex items-center space-x-2">
             <div className="flex items-center">
               <svg
-                className={`h-8 w-8 ${transparent && !scrolled ? 'text-white' : 'text-brand-green'}`}
+                className={`h-8 w-8 ${transparent && !scrolled ? 'text-brand-green' : 'text-brand-green'}`}
                 viewBox="0 0 40 40"
                 fill="currentColor"
               >
@@ -119,10 +119,10 @@ export default function Navigation({ transparent = false }: NavigationProps) {
                 href={link.href}
                 className={`text-sm font-medium transition-colors duration-200 ${
                   isActive(link.href)
-                    ? 'text-brand-green'
+                    ? 'text-brand-green font-semibold'
                     : transparent && !scrolled
-                    ? 'text-white hover:text-brand-cream'
-                    : 'text-neutral-600 hover:text-brand-green'
+                    ? 'text-neutral-900 hover:text-brand-green'
+                    : 'text-neutral-700 hover:text-brand-green'
                 }`}
               >
                 {link.label}
@@ -229,7 +229,7 @@ export default function Navigation({ transparent = false }: NavigationProps) {
                   href="/login"
                   className={`text-sm font-medium ${
                     transparent && !scrolled
-                      ? 'text-white hover:text-brand-cream'
+                      ? 'text-neutral-900 hover:text-brand-green'
                       : 'text-neutral-600 hover:text-brand-green'
                   }`}
                 >

@@ -26,7 +26,7 @@ interface SessionData {
 
 export default function PurchaseSuccessPage() {
   const router = useRouter();
-  const { isAuthenticated } = useUserStore();
+  const { isAuthenticated, _hasHydrated } = useUserStore();
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,12 +35,15 @@ export default function PurchaseSuccessPage() {
   // Extract session_id from URL
   const sessionId = router.query.session_id as string;
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated (only after store has hydrated from localStorage)
   useEffect(() => {
+    // Wait for store to hydrate before checking authentication
+    if (!_hasHydrated) return;
+
     if (!isAuthenticated) {
       router.push('/login?redirect=/purchase/success');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, _hasHydrated, router]);
 
   // Fetch session details
   useEffect(() => {
@@ -92,7 +95,8 @@ export default function PurchaseSuccessPage() {
     return () => clearInterval(intervalId);
   }, [sessionData, redirectCountdown, router]);
 
-  if (!isAuthenticated || loading) {
+  // Show loading while store is hydrating or session data is being fetched
+  if (!_hasHydrated || !isAuthenticated || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center">
         <div className="text-center">

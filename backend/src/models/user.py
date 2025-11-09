@@ -167,7 +167,7 @@ class User(BaseModel):
     trial_used: int = Field(ge=0, description="Trial credits used")
 
     # Subscription
-    subscription_tier: str = Field(default="free")
+    subscription_tier: Optional[str] = Field(default=None)
     subscription_status: str = Field(default="inactive")
     stripe_customer_id: Optional[str] = None
     stripe_subscription_id: Optional[str] = None

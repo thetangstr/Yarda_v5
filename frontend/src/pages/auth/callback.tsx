@@ -17,22 +17,36 @@ export default function AuthCallback() {
 
   useEffect(() => {
     let authSubscription: { unsubscribe: () => void } | null = null;
+    let processed = false; // Prevent double-processing
 
     const handleCallback = async () => {
       try {
+        console.log('[Auth Callback] Starting OAuth callback handler');
+        console.log('[Auth Callback] URL:', window.location.href);
+        console.log('[Auth Callback] Search params:', window.location.search);
+        console.log('[Auth Callback] Hash:', window.location.hash);
+
         // Listen for auth state changes - this is the proper way to handle OAuth callbacks
         const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
-          console.log('Auth state change:', event, session);
+          console.log('[Auth Callback] Auth state change:', event);
+          console.log('[Auth Callback] Session exists:', !!session);
 
-          if (event === 'SIGNED_IN' && session) {
+          if (event === 'SIGNED_IN' && session && !processed) {
+            processed = true;
+            console.log('[Auth Callback] Processing SIGNED_IN event');
+            console.log('[Auth Callback] User ID:', session.user.id);
+            console.log('[Auth Callback] User email:', session.user.email);
+
             // Store the access token
             setAccessToken(session.access_token);
 
             // Fetch user data from our users table
             if (session.user) {
               // Wait a moment for the database trigger to sync the user
-              await new Promise(resolve => setTimeout(resolve, 500));
+              console.log('[Auth Callback] Waiting for database sync...');
+              await new Promise(resolve => setTimeout(resolve, 1000));
 
+              console.log('[Auth Callback] Querying users table...');
               const { data: userData, error: userError } = await supabase
                 .from('users')
                 .select('*')
@@ -45,7 +59,8 @@ export default function AuthCallback() {
               const fullName = googleMetadata?.full_name || googleMetadata?.name;
 
               if (userError) {
-                console.error('Error fetching user data:', userError);
+                console.error('[Auth Callback] Error fetching user data:', userError);
+                console.log('[Auth Callback] Using default user data (user will be synced by trigger)');
                 // User might not be synced yet, use default values
                 setUser({
                   id: session.user.id,
@@ -60,6 +75,7 @@ export default function AuthCallback() {
                   full_name: fullName,
                 } as any);
               } else {
+                console.log('[Auth Callback] Successfully fetched user data from database');
                 // Use data from our users table + Google profile data
                 setUser({
                   id: userData.id,
@@ -87,25 +103,43 @@ export default function AuthCallback() {
 
             // Redirect to the generate page or intended destination
             const redirectTo = router.query.redirect as string || '/generate';
+            console.log('[Auth Callback] Redirecting to:', redirectTo);
             router.push(redirectTo);
+          } else if (event === 'SIGNED_OUT') {
+            console.log('[Auth Callback] User signed out');
+          } else if (event === 'TOKEN_REFRESHED') {
+            console.log('[Auth Callback] Token refreshed');
           }
         });
 
         authSubscription = data.subscription;
 
         // Also try to get existing session (for page refreshes or direct navigation with existing session)
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
+        console.log('[Auth Callback] Checking for existing session...');
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError) {
+          console.error('[Auth Callback] Error getting session:', sessionError);
+        }
+
+        if (session && !processed) {
+          processed = true;
+          console.log('[Auth Callback] Found existing session');
           // Already have a session, process it
           setAccessToken(session.access_token);
 
-          const { data: userData } = await supabase
+          const { data: userData, error: userError } = await supabase
             .from('users')
             .select('*')
             .eq('id', session.user.id)
             .single();
 
+          if (userError) {
+            console.error('[Auth Callback] Error fetching user for existing session:', userError);
+          }
+
           if (userData) {
+            console.log('[Auth Callback] Setting user data from existing session');
             const googleMetadata = session.user.user_metadata;
             setUser({
               id: userData.id,
@@ -122,16 +156,32 @@ export default function AuthCallback() {
           }
 
           const redirectTo = router.query.redirect as string || '/generate';
+          console.log('[Auth Callback] Redirecting to:', redirectTo);
           router.push(redirectTo);
-        } else if (!window.location.hash && !window.location.search.includes('code=')) {
-          // No session and no OAuth callback parameters - redirect to login
-          console.log('No session found, redirecting to login');
+        } else if (!window.location.hash && !window.location.search.includes('code=') && !window.location.search.includes('error=')) {
+          // No session and no OAuth callback parameters - redirect to login after waiting
+          console.log('[Auth Callback] No session or OAuth params found, will redirect to login in 3 seconds');
+          setTimeout(() => {
+            if (!processed) {
+              console.log('[Auth Callback] No auth event received, redirecting to login');
+              router.push('/login');
+            }
+          }, 3000);
+        } else if (window.location.search.includes('error=')) {
+          const urlParams = new URLSearchParams(window.location.search);
+          const error = urlParams.get('error');
+          const errorDescription = urlParams.get('error_description');
+          console.error('[Auth Callback] OAuth error:', error, errorDescription);
+          setError(errorDescription || error || 'Authentication failed');
           setTimeout(() => {
             router.push('/login');
-          }, 2000);
+          }, 3000);
+        } else {
+          console.log('[Auth Callback] Waiting for auth state change event...');
         }
       } catch (err: any) {
-        console.error('OAuth callback error:', err);
+        console.error('[Auth Callback] Unexpected error:', err);
+        console.error('[Auth Callback] Error stack:', err.stack);
         setError(err.message || 'Authentication failed');
 
         // Redirect to login after a delay

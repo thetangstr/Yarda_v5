@@ -40,21 +40,6 @@ interface GoogleOneTapProps {
   cancelOnTapOutside?: boolean;
 }
 
-// Extend the Window interface to include Google Identity Services
-declare global {
-  interface Window {
-    google?: {
-      accounts: {
-        id: {
-          initialize: (config: any) => void;
-          prompt: (callback?: (notification: any) => void) => void;
-          cancel: () => void;
-        };
-      };
-    };
-  }
-}
-
 export default function GoogleOneTap({
   clientId,
   autoSelect = true,

@@ -70,7 +70,19 @@ export default function TokenBalance({
       );
 
       if (!response.ok) {
-        throw new Error('Failed to fetch token balance');
+        // Log detailed error for debugging
+        console.error(`Token balance fetch failed: ${response.status} ${response.statusText}`);
+
+        // For new users (404) or auth issues (401), gracefully default to 0
+        if (response.status === 404 || response.status === 401) {
+          console.warn('User not found or unauthorized - defaulting to 0 balance (likely new user)');
+          setBalance({ balance: 0, total_purchased: 0, total_spent: 0 });
+          setError(null); // Don't show error for new users
+          setLoading(false);
+          return;
+        }
+
+        throw new Error(`Failed to fetch token balance: ${response.status}`);
       }
 
       const data = await response.json();
@@ -78,7 +90,8 @@ export default function TokenBalance({
       setError(null);
     } catch (err) {
       console.error('Error fetching token balance:', err);
-      setError('Failed to load balance');
+      // Don't show error to user - just default to 0
+      setError(null);
       // Set balance to 0 on error
       setBalance({ balance: 0, total_purchased: 0, total_spent: 0 });
     } finally {

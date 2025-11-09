@@ -1,0 +1,315 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║          FRONTEND GENERATION FLOW - COMPONENT ARCHITECTURE MAP             ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ PAGE: generate.tsx (446 lines)                                              │
+│ Role: Single-page coordinator, polling lifecycle manager                   │
+│ State: generationStore (Zustand)                                           │
+│ Phases: form → progress → results                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+        ├── Navbar
+        │   ├── Logo "Yarda"
+        │   ├── TokenBalance (variant="compact", autoRefresh=true)
+        │   └── TrialCounter (variant="compact")
+        │
+        ├── PHASE 1: FORM (Always visible, disabled during generation)
+        │   └── GenerationFormEnhanced
+        │       ├── AddressInput
+        │       ├── AreaSelectorEnhanced (front_yard, back_yard, walkway)
+        │       ├── StyleSelectorEnhanced (minimalist, mediterranean, california_native)
+        │       ├── PreservationStrengthSlider (0.0-1.0)
+        │       └── Submit Button → onGenerationStart(generationId)
+        │
+        ├── PHASE 2: PROGRESS (AnimatePresence when isGenerating=true)
+        │   ├── Network Error Banner (if networkError !== null)
+        │   ├── Timeout Error Banner (if timedOut=true)
+        │   └── GenerationProgressInline (lines 251)
+        │       └── For each area in areaResults:
+        │           ├── Area Header
+        │           │   ├── Emoji icon
+        │           │   ├── Area name ("Front Yard", "Back Yard", "Walkway")
+        │           │   ├── Status text (animated color)
+        │           │   └── Status icon (spinner → checkmark → X)
+        │           ├── Progress Bar (0-100% animated)
+        │           ├── Thumbnail Preview (when imageUrl available)
+        │           │   ├── Image display
+        │           │   ├── Processing overlay (if processing)
+        │           │   └── Status badge ("✓ Design Complete" or "🎨 Processing...")
+        │           └── Error message (if area.error)
+        │       └── Loading Indicator (pulsing dots animation)
+        │
+        ├── PHASE 3: RESULTS (AnimatePresence when phase='results')
+        │   └── GenerationResultsInline (lines 294)
+        │       ├── Success Banner
+        │       │   ├── Big emoji title ("🎉 All Designs Created!")
+        │       │   ├── Property address
+        │       │   └── Stats: Total Areas | Successful | Failed
+        │       │
+        │       └── Results Grid (responsive: 1 col → 3 cols)
+        │           └── For each area in areaResults:
+        │               ├── Card Header
+        │               │   ├── Emoji + Area name
+        │               │   ├── Success/Failed badge
+        │               │   └── Status icon
+        │               ├── Result Image
+        │               │   └── On click: setSelectedImage() → Modal
+        │               ├── Download Button → Trigger browser download
+        │               └── View Full Size Button → setSelectedImage()
+        │
+        ├── Image Modal (AnimatePresence when selectedImage !== null)
+        │   ├── Dark overlay (click to close)
+        │   ├── Full-size image centered
+        │   └── Close button (top-right)
+        │
+        ├── Action Button
+        │   └── "Create New Design" → handleStartNew()
+        │       └── Resets: phase, results, polling, form
+        │
+        └── Debug Panel (bottom, admin only)
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                          DATA FLOW DIAGRAM                                  ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+USER SUBMITS FORM
+    ↓
+generationsAPI.create(request) ──→ POST /v1/generations
+    ↓
+GenerationResponse {
+    id: "uuid",
+    status: "pending",
+    areas: [{ area: "front_yard", status: "pending", ... }],
+    ...
+}
+    ↓
+onGenerationStart(id) callback
+    ↓
+startPolling(id) + saveGenerationToLocalStorage(id, areas, address)
+    ↓
+setGenerationPhase('progress')
+    ↓
+POLLING LOOP (every 2s)
+    │
+    └──→ pollGenerationStatus(id)
+            ↓
+            generationsAPI.getStatus(id) ──→ GET /v1/generations/{id}
+            ↓
+            GenerationStatusResponse {
+                areas: [{
+                    area: "front_yard",
+                    status: "processing" or "completed" or "failed",
+                    image_url: "https://...", ← When completed
+                    progress: 50,
+                    ...
+                }],
+                source_images?: [{ ← Available during generation
+                    image_type: "street_view",
+                    image_url: "https://..."
+                }],
+                ...
+            }
+            ↓
+            onProgress callback
+                ↓
+                updatePollingProgress(areaId, status, imageUrl, progress)
+                    ↓
+                    Update state:
+                    - areaResults[] with new status/imageUrl/progress
+                    - overallStatus
+                ↓
+                Component re-renders:
+                - Progress bars animate to new percentage
+                - Status icons change (spinner/checkmark/X)
+                - Thumbnails appear when imageUrl loaded
+            ↓
+            Check: allDone = areas.every(a => a.status === 'completed' || 'failed')
+            ↓
+            If allDone OR timeout:
+                onComplete callback
+                    ↓
+                    setGenerationPhase('results')
+                    clearGenerationFromLocalStorage()
+                    stopPolling()
+                    ↓
+                    Components animate:
+                    - Progress cards exit
+                    - Results grid enters
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                        STATE MANAGEMENT (Zustand)                           ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+useGenerationStore
+├── FORM STATE (Persisted to localStorage)
+│   ├── address: string
+│   ├── placeId: string
+│   ├── selectedAreas: string[]           ["front_yard", "back_yard"]
+│   ├── areaPrompts: Record<string, string>  { front_yard: "flowers, patio" }
+│   └── selectedStyles: string[]
+│
+├── GENERATION STATE (Transient)
+│   ├── currentGeneration: Generation | null
+│   ├── generationHistory: Generation[]
+│   └── isGenerating: boolean
+│
+└── POLLING STATE (Transient, reset on reload)
+    ├── pollingRequestId: string | null
+    ├── pollingProgress: Record<string, {
+    │   status: "pending" | "processing" | "completed" | "failed",
+    │   imageUrl?: string,
+    │   progress?: number
+    │ }>
+    ├── pollingError: string | null
+    └── pollingTimedOut: boolean
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                      ANIMATION TIMING ORCHESTRATION                        ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+FORM PHASE (Initial)
+├── Form container: fade-in + slide-down (0.3s)
+└── (visible throughout, but disabled when generating)
+
+PROGRESS PHASE (On Generation Start)
+├── Progress container: fade-in + slide-down (0.3s)
+├── Area cards (staggered):
+│   └── Card N: fade + slide-left (delay: N * 0.1s, duration: 0.3s)
+├── Within each card:
+│   ├── Progress bar: width animation to current % (0.3s)
+│   ├── Spinner icon: rotate 360° continuously (1s loop)
+│   ├── Thumbnail: scale 0.95→1 + fade (0.3s when imageUrl loads)
+│   └── Status badge: fade-in (0.3s)
+└── Loading dots: pulsing scale animation (1.5s with staggered delays)
+
+RESULTS PHASE (On Completion)
+├── Progress section: fade-out + slide-up (0.3s)
+├── Results container: fade-in + slide-down (0.3s)
+├── Result cards (staggered):
+│   └── Card N: scale 0.95→1 + fade (delay: N * 0.1s, duration: 0.3s)
+├── "Create New Design" button: fade-in (delay: 0.5s)
+└── Image modal (when viewing):
+    ├── Overlay: fade-in (0.3s)
+    └── Image: scale 0.9→1 (0.3s)
+
+Smooth scrolling between sections:
+- Form-to-Progress: progressRef.scrollIntoView({ behavior: 'smooth' })
+- Progress-to-Results: resultsRef.scrollIntoView({ behavior: 'smooth' })
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                      KEY FILES & RESPONSIBILITIES                          ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+PAGES
+├── src/pages/generate.tsx (446 lines)
+│   └── Single-page coordinator, polling lifecycle, phase management
+
+COMPONENTS
+├── src/components/generation/GenerationFormEnhanced.tsx
+│   └── Form inputs, validation, API call, payment check
+├── src/components/generation/GenerationProgressInline.tsx (251 lines)
+│   └── Per-area progress cards, status icons, thumbnails
+├── src/components/generation/GenerationResultsInline.tsx (294 lines)
+│   └── Results grid, download, modal viewer
+├── src/components/generation/shared/constants.ts
+│   └── Animation timing, color mappings
+└── src/components/generation/shared/utils.ts
+    └── Emoji & display name mappings
+
+STATE & STORAGE
+├── src/store/generationStore.ts (318 lines)
+│   └── Zustand with selective localStorage persistence
+└── src/lib/localStorage-keys.ts
+    └── Recovery helpers, storage keys
+
+UTILITIES & TYPES
+├── src/lib/api.ts (lines 490-577)
+│   └── pollGenerationStatus() function (2s interval, 5min timeout)
+├── src/lib/suggested-prompts.ts
+│   └── 30+ emoji mappings, 5 prompts per area
+└── src/types/generation.ts
+    └── TS interfaces for all API responses
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    POLLING MECHANISM DETAILS                               ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+pollGenerationStatus(generationId, callbacks)
+│
+├── 1. Initial check (immediate, don't wait)
+│   └── generationsAPI.getStatus(id)
+│
+├── 2. Setup polling loop (every 2 seconds)
+│   └── setInterval(checkStatus, 2000)
+│
+├── 3. Setup timeout (5 minutes)
+│   └── setTimeout(cleanup, 300000)
+│
+├── 4. On each poll result:
+│   ├── Call onProgress(response)
+│   ├── Check: allDone = areas.every(a => a.status === 'completed' || 'failed')
+│   ├── If allDone:
+│   │   └── cleanup() + call onComplete(response)
+│   └── If error:
+│       └── call onError(error)
+│
+├── 5. On timeout:
+│   └── cleanup() + call onTimeout()
+│
+└── 6. Return cleanup function for unmount
+    └── Clears interval, timeout, sets cancelled=true
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                         WHAT'S AVAILABLE NOW                               ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+✅ Single-page experience (no page navigations)
+✅ Real-time polling every 2 seconds
+✅ Per-area progress cards with animations
+✅ Progress bars (0-100% fill)
+✅ Status icons (spinner, checkmark, X)
+✅ Thumbnail preview (when imageUrl available)
+✅ Error handling & network recovery
+✅ 5-minute timeout with user messaging
+✅ Framer Motion animations (24+ animated elements)
+✅ localStorage recovery on page refresh
+✅ Results grid (responsive 1→3 columns)
+✅ Download buttons per image
+✅ Full-size image modal viewer
+✅ Restart button ("Create New Design")
+✅ Zustand state with persistence
+✅ Suggested prompts system (30+ emoji mappings)
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                     WHAT'S MISSING / ENHANCEMENT GAPS                      ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+❌ SOURCE IMAGE CAROUSEL
+   - API returns source_images (Street View + Satellite)
+   - Currently: Not displayed during progress
+   - Gap: No user context of what's being processed
+   - Implementation: GenerationSourceImagesCarousel.tsx
+
+❌ PROCESSING STAGE VISUALIZATION
+   - API returns current_stage enum (6 stages)
+   - Currently: Binary "processing" vs "done"
+   - Gap: User doesn't know which sub-task is running
+   - Implementation: Step indicator "Analyzing property (2/6)"
+
+❌ BEFORE/AFTER COMPARISON
+   - Results show only final design
+   - Gap: No side-by-side transformation view
+   - Implementation: Side-by-side slider
+
+❌ ADVANCED DOWNLOAD OPTIONS
+   - Only direct browser download
+   - Gap: No print optimization, batch zip, email
+   - Implementation: Download menu with options
+

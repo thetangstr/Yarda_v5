@@ -18,18 +18,30 @@ import TokenPurchaseModal from '@/components/TokenPurchaseModal';
 
 export default function PurchasePage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useUserStore();
+  const { user, isAuthenticated, _hasHydrated } = useUserStore();
   const [showModal, setShowModal] = useState(false);
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated (but wait for hydration first)
   React.useEffect(() => {
-    if (!isAuthenticated) {
+    if (_hasHydrated && !isAuthenticated) {
       router.push('/login?redirect=/purchase');
-    } else {
+    } else if (_hasHydrated && isAuthenticated) {
       // Auto-open modal when page loads
       setShowModal(true);
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, _hasHydrated, router]);
+
+  // Show loading while hydrating from localStorage
+  if (!_hasHydrated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated || !user) {
     return null; // Will redirect

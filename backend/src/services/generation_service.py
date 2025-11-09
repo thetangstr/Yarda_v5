@@ -28,6 +28,7 @@ from src.services.storage_service import BlobStorageService
 from src.services.trial_service import TrialService
 from src.services.token_service import TokenService
 from src.services.subscription_service import SubscriptionService
+from src.services.debug_service import get_debug_service
 from src.models.generation import PaymentType
 
 
@@ -223,6 +224,7 @@ class GenerationService:
                 - area: YardArea enum value
                 - style: DesignStyle enum value
                 - custom_prompt: Optional custom prompt
+                - preservation_strength: Optional float (0.0-1.0, default 0.5)
 
         Returns:
             Tuple of (success, generation_id, error_message, generation_data)
@@ -292,11 +294,29 @@ class GenerationService:
 
             # Step 3.5: Retrieve Street View imagery for the address (T013)
             street_view_url = None
+            debug_service = get_debug_service()
+
             try:
+                # Log: About to retrieve Street View
+                debug_service.log(
+                    generation_id,
+                    'address_validation',
+                    'info',
+                    f'Validating address via Google Maps API: {address}'
+                )
+
                 # Use first area for image retrieval (all areas share same property address)
                 first_area = areas[0]['area']
                 street_view_bytes, metadata, _, image_source = await self.maps_service.get_property_images(
                     address, first_area
+                )
+
+                # Log: Street View retrieved successfully
+                debug_service.log(
+                    generation_id,
+                    'street_view_retrieved',
+                    'success',
+                    f'Street View image retrieved successfully (pano_id: {metadata.pano_id if metadata else "unknown"})'
                 )
 
                 # Store source image metadata in generation_source_images table
@@ -321,9 +341,23 @@ class GenerationService:
                     # Store URL for returning to client (will be uploaded to blob in background worker)
                     street_view_url = f"pano_id:{metadata.pano_id}"
 
+                    # Log: Images displayed to user
+                    debug_service.log(
+                        generation_id,
+                        'images_displayed',
+                        'success',
+                        'Street View thumbnail ready for display'
+                    )
+
             except Exception as e:
                 # Street View retrieval failed - refund payment and abort
                 error_msg = f"Failed to retrieve property imagery: {str(e)}"
+                debug_service.log(
+                    generation_id,
+                    'google_maps_api_call',
+                    'error',
+                    f'Street View retrieval failed: {str(e)}'
+                )
 
                 # Refund payment
                 if payment_method == PaymentType.TRIAL:
@@ -350,7 +384,8 @@ class GenerationService:
                 'total_cost': num_areas,
                 'payment_details': payment_details,
                 'area_ids': [str(aid) for aid in area_ids],
-                'created_at': datetime.utcnow().isoformat()
+                'created_at': datetime.utcnow().isoformat(),
+                'street_view_bytes': street_view_bytes  # Include for background processing
             }
 
             return (True, generation_id, None, generation_data)
@@ -368,22 +403,25 @@ class GenerationService:
     async def process_generation(
         self,
         generation_id: UUID,
+        area_id: UUID,
         user_id: UUID,
         input_image_bytes: bytes,
         address: str,
         area_type: str,
         style: str,
         custom_prompt: Optional[str],
-        payment_method: str
+        payment_method: str,
+        preservation_strength: float = 0.5
     ) -> Tuple[bool, Optional[str]]:
         """
-        Process complete generation workflow.
+        Process complete generation workflow for a single area.
 
         This is the main orchestration method called asynchronously after
         the generation record is created.
 
         Args:
             generation_id: Generation UUID
+            area_id: Area UUID (generation_areas record already created)
             user_id: User UUID
             input_image_bytes: Input property image bytes
             address: Property address
@@ -391,42 +429,62 @@ class GenerationService:
             style: Design style
             custom_prompt: Optional custom instructions
             payment_method: Payment method used ('subscription', 'trial', 'token')
+            preservation_strength: Control transformation intensity (0.0-1.0, default 0.5)
 
         Returns:
             Tuple of (success, error_message)
         """
         try:
-            # Update status to 'processing'
+            # Update area status to 'processing'
             await self.db.execute("""
-                UPDATE generations
+                UPDATE generation_areas
                 SET status = 'processing',
+                    progress = 0,
+                    current_stage = 'generating_design',
                     updated_at = NOW()
                 WHERE id = $1
-            """, generation_id)
-
-            # Create generation area record
-            area_id = await self.db.fetchval("""
-                INSERT INTO generation_areas (
-                    generation_id,
-                    area_type,
-                    status,
-                    progress
-                ) VALUES ($1, $2, 'processing', 0)
-                RETURNING id
-            """, generation_id, area_type)
+            """, area_id)
 
             # Generate landscape design with Gemini
             start_time = datetime.utcnow()
+            debug_service = get_debug_service()
+
+            # Log: Starting Gemini API call
+            debug_service.log(
+                generation_id,
+                'gemini_api_call',
+                'info',
+                f'Starting Gemini image generation for {area_type}'
+            )
 
             try:
+                # Generate landscape design with Gemini
                 output_image_bytes = await self.gemini.generate_landscape_design(
                     input_image=input_image_bytes,
                     address=address,
                     area_type=area_type,
                     style=style,
-                    custom_prompt=custom_prompt
+                    custom_prompt=custom_prompt,
+                    preservation_strength=preservation_strength
                 )
+
+                # Log: Gemini generation successful
+                debug_service.log(
+                    generation_id,
+                    'image_generation_complete',
+                    'success',
+                    f'Successfully generated image for {area_type}'
+                )
+
             except Exception as gemini_error:
+                # Log: Gemini API failed
+                debug_service.log(
+                    generation_id,
+                    'gemini_api_call',
+                    'error',
+                    f'Gemini API failed: {str(gemini_error)}'
+                )
+
                 # Gemini API failed - refund payment
                 await self._handle_failure(
                     generation_id,
@@ -437,15 +495,12 @@ class GenerationService:
                 )
                 return False, str(gemini_error)
 
-            gemini_response_time = (datetime.utcnow() - start_time).total_seconds()
-
             # Update progress
             await self.db.execute("""
                 UPDATE generation_areas
-                SET progress = 50,
-                    gemini_response_time = $2
+                SET progress = 50
                 WHERE id = $1
-            """, area_id, gemini_response_time)
+            """, area_id)
 
             # Upload output image to Vercel Blob
             try:
@@ -470,7 +525,7 @@ class GenerationService:
                 UPDATE generation_areas
                 SET status = 'completed',
                     progress = 100,
-                    output_image_url = $2,
+                    image_url = $2,
                     completed_at = NOW()
                 WHERE id = $1
             """, area_id, output_url)
@@ -481,6 +536,28 @@ class GenerationService:
                     completed_at = NOW()
                 WHERE id = $1
             """, generation_id)
+
+            # Log: Image displayed to user
+            debug_service.log(
+                generation_id,
+                'image_displayed',
+                'success',
+                f'Generated landscape design image displayed to user'
+            )
+
+            # DEDUCT PAYMENT NOW THAT IMAGE IS SUCCESSFULLY SAVED
+            # This ensures we only charge users for successful generations
+            success, deduction_error = await self._deduct_payment(
+                user_id,
+                payment_method,
+                1  # 1 area processed
+            )
+
+            if not success:
+                print(f"Payment deduction failed for generation {generation_id}: {deduction_error}")
+                # Continue anyway - generation succeeded even if payment deduction has issues
+            else:
+                print(f"Payment deducted for generation {generation_id}")
 
             print(f"Generation {generation_id} completed successfully")
             return True, None
@@ -494,6 +571,60 @@ class GenerationService:
                 payment_method,
                 f"Unexpected error: {str(e)}"
             )
+            return False, str(e)
+
+    async def _deduct_payment(
+        self,
+        user_id: UUID,
+        payment_method: str,
+        num_areas: int = 1
+    ) -> Tuple[bool, Optional[str]]:
+        """
+        Deduct payment for successful generation.
+
+        This is called AFTER the image is successfully generated and saved.
+        This ensures we only charge users for successful generations.
+
+        Requirements:
+        - FR-034: No deduction for active subscriptions (unlimited)
+        - FR-013: Atomic trial deduction
+        - FR-026: Atomic token deduction with row-level locking
+
+        Args:
+            user_id: User UUID
+            payment_method: Payment method ('subscription', 'trial', 'token')
+            num_areas: Number of areas processed (default 1)
+
+        Returns:
+            Tuple of (success, error_message)
+        """
+        try:
+            if payment_method == 'subscription':
+                # No deduction needed - subscription provides unlimited
+                return True, None
+
+            elif payment_method == 'trial':
+                # Deduct trial credit atomically
+                success, remaining = await self.trial_service.deduct_trial(user_id)
+                if not success:
+                    return False, "Trial credit deduction failed"
+                return True, None
+
+            elif payment_method == 'token':
+                # Deduct token(s) atomically
+                result = await self.db.fetchrow("""
+                    SELECT * FROM subtract_tokens($1, $2, 'generation', 'Landscape generation completed')
+                """, user_id, num_areas)
+
+                if not result or not result.get('success'):
+                    return False, "Token deduction failed"
+
+                return True, None
+
+            else:
+                return False, f"Unknown payment method: {payment_method}"
+
+        except Exception as e:
             return False, str(e)
 
     async def _handle_failure(
@@ -568,7 +699,7 @@ class GenerationService:
         user_id: UUID,
         input_image_bytes: bytes,
         address: str,
-        areas: List[str],
+        areas: List[Dict[str, Any]],
         style: str,
         custom_prompt: Optional[str],
         payment_method: str
@@ -585,9 +716,9 @@ class GenerationService:
             user_id: User UUID
             input_image_bytes: Input property image
             address: Property address
-            areas: List of area types to generate
-            style: Design style
-            custom_prompt: Optional custom instructions
+            areas: List of area dicts, each with 'area_type', 'style', 'custom_prompt', 'preservation_strength'
+            style: Default design style (overridden by per-area style)
+            custom_prompt: Default custom instructions (overridden by per-area custom_prompt)
             payment_method: Payment method used
 
         Returns:
@@ -604,15 +735,22 @@ class GenerationService:
 
             # Create tasks for each area
             tasks = []
-            for area_type in areas:
+            for area_data in areas:
+                # Extract area-specific parameters
+                area_type = area_data.get('area_type') or area_data.get('area')
+                area_style = area_data.get('style', style)
+                area_custom_prompt = area_data.get('custom_prompt', custom_prompt)
+                area_preservation = area_data.get('preservation_strength', 0.5)
+
                 task = self._process_single_area(
                     generation_id=generation_id,
                     user_id=user_id,
                     input_image_bytes=input_image_bytes,
                     address=address,
                     area_type=area_type,
-                    style=style,
-                    custom_prompt=custom_prompt
+                    style=area_style,
+                    custom_prompt=area_custom_prompt,
+                    preservation_strength=area_preservation
                 )
                 tasks.append(task)
 
@@ -664,7 +802,8 @@ class GenerationService:
         address: str,
         area_type: str,
         style: str,
-        custom_prompt: Optional[str]
+        custom_prompt: Optional[str],
+        preservation_strength: float = 0.5
     ) -> Tuple[bool, Optional[str]]:
         """
         Process single area generation.
@@ -677,6 +816,7 @@ class GenerationService:
             area_type: Area type
             style: Design style
             custom_prompt: Custom instructions
+            preservation_strength: Control transformation intensity (0.0-1.0)
 
         Returns:
             Tuple of (success, error_message)
@@ -700,10 +840,9 @@ class GenerationService:
                 address=address,
                 area_type=area_type,
                 style=style,
-                custom_prompt=custom_prompt
+                custom_prompt=custom_prompt,
+                preservation_strength=preservation_strength
             )
-            gemini_response_time = (datetime.utcnow() - start_time).total_seconds()
-
             # Upload to storage
             filename = f"generation_{generation_id}_{area_type}.jpg"
             output_url = await self.storage.upload_image(
@@ -716,11 +855,10 @@ class GenerationService:
                 UPDATE generation_areas
                 SET status = 'completed',
                     progress = 100,
-                    output_image_url = $2,
-                    gemini_response_time = $3,
+                    image_url = $2,
                     completed_at = NOW()
                 WHERE id = $1
-            """, area_id, output_url, gemini_response_time)
+            """, area_id, output_url)
 
             return True, None
 
