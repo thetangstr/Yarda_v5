@@ -28,10 +28,13 @@ class YardArea(str, Enum):
 
 
 class DesignStyle(str, Enum):
-    """Landscape design style options"""
-    MINIMALIST = "minimalist"
-    MEDITERRANEAN = "mediterranean"
+    """Landscape design style options (synced with frontend Feature 005)"""
+    MODERN_MINIMALIST = "modern_minimalist"
     CALIFORNIA_NATIVE = "california_native"
+    JAPANESE_ZEN = "japanese_zen"
+    ENGLISH_GARDEN = "english_garden"
+    DESERT_LANDSCAPE = "desert_landscape"
+    MEDITERRANEAN = "mediterranean"  # Legacy, keeping for backward compatibility
 
 
 class GenerationStatus(str, Enum):
