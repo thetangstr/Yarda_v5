@@ -15,7 +15,7 @@ from typing import Dict, Optional
 
 # Core style prompt templates (reduced to 3 core styles)
 STYLE_PROMPTS: Dict[str, str] = {
-    "minimalist": """Transform this residential landscape into a stunning modern minimalist design:
+    "modern_minimalist": """Transform this residential landscape into a stunning modern minimalist design:
 
 **Design Philosophy:**
 - Clean geometric lines and structured plantings
@@ -141,8 +141,8 @@ def get_style_metadata(style: str) -> Optional[Dict[str, str]]:
         Dictionary with 'name' and 'description' keys, or None if not found
     """
     metadata = {
-        "minimalist": {
-            "name": "Minimalist",
+        "modern_minimalist": {
+            "name": "Modern Minimalist",
             "description": "Clean lines, contemporary materials, and zen-inspired simplicity"
         },
         "mediterranean": {
