@@ -1,0 +1,156 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - navigation [ref=e4]:
+      - generic [ref=e5]:
+        - heading "Yarda" [level=1] [ref=e6]
+        - generic [ref=e7]:
+          - generic [ref=e8]:
+            - img [ref=e9]
+            - generic [ref=e11]: 0 tokens
+          - generic [ref=e13]:
+            - img [ref=e14]
+            - generic [ref=e16]: 0 trial credits
+    - generic [ref=e17]:
+      - generic [ref=e18]:
+        - generic [ref=e19]:
+          - heading "Create Your Landscape Design" [level=2] [ref=e20]
+          - paragraph [ref=e21]: Enter your property address and choose your design preferences
+        - generic [ref=e22]:
+          - generic [ref=e24]:
+            - img [ref=e26]
+            - generic [ref=e28]:
+              - paragraph [ref=e29]: No Credits Available
+              - paragraph [ref=e30]: No payment method
+          - generic [ref=e31]:
+            - generic [ref=e32]:
+              - heading "Property Address" [level=3] [ref=e33]
+              - paragraph [ref=e34]: Start by entering your property address
+            - generic [ref=e35]:
+              - generic [ref=e36]: Property Address
+              - textbox "Property Address" [active] [ref=e38]:
+                - /placeholder: 123 Main Street, San Francisco, CA
+                - text: 321 Pine St, Sacramento, CA
+              - paragraph [ref=e39]: Start typing to see address suggestions
+          - generic [ref=e41]:
+            - generic [ref=e42]:
+              - heading "Choose Your Landscape Areas" [level=3] [ref=e43]
+              - paragraph [ref=e44]: Select the areas you'd like to transform
+            - generic [ref=e45]:
+              - button "🏠 Front Yard" [ref=e48] [cursor=pointer]:
+                - generic [ref=e49]:
+                  - generic [ref=e51]: 🏠
+                  - heading "Front Yard" [level=4] [ref=e53]
+              - button "🌲 Back Yard" [ref=e56] [cursor=pointer]:
+                - generic [ref=e57]:
+                  - generic [ref=e59]: 🌲
+                  - heading "Back Yard" [level=4] [ref=e61]
+              - button "🚶 Walkway" [ref=e64] [cursor=pointer]:
+                - generic [ref=e65]:
+                  - generic [ref=e67]: 🚶
+                  - heading "Walkway" [level=4] [ref=e69]
+            - generic [ref=e74]: 0 areas selected
+          - generic [ref=e76]:
+            - generic [ref=e77]:
+              - heading "Choose Your Design Style" [level=3] [ref=e78]
+              - paragraph [ref=e79]: Select your preferred design style
+            - generic [ref=e80]:
+              - button "🏠 Modern Minimalist Clean lines and contemporary design" [ref=e83] [cursor=pointer]:
+                - img [ref=e85]
+                - generic [ref=e87]:
+                  - generic [ref=e88]: 🏠
+                  - generic [ref=e89]:
+                    - heading "Modern Minimalist" [level=4] [ref=e90]
+                    - paragraph [ref=e91]: Clean lines and contemporary design
+              - button "🌲 California Native Drought-tolerant native plants" [ref=e94] [cursor=pointer]:
+                - generic [ref=e95]:
+                  - generic [ref=e96]: 🌲
+                  - generic [ref=e97]:
+                    - heading "California Native" [level=4] [ref=e98]
+                    - paragraph [ref=e99]: Drought-tolerant native plants
+              - button "🌸 English Garden Lush flowers and cottage charm" [ref=e102] [cursor=pointer]:
+                - generic [ref=e103]:
+                  - generic [ref=e104]: 🌸
+                  - generic [ref=e105]:
+                    - heading "English Garden" [level=4] [ref=e106]
+                    - paragraph [ref=e107]: Lush flowers and cottage charm
+            - generic [ref=e109]:
+              - generic [ref=e110]: Custom Instructions (Optional)
+              - textbox "Describe any specific features or preferences..." [ref=e111]
+              - generic [ref=e113]: 0/500 characters
+          - generic [ref=e114]:
+            - generic [ref=e115]:
+              - heading "Transformation Intensity" [level=3] [ref=e116]
+              - paragraph [ref=e117]: Control how dramatically we transform your landscape
+            - generic [ref=e118]:
+              - generic [ref=e119]:
+                - generic [ref=e120]: Transformation Intensity
+                - generic [ref=e121]: Balanced
+              - generic [ref=e122]:
+                - slider [ref=e123] [cursor=pointer]: "0.5"
+                - generic [ref=e124]:
+                  - generic [ref=e125]: "0.0"
+                  - generic [ref=e126]: "0.5"
+                  - generic [ref=e127]: "1.0"
+              - paragraph [ref=e128]: Balance enhancement with preservation of existing character
+              - generic [ref=e129]:
+                - generic [ref=e130]:
+                  - generic [ref=e131]: Dramatic
+                  - generic [ref=e132]: 0.0 - 0.4
+                - generic [ref=e133]:
+                  - generic [ref=e134]: Balanced
+                  - generic [ref=e135]: 0.4 - 0.6
+                - generic [ref=e136]:
+                  - generic [ref=e137]: Subtle
+                  - generic [ref=e138]: 0.6 - 1.0
+          - generic [ref=e140]:
+            - button "Generate Landscape Design" [disabled] [ref=e141]:
+              - generic [ref=e142]:
+                - img [ref=e143]
+                - generic [ref=e145]: Generate Landscape Design
+            - paragraph [ref=e146]: Please select at least one area
+      - paragraph [ref=e148]: Fill out the form above to start generating your landscape design
+    - generic [ref=e150] [cursor=pointer]:
+      - generic [ref=e152]: DEBUG PANEL
+      - generic [ref=e153]:
+        - button "Copy logs to clipboard" [ref=e154]:
+          - img [ref=e155]
+        - button "Clear logs" [ref=e158]:
+          - img [ref=e159]
+        - img [ref=e162]
+  - alert [ref=e164]
+  - generic [ref=e165]:
+    - generic [ref=e166]:
+      - generic [ref=e168]: 321 Pine St
+      - generic [ref=e169]: Galt, Sacramento, California, USA
+    - generic [ref=e170]:
+      - generic [ref=e172]: 321 Pine St
+      - generic [ref=e173]: Walnut Grove, Sacramento, California, USA
+    - generic [ref=e174]:
+      - generic [ref=e176]: 321 Pine St
+      - generic [ref=e177]: Antelope, Sacramento, California, USA
+    - generic [ref=e178]:
+      - generic [ref=e180]: 321 Grove St Pine St Alley
+      - generic [ref=e181]: Walnut Grove, Sacramento, California, USA
+    - generic [ref=e182]:
+      - generic [ref=e184]: 321 Beach Pine Way
+      - generic [ref=e185]: Sacramento, California, USA
+  - generic [ref=e186]:
+    - generic [ref=e187]:
+      - generic [ref=e189]: 321 Pine St
+      - generic [ref=e190]: Galt, Sacramento, California, USA
+    - generic [ref=e191]:
+      - generic [ref=e193]: 321 Pine St
+      - generic [ref=e194]: Walnut Grove, Sacramento, California, USA
+    - generic [ref=e195]:
+      - generic [ref=e197]: 321 Pine St
+      - generic [ref=e198]: Antelope, Sacramento, California, USA
+    - generic [ref=e199]:
+      - generic [ref=e201]: 321 Grove St Pine St Alley
+      - generic [ref=e202]: Walnut Grove, Sacramento, California, USA
+    - generic [ref=e203]:
+      - generic [ref=e205]: 321 Beach Pine Way
+      - generic [ref=e206]: Sacramento, California, USA
+```

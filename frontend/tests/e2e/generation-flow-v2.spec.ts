@@ -23,41 +23,48 @@ import { test, expect, Page } from '@playwright/test';
 const POLLING_INTERVAL = 2000; // 2 seconds
 const MAX_GENERATION_TIME = 120000; // 2 minutes (generous for real backend)
 
+// Staging environment configuration
+const STAGING_BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'https://yarda-v5-frontend-jxonwuxkj-thetangstrs-projects.vercel.app';
+const VERCEL_SHARE_PARAM = 'o64DXz4AMnGg6wpNTJ6UIqnk3EnGeGen';
+const TEST_USER_EMAIL = 'test+trial@yarda.ai';
+const TEST_USER_PASSWORD = 'TestPassword123!';
+
 /**
- * Helper: Setup mock authentication for testing
- * Uses localStorage to bypass actual login flow
+ * Helper: Login with real test user credentials
+ * This authenticates the user properly for staging tests
  */
-async function setupMockAuth(page: Page) {
-  const mockUserState = {
-    state: {
-      user: {
-        id: 'test-user-id',
-        email: 'test.uat.bypass@yarda.app',
-        email_verified: true,
-        trial_remaining: 3,
-        trial_used: 0,
-        subscription_status: null,
-        subscription_tier: null,
-      },
-      accessToken: 'mock-access-token',
-      isAuthenticated: true,
-    },
-    version: 0,
-  };
+async function loginToStaging(page: Page) {
+  // Navigate to login page with Vercel bypass
+  const loginUrl = `${STAGING_BASE_URL}/login?_vercel_share=${VERCEL_SHARE_PARAM}`;
+  await page.goto(loginUrl);
+  await page.waitForLoadState('networkidle');
 
-  // Set mock auth state before navigating
-  await page.addInitScript((mockState) => {
-    localStorage.setItem('user-storage', JSON.stringify(mockState));
-  }, mockUserState);
+  // Wait for login form to appear
+  await page.waitForSelector('input[type="email"]', { timeout: 10000 });
 
-  // Navigate to generate page
-  await page.goto('/generate');
+  // Fill in credentials
+  await page.fill('input[type="email"]', TEST_USER_EMAIL);
+  await page.fill('input[type="password"]', TEST_USER_PASSWORD);
+
+  // Click sign in button
+  await page.click('button:has-text("Sign In")');
+
+  // Wait for authentication to complete (redirect to home or generate page)
+  await page.waitForURL(/\/(generate|$|\?)/, { timeout: 15000 });
+  await page.waitForLoadState('networkidle');
+
+  console.log('✅ Successfully authenticated as:', TEST_USER_EMAIL);
 }
 
 test.describe('US1 + US5: Single-Page Generation Flow with Polling', () => {
   test.beforeEach(async ({ page }) => {
-    // Setup mock auth before each test
-    await setupMockAuth(page);
+    // Authenticate with real test user credentials
+    await loginToStaging(page);
+
+    // Navigate to generate page with Vercel bypass
+    const generateUrl = `${STAGING_BASE_URL}/generate?_vercel_share=${VERCEL_SHARE_PARAM}`;
+    await page.goto(generateUrl);
+    await page.waitForLoadState('networkidle');
   });
 
   /**
@@ -77,15 +84,20 @@ test.describe('US1 + US5: Single-Page Generation Flow with Polling', () => {
     // Get initial URL
     const initialURL = page.url();
 
-    // Fill in address
-    await page.fill('input[placeholder*="address" i]', '123 Main St, San Francisco, CA');
+    // Fill in address (use actual staging placeholder)
+    const addressInput = page.locator('input[placeholder*="Main Street" i], input[placeholder*="property" i], input[name="address"]').first();
+    await addressInput.fill('123 Main St, San Francisco, CA');
     await page.waitForTimeout(1000); // Wait for autocomplete
 
-    // Select first yard area (front_yard)
-    await page.click('[data-testid="yard-area-front_yard"]');
+    // Select first yard area (front_yard) - staging uses text-based selectors
+    await page.click('button:has-text("Front Yard")');
 
-    // Select a style
-    await page.click('[data-testid="style-modern"]');
+    // Scroll down to see style selector if needed
+    await page.evaluate(() => window.scrollBy(0, 300));
+    await page.waitForTimeout(500);
+
+    // Select a style - staging uses text-based selectors
+    await page.click('button:has-text("Modern")');
 
     // Add custom prompt
     await page.fill('textarea[name="custom_prompt"]', 'Modern minimalist landscaping');
@@ -102,7 +114,8 @@ test.describe('US1 + US5: Single-Page Generation Flow with Polling', () => {
     expect(page.url()).toBe(initialURL);
 
     // Verify form is still visible but possibly disabled
-    await expect(page.locator('input[placeholder*="address" i]')).toBeVisible();
+    const formInput = page.locator('input[placeholder*="Main Street" i], input[placeholder*="property" i], input[name="address"]').first();
+    await expect(formInput).toBeVisible();
 
     // Wait for generation to complete (up to 2 minutes)
     await expect(page.locator('[data-testid="generation-results"]')).toBeVisible({
@@ -131,9 +144,10 @@ test.describe('US1 + US5: Single-Page Generation Flow with Polling', () => {
    */
   test('T009: Should poll for progress updates every 2 seconds', async ({ page }) => {
     // Fill and submit form
-    await page.fill('input[placeholder*="address" i]', '456 Elm St, Los Angeles, CA');
-    await page.click('[data-testid="yard-area-back_yard"]');
-    await page.click('[data-testid="style-modern"]');
+    const addressInput = page.locator('input[placeholder*="Main Street" i], input[placeholder*="property" i], input[name="address"]').first();
+    await addressInput.fill('456 Elm St, Los Angeles, CA');
+    await page.click('button:has-text("Back Yard")');
+    await page.click('button:has-text("Modern")');
     await page.click('button:has-text("Generate Design")');
 
     // Wait for progress section
@@ -180,10 +194,11 @@ test.describe('US1 + US5: Single-Page Generation Flow with Polling', () => {
    */
   test('T010: Should display results inline when generation completes', async ({ page }) => {
     // Fill and submit form
-    await page.fill('input[placeholder*="address" i]', '789 Oak Ave, San Diego, CA');
-    await page.click('[data-testid="yard-area-front_yard"]');
-    await page.click('[data-testid="yard-area-back_yard"]');
-    await page.click('[data-testid="style-modern"]');
+    const addressInput = page.locator('input[placeholder*="Main Street" i], input[placeholder*="property" i], input[name="address"]').first();
+    await addressInput.fill('789 Oak Ave, San Diego, CA');
+    await page.click('button:has-text("Front Yard")');
+    await page.click('button:has-text("Back Yard")');
+    await page.click('button:has-text("Modern")');
     await page.fill('textarea[name="custom_prompt"]', 'Beautiful landscaping');
     await page.click('button:has-text("Generate Design")');
 
@@ -226,9 +241,10 @@ test.describe('US1 + US5: Single-Page Generation Flow with Polling', () => {
    */
   test('T019: Should handle network interruptions gracefully', async ({ page, context }) => {
     // Fill and submit form
-    await page.fill('input[placeholder*="address" i]', '321 Pine St, Sacramento, CA');
-    await page.click('[data-testid="yard-area-front_yard"]');
-    await page.click('[data-testid="style-modern"]');
+    const addressInput = page.locator('input[placeholder*="Main Street" i], input[placeholder*="property" i], input[name="address"]').first();
+    await addressInput.fill('321 Pine St, Sacramento, CA');
+    await page.click('button:has-text("Front Yard")');
+    await page.click('button:has-text("Modern")');
     await page.click('button:has-text("Generate Design")');
 
     // Wait for progress to start
@@ -302,9 +318,10 @@ test.describe('US1 + US5: Single-Page Generation Flow with Polling', () => {
     });
 
     // Fill and submit form
-    await page.fill('input[placeholder*="address" i]', '654 Maple Dr, Fresno, CA');
-    await page.click('[data-testid="yard-area-front_yard"]');
-    await page.click('[data-testid="style-modern"]');
+    const addressInput = page.locator('input[placeholder*="Main Street" i], input[placeholder*="property" i], input[name="address"]').first();
+    await addressInput.fill('654 Maple Dr, Fresno, CA');
+    await page.click('button:has-text("Front Yard")');
+    await page.click('button:has-text("Modern")');
     await page.click('button:has-text("Generate Design")');
 
     // Wait for progress to start
@@ -338,14 +355,21 @@ test.describe('US1 + US5: Single-Page Generation Flow with Polling', () => {
  */
 test.describe('US1: Start New Generation Flow', () => {
   test.beforeEach(async ({ page }) => {
-    await setupMockAuth(page);
+    // Authenticate with real test user credentials
+    await loginToStaging(page);
+
+    // Navigate to generate page with Vercel bypass
+    const generateUrl = `${STAGING_BASE_URL}/generate?_vercel_share=${VERCEL_SHARE_PARAM}`;
+    await page.goto(generateUrl);
+    await page.waitForLoadState('networkidle');
   });
 
   test('T018: Should reset form without page reload', async ({ page }) => {
     // Complete a generation first
-    await page.fill('input[placeholder*="address" i]', '111 Test St, San Francisco, CA');
-    await page.click('[data-testid="yard-area-front_yard"]');
-    await page.click('[data-testid="style-modern"]');
+    const addressInput = page.locator('input[placeholder*="Main Street" i], input[placeholder*="property" i], input[name="address"]').first();
+    await addressInput.fill('111 Test St, San Francisco, CA');
+    await page.click('button:has-text("Front Yard")');
+    await page.click('button:has-text("Modern")');
     await page.fill('textarea[name="custom_prompt"]', 'Test prompt');
     await page.click('button:has-text("Generate Design")');
 
@@ -364,7 +388,8 @@ test.describe('US1: Start New Generation Flow', () => {
     expect(page.url()).toBe(urlBeforeReset);
 
     // Verify form is reset
-    await expect(page.locator('input[placeholder*="address" i]')).toHaveValue('');
+    const resetInput = page.locator('input[placeholder*="Main Street" i], input[placeholder*="property" i], input[name="address"]').first();
+    await expect(resetInput).toHaveValue('');
     await expect(page.locator('textarea[name="custom_prompt"]')).toHaveValue('');
 
     // Verify results section is hidden
