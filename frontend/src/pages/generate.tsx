@@ -83,13 +83,22 @@ export default function GeneratePageV2() {
   // Redirect if not authenticated (but wait for hydration first)
   // Skip redirect in E2E test mode to prevent test flakiness
   useEffect(() => {
-    // Check if we're in Playwright E2E test mode
-    const isE2ETest = typeof window !== 'undefined' && (window as any).__PLAYWRIGHT_E2E__;
+    // Check if we're in Playwright E2E test mode (check both window and localStorage)
+    const isE2ETest = typeof window !== 'undefined' && (
+      (window as any).__PLAYWRIGHT_E2E__ ||
+      localStorage.getItem('__PLAYWRIGHT_E2E__') === 'true'
+    );
 
     // Debug logging for E2E tests
-    if (typeof window !== 'undefined' && (window as any).__PLAYWRIGHT_E2E__) {
+    if (isE2ETest) {
       console.log('[generate.tsx] E2E test mode detected, skipping auth redirect');
-      console.log('[generate.tsx] Auth state:', { _hasHydrated, isAuthenticated, isE2ETest });
+      console.log('[generate.tsx] Auth state:', {
+        _hasHydrated,
+        isAuthenticated,
+        isE2ETest,
+        windowFlag: (window as any).__PLAYWRIGHT_E2E__,
+        localStorageFlag: localStorage.getItem('__PLAYWRIGHT_E2E__')
+      });
     }
 
     if (!isE2ETest && _hasHydrated && !isAuthenticated) {
