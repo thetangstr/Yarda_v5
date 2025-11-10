@@ -99,10 +99,14 @@ test.describe('US1 + US5: Single-Page Generation Flow with Polling', () => {
     // Select a style - staging uses text-based selectors
     await page.click('button:has-text("Modern")');
 
-    // Add custom prompt
-    await page.fill('textarea[name="custom_prompt"]', 'Modern minimalist landscaping');
+    // Add custom prompt (use first visible textarea - per-area in staging)
+    const customPrompt = page.locator('textarea').first();
+    await customPrompt.scrollIntoViewIfNeeded();
+    await customPrompt.fill('Modern minimalist landscaping');
 
-    // Submit form
+    // Scroll to submit button and submit form
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForTimeout(500);
     await page.click('button:has-text("Generate Design")');
 
     // Wait for progress section to appear (should be inline)
@@ -147,7 +151,15 @@ test.describe('US1 + US5: Single-Page Generation Flow with Polling', () => {
     const addressInput = page.locator('input[placeholder*="Main Street" i], input[placeholder*="property" i], input[name="address"]').first();
     await addressInput.fill('456 Elm St, Los Angeles, CA');
     await page.click('button:has-text("Back Yard")');
+
+    // Scroll down to see style selector
+    await page.evaluate(() => window.scrollBy(0, 300));
+    await page.waitForTimeout(500);
     await page.click('button:has-text("Modern")');
+
+    // Scroll to submit button and submit form
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForTimeout(500);
     await page.click('button:has-text("Generate Design")');
 
     // Wait for progress section
@@ -198,8 +210,20 @@ test.describe('US1 + US5: Single-Page Generation Flow with Polling', () => {
     await addressInput.fill('789 Oak Ave, San Diego, CA');
     await page.click('button:has-text("Front Yard")');
     await page.click('button:has-text("Back Yard")');
+
+    // Scroll down to see style selector
+    await page.evaluate(() => window.scrollBy(0, 300));
+    await page.waitForTimeout(500);
     await page.click('button:has-text("Modern")');
-    await page.fill('textarea[name="custom_prompt"]', 'Beautiful landscaping');
+
+    // Add custom prompt (use first visible textarea - per-area in staging)
+    const customPrompt = page.locator('textarea').first();
+    await customPrompt.scrollIntoViewIfNeeded();
+    await customPrompt.fill('Beautiful landscaping');
+
+    // Scroll to submit button and submit form
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForTimeout(500);
     await page.click('button:has-text("Generate Design")');
 
     // Wait for results section to appear
@@ -244,7 +268,15 @@ test.describe('US1 + US5: Single-Page Generation Flow with Polling', () => {
     const addressInput = page.locator('input[placeholder*="Main Street" i], input[placeholder*="property" i], input[name="address"]').first();
     await addressInput.fill('321 Pine St, Sacramento, CA');
     await page.click('button:has-text("Front Yard")');
+
+    // Scroll down to see style selector
+    await page.evaluate(() => window.scrollBy(0, 300));
+    await page.waitForTimeout(500);
     await page.click('button:has-text("Modern")');
+
+    // Scroll to submit button and submit form
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForTimeout(500);
     await page.click('button:has-text("Generate Design")');
 
     // Wait for progress to start
@@ -321,7 +353,15 @@ test.describe('US1 + US5: Single-Page Generation Flow with Polling', () => {
     const addressInput = page.locator('input[placeholder*="Main Street" i], input[placeholder*="property" i], input[name="address"]').first();
     await addressInput.fill('654 Maple Dr, Fresno, CA');
     await page.click('button:has-text("Front Yard")');
+
+    // Scroll down to see style selector
+    await page.evaluate(() => window.scrollBy(0, 300));
+    await page.waitForTimeout(500);
     await page.click('button:has-text("Modern")');
+
+    // Scroll to submit button and submit form
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForTimeout(500);
     await page.click('button:has-text("Generate Design")');
 
     // Wait for progress to start
@@ -369,8 +409,20 @@ test.describe('US1: Start New Generation Flow', () => {
     const addressInput = page.locator('input[placeholder*="Main Street" i], input[placeholder*="property" i], input[name="address"]').first();
     await addressInput.fill('111 Test St, San Francisco, CA');
     await page.click('button:has-text("Front Yard")');
+
+    // Scroll down to see style selector
+    await page.evaluate(() => window.scrollBy(0, 300));
+    await page.waitForTimeout(500);
     await page.click('button:has-text("Modern")');
-    await page.fill('textarea[name="custom_prompt"]', 'Test prompt');
+
+    // Add custom prompt (use first visible textarea - per-area in staging)
+    const customPrompt = page.locator('textarea').first();
+    await customPrompt.scrollIntoViewIfNeeded();
+    await customPrompt.fill('Test prompt');
+
+    // Scroll to submit button and submit form
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForTimeout(500);
     await page.click('button:has-text("Generate Design")');
 
     // Wait for completion
@@ -390,7 +442,10 @@ test.describe('US1: Start New Generation Flow', () => {
     // Verify form is reset
     const resetInput = page.locator('input[placeholder*="Main Street" i], input[placeholder*="property" i], input[name="address"]').first();
     await expect(resetInput).toHaveValue('');
-    await expect(page.locator('textarea[name="custom_prompt"]')).toHaveValue('');
+
+    // Verify textarea is cleared (use first visible textarea)
+    const resetPrompt = page.locator('textarea').first();
+    await expect(resetPrompt).toHaveValue('');
 
     // Verify results section is hidden
     await expect(page.locator('[data-testid="generation-results"]')).not.toBeVisible();
