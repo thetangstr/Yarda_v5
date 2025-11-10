@@ -61,6 +61,7 @@ export const GenerationFormEnhanced: React.FC<GenerationFormEnhancedProps> = ({
   const [selectedStyle, setSelectedStyle] = useState<LandscapeStyle>(DesignStyle.ModernMinimalist);
   const [customPrompt, setCustomPrompt] = useState('');
   const [preservationStrength, setPreservationStrength] = useState(0.5); // v2 enhancement: default balanced transformation
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false); // Hide transformation intensity by default
 
   // UI state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -503,25 +504,52 @@ export const GenerationFormEnhanced: React.FC<GenerationFormEnhancedProps> = ({
         />
       </motion.div>
 
-      {/* Section 4: Transformation Intensity (v2 enhancement) */}
+      {/* Advanced Options Toggle */}
       <motion.div
-        initial={{ opacity: 0, y: 30 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.4 }}
-        className="max-w-2xl mx-auto"
+        transition={{ duration: 0.4, delay: 0.35 }}
+        className="max-w-2xl mx-auto text-center mt-8"
       >
-        <div className="text-center mb-8">
-          <h3 className="text-2xl font-bold text-gray-900 mb-2">Transformation Intensity</h3>
-          <p className="text-gray-600">
-            Control how dramatically we transform your landscape
-          </p>
-        </div>
-        <PreservationStrengthSlider
-          value={preservationStrength}
-          onChange={setPreservationStrength}
-          disabled={isFormDisabled}
-        />
+        <button
+          type="button"
+          onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md"
+        >
+          <svg
+            className={`w-4 h-4 transition-transform duration-200 ${showAdvancedOptions ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+          <span>{showAdvancedOptions ? 'Hide' : 'Show'} Advanced Options</span>
+        </button>
       </motion.div>
+
+      {/* Section 4: Transformation Intensity (v2 enhancement) - Hidden by default */}
+      {showAdvancedOptions && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          transition={{ duration: 0.3 }}
+          className="max-w-2xl mx-auto mt-8 overflow-hidden"
+        >
+          <div className="text-center mb-8">
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Transformation Intensity</h3>
+            <p className="text-gray-600">
+              Control how dramatically we transform your landscape
+            </p>
+          </div>
+          <PreservationStrengthSlider
+            value={preservationStrength}
+            onChange={setPreservationStrength}
+            disabled={isFormDisabled}
+          />
+        </motion.div>
+      )}
 
       {/* Submit Button */}
       <motion.div

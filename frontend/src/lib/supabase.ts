@@ -13,12 +13,23 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-// Create Supabase client
+// Create Supabase client with maximized session persistence
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
+    // Auto-refresh access token before expiry (default: 1 hour)
     autoRefreshToken: true,
+
+    // Persist session in localStorage (survives browser close)
     persistSession: true,
+
+    // Detect session from URL callback (for OAuth/magic link redirects)
     detectSessionInUrl: true,
+
+    // Use localStorage for maximum persistence (default, but being explicit)
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+
+    // Custom storage key for session isolation
+    storageKey: 'yarda-auth-session',
   },
 });
 

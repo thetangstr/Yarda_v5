@@ -39,7 +39,7 @@ Yarda AI Landscape Studio - AI-powered landscape design generation with Google M
 **Frontend:** Next.js 15.0.2, React 18, TypeScript 5.6.3, TailwindCSS, Zustand (state), Axios (HTTP)
 **Backend:** Python 3.11+, FastAPI, asyncpg (connection pool), Pydantic
 **Database:** PostgreSQL 17 (Supabase) with Row-Level Security
-**Auth:** Supabase Auth with Google OAuth
+**Auth:** Supabase Auth with Google OAuth + Magic Link (passwordless)
 **Payments:** Stripe (Checkout, Customer Portal, Webhooks)
 **AI:** Google Gemini 2.5 Flash
 **Maps:** Google Maps API (Street View, Satellite)
@@ -631,78 +631,40 @@ stripe trigger payment_intent.succeeded
 - 3D Secure: `4000 0025 0000 3155`
 
 ## Recent Changes
+- 006-magic-link-auth: Added TypeScript 5.6.3 (Frontend), Next.js 15.0.2
 
 ### 2025-11-08 - Integration Success & Code Quality Improvements ✅
 **Integration Working:**
 - ✅ End-to-end generation flow verified working (test generation completed in ~15 seconds)
 - ✅ Google Maps API integration operational (geocoding, Street View)
-- ✅ Gemini 2.5 Flash API integration operational (image generation)
-- ✅ Trial credit atomic deduction working correctly (3 → 2)
 
 **Critical Infrastructure Fix:**
-- Fixed CORS errors caused by backend not running with venv activated
-- Root cause: Backend must run with `source venv/bin/activate` to load dependencies
-- Symptom: CORS errors, ModuleNotFoundError, API endpoints failing
-- **Note:** Gemini API key was NOT expired - integration worked on first try after venv fix
 
 **Code Quality Improvements:**
-- Created shared component utilities: `frontend/src/components/generation/shared/constants.ts` (150 lines)
-- Created shared utility functions: `frontend/src/components/generation/shared/utils.ts` (42 lines)
-- Eliminated ~90 lines of duplicated code from GenerationProgressInline and GenerationResultsInline
-- Single source of truth for area mappings, animations, and status colors
 
 **Bug Fixes:**
-- Fixed React key warnings in `generate.tsx` lines 340, 365, 389 (parent component issue)
-- All siblings in progress section now have unique keys (network-error, timeout-banner, progress-inline)
-- Updated area selector to use emoji icons (🏠 🌲 🚶) instead of Lucide components per spec FR-006
 
 **Documentation:**
-- Created comprehensive integration summary: `INTEGRATION_SUCCESS_SUMMARY.md`
-- Updated CLAUDE.md with critical venv activation requirements
-- Documented React key pattern for conditional siblings
 
 **Status:** Integration verified working, all code production-ready
 
 ### 2025-11-07 - Feature 005 Single-Page Generation Flow (Ready for Testing ✅)
 **Implementation:**
-- Ported Yarda v2's proven single-page generation UX to v5
-- Created inline progress tracking (`GenerationProgressInline.tsx`) and results display (`GenerationResultsInline.tsx`)
-- Implemented 2-second polling with 5-minute timeout
-- Added localStorage recovery for interrupted generations
-- Replaced `generate.tsx` with single-page flow (old version backed up as `generate-old-backup.tsx`)
-- Updated `GenerationFormEnhanced` to sync state with Zustand store
 
 **Type System:**
-- Extended `generation.ts` with 5 new interfaces for v2-specific types
-- Created utility libraries: `suggested-prompts.ts` (30+ emoji mappings), `localStorage-keys.ts`
-- Fixed all type errors: Changed `MultiAreaStatusResponse` → `GenerationStatusResponse` with `areas` property
 
 **Testing:**
-- Fixed E2E test login flow to use `/auth` directly
-- E2E tests ready to run: `frontend/tests/e2e/generation-flow-v2.spec.ts` (6 comprehensive tests)
-- Manual testing required: Verify polling, localStorage recovery, and network error handling
 
 **Status:** Ready for integration testing and verification
 
 ### 2025-11-06 - Feature 004 Generation Flow (Production Ready ✅)
 **Bug Fixes:**
-- Fixed missing database columns: Added `stripe_subscription_id`, `current_period_end`, `cancel_at_period_end` to users table
-- Fixed Pydantic model attribute access: Changed `.get()` calls to direct attribute access in payment-status endpoint
-- Fixed local development CORS: Updated `frontend/.env.local` to point to `http://localhost:8000` instead of production Railway URL
 
 **Testing:**
-- Completed comprehensive E2E testing: 11/11 tests passed (100% pass rate)
-- Verified trial credit system working atomically
-- Validated generation flow end-to-end: form submission → progress tracking → credit deduction
-- Migration file created: `supabase/migrations/014_add_subscription_columns.sql`
 
 **Status:** Feature 004 is production-ready pending final deployment
 
 ### 2025-11-04
-- Implemented Google Sign-In with Supabase Auth (removed Firebase)
-- Created `users` table with auth.users sync trigger
-- Updated all environment variables to use correct project IDs
-- Fixed CORS to support Vercel preview deployments
 
 ## Quick Reference - File Locations
 
@@ -724,6 +686,7 @@ stripe trigger payment_intent.succeeded
 | Pydantic models | `backend/src/models/` |
 
 ## Active Technologies
+- TypeScript 5.6.3 (Frontend), Next.js 15.0.2 (006-magic-link-auth)
 
 - **Frontend**: TypeScript 5.6.3, Next.js 15.0.2, React 18, TailwindCSS, Zustand
 - **Backend**: Python 3.11+, FastAPI, asyncpg, Pydantic 2.11

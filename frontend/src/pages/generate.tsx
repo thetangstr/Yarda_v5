@@ -23,6 +23,7 @@ import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUserStore } from '@/store/userStore';
 import { useGenerationStore } from '@/store/generationStore';
+import Navigation from '@/components/Navigation';
 import GenerationFormEnhanced from '@/components/generation/GenerationFormEnhanced';
 import GenerationProgressInline from '@/components/generation/GenerationProgressInline';
 import GenerationResultsInline from '@/components/generation/GenerationResultsInline';
@@ -354,18 +355,18 @@ export default function GeneratePageV2() {
         />
       </Head>
 
-      {/* Navbar */}
-      <nav className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Yarda</h1>
-          <div className="flex items-center gap-4">
-            <TokenBalance variant="compact" autoRefresh={true} />
-            <div data-testid="trial-counter">
-              <TrialCounter variant="compact" />
-            </div>
+      {/* Navigation with user profile icon */}
+      <Navigation />
+
+      {/* Credits/Balance Bar */}
+      <div className="bg-white border-b border-gray-200 px-6 py-3 mt-16">
+        <div className="max-w-7xl mx-auto flex items-center justify-end gap-4">
+          <TokenBalance variant="compact" autoRefresh={true} />
+          <div data-testid="trial-counter">
+            <TrialCounter variant="compact" />
           </div>
         </div>
-      </nav>
+      </div>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-12 space-y-12">
