@@ -50,6 +50,12 @@ async function loginToStaging(page: Page) {
   await page.waitForURL(/\/(generate|$|\?)/, { timeout: 15000 });
   await page.waitForLoadState('networkidle');
 
+  // Clear any previous generation state to ensure clean test environment
+  await page.evaluate(() => {
+    localStorage.removeItem('generation-storage');
+    localStorage.removeItem('yarda-generation-request-id');
+  });
+
   console.log('✅ Successfully authenticated as:', TEST_USER_EMAIL);
 }
 
