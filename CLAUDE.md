@@ -521,8 +521,186 @@ BLOB_READ_WRITE_TOKEN=vercel_blob_rw_...
    - Even always-rendered components need keys if they have conditional siblings
    - Use descriptive keys: `key="network-error"` not `key="div-1"`
    - Prevents React console warnings and improves render performance
+   - **Framer Motion AnimatePresence**: Conditional motion.div wrappers MUST have keys:
+     ```tsx
+     <AnimatePresence>
+       {isVisible && (
+         <motion.div key="unique-section" ...>  {/* Key required! */}
+           <Component />
+         </motion.div>
+       )}
+     </AnimatePresence>
+     ```
+   - **Sibling motion.div elements**: All sibling motion.div elements need keys, even if not conditionally rendered:
+     ```tsx
+     <div>
+       <motion.div key="dot-1" animate={...} />
+       <motion.div key="dot-2" animate={...} />
+       <motion.div key="dot-3" animate={...} />
+     </div>
+     ```
 
-## Deployment Process
+## Fully Automated CI/CD Workflow
+
+### ONE COMMAND: `/test-smart`
+
+This single slash command handles the **entire pipeline** from local development to production deployment with automatic testing, fixing, and deployment at each stage.
+
+**Flow:**
+```
+Local → Staging/Preview → Production
+  ↓         ↓                ↓
+Test      Test          Smoke Test
+  ↓         ↓                ↓
+Auto-Fix  Auto-Fix      Monitor
+  ↓         ↓                ↓
+Pass      Pass          Done ✅
+  ↓         ↓
+Deploy    Approve
+```
+
+### Environments
+
+**Terminology (Consistent):**
+- **Staging** (Railway backend) = **Preview** (Vercel frontend) = Same environment
+- `local` → `staging/preview` → `production`
+
+**Local Development:**
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:8000`
+- Database: Supabase (development)
+
+**Staging/Preview:**
+- Frontend (Vercel Preview): `https://yarda-v5-frontend-git-{branch}-{team}.vercel.app`
+- Backend (Railway): Auto-deploys on push to current branch
+- Database: Supabase (same as production, but separate schema if needed)
+- **Purpose:** Full E2E testing before production
+
+**Production:**
+- Frontend (Vercel): `https://yarda.app` (or configured domain)
+- Backend (Railway): `https://yarda-api-production.up.railway.app`
+- Database: Supabase (production)
+
+### Usage: Single Command Workflow
+
+```bash
+# Make code changes
+# Edit files in local development
+
+# Run the fully automated pipeline
+/test-smart
+
+# Agent automatically does:
+# ✅ PHASE 1: LOCAL TESTING & AUTO-FIX
+#    - Analyzes what changed
+#    - Runs affected tests (smart selection)
+#    - Auto-fixes failures (up to 3 attempts)
+#    - Reports: "✅ 10/10 tests passed"
+#
+# ✅ PHASE 2: AUTO-DEPLOY TO STAGING
+#    - Commits auto-fixes
+#    - Pushes to current branch
+#    - Waits for Vercel preview + Railway deployment
+#    - Reports: "🚀 Deployed to staging/preview"
+#
+# ✅ PHASE 3: STAGING TESTING & AUTO-FIX
+#    - Runs FULL test suite (47 tests) on staging
+#    - Auto-fixes staging-specific failures
+#    - Reports: "✅ 47/47 tests passed"
+#
+# ⏸️ PHASE 4: HUMAN APPROVAL GATE
+#    - Shows summary of all tests
+#    - Shows preview URL for manual review (optional)
+#    - Asks: "Deploy to production? (yes/no/review)"
+#
+# You type: yes
+#
+# ✅ PHASE 5: PRODUCTION DEPLOYMENT
+#    - Merges to main branch
+#    - Pushes (triggers auto-deploy)
+#    - Runs production smoke tests
+#    - Monitors for errors
+#    - Reports: "✅ Production deployment successful!"
+```
+
+### Auto-Fix Capability
+
+The agent **automatically fixes** common test failures without manual intervention:
+
+**Examples of Auto-Fixes:**
+- Race conditions → Add explicit waits
+- Selector changes → Update test selectors
+- Timeouts → Increase timeout values
+- Network issues → Add retry logic
+- Flaky tests → Add stability improvements
+
+**Max 3 attempts per failure.** If unable to fix automatically, escalates to human.
+
+### Error Handling
+
+**Local tests fail (after 3 auto-fix attempts):**
+```
+❌ Unable to fix automatically.
+Manual intervention required.
+
+Run /test-smart again after fixing.
+```
+
+**Staging tests fail (after 3 auto-fix attempts):**
+```
+❌ Staging environment issues detected.
+Check: environment variables, database state, API keys
+
+Fix and run /test-smart again.
+```
+
+**Agent stops and waits for you to fix the issue.**
+
+### Benefits
+
+- **Zero Manual Testing**: Agent handles all test execution and fixing
+- **Zero Manual Deployment**: Agent deploys automatically after tests pass
+- **Single Approval Point**: Only human decision is production deployment
+- **Full Traceability**: Agent reports every step with detailed logs
+- **Automatic Rollback**: If production smoke tests fail, agent can revert
+
+### When to Use
+
+```bash
+# Daily development (recommended)
+# Make changes → /test-smart → Approve → Done
+/test-smart
+
+# Emergency hotfix (skip staging, direct to prod - NOT RECOMMENDED)
+# Only use in critical situations
+git checkout main
+# Make fix
+/test-smart --skip-staging  # (if implemented)
+```
+
+### Time Estimates
+
+| Phase | Time | What Happens |
+|-------|------|--------------|
+| Local Testing | 2-5 min | Smart test selection, auto-fix |
+| Deploy to Staging | 2-3 min | Push + Vercel/Railway deployment |
+| Staging Testing | 7-10 min | Full suite (47 tests), auto-fix |
+| Human Approval | 0-∞ min | You review and approve |
+| Production Deploy | 2-3 min | Merge, push, smoke tests |
+| **Total** | **15-25 min** | Fully automated except approval |
+
+**Compare to manual workflow:** 2-3 hours (testing, fixing, deploying manually)
+
+### Previous Commands (Deprecated)
+
+These are now **built into /test-smart**:
+- ~~`/test-fix`~~ → Auto-fix is built-in
+- ~~`/deploy-staging`~~ → Auto-deploys after local tests pass
+- ~~`/deploy-production`~~ → Auto-deploys after approval
+
+**Use `/test-smart` for everything.**
+
+## Deployment Process (Manual Alternative)
 
 ### Frontend (Vercel)
 - Auto-deploys on push to `main` branch

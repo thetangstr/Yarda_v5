@@ -402,6 +402,7 @@ export default function GeneratePageV2() {
         <AnimatePresence>
           {isGenerating && (
             <motion.div
+              key="progress-section"
               ref={progressRef}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -431,6 +432,7 @@ export default function GeneratePageV2() {
         <AnimatePresence>
           {hasResults && (
             <motion.div
+              key="results-section"
               ref={resultsRef}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}

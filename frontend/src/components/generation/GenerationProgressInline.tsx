@@ -102,7 +102,7 @@ export default function GenerationProgressInline({
               data-testid={`progress-area-${area.areaId}`}
             >
               {/* Area Header */}
-              <div key={`${area.areaId}-header`} className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-3">
                   <span className="text-3xl">{getAreaEmoji(area.areaId)}</span>
                   <div>
@@ -172,7 +172,7 @@ export default function GenerationProgressInline({
 
               {/* Progress Bar */}
               {area.status !== 'failed' && (
-                <div key={`${area.areaId}-progress-bar`} className="w-full bg-gray-200 rounded-full h-2.5">
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <motion.div
                     className={`h-2.5 rounded-full ${
                       area.status === 'completed'
@@ -196,7 +196,6 @@ export default function GenerationProgressInline({
                 if (sourceImage) {
                   return (
                     <motion.div
-                      key={`${area.areaId}-hero-source`}
                       initial={{ opacity: 0, scale: 0.98 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ duration: ANIMATION_DURATION.fast }}
@@ -238,16 +237,19 @@ export default function GenerationProgressInline({
                             {/* Animated Processing Dots */}
                             <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2">
                               <motion.div
+                                key="pulse-dot-1"
                                 animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
                                 transition={{ repeat: Infinity, duration: 1, delay: 0 }}
                                 className="w-3 h-3 bg-white rounded-full"
                               />
                               <motion.div
+                                key="pulse-dot-2"
                                 animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
                                 transition={{ repeat: Infinity, duration: 1, delay: 0.2 }}
                                 className="w-3 h-3 bg-white rounded-full"
                               />
                               <motion.div
+                                key="pulse-dot-3"
                                 animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
                                 transition={{ repeat: Infinity, duration: 1, delay: 0.4 }}
                                 className="w-3 h-3 bg-white rounded-full"
@@ -296,7 +298,6 @@ export default function GenerationProgressInline({
                   // Fallback: Show generated result if no source image
                   return (
                     <motion.div
-                      key={`${area.areaId}-result`}
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ duration: ANIMATION_DURATION.fast }}
@@ -318,7 +319,6 @@ export default function GenerationProgressInline({
               {/* Error Message */}
               {area.error && (
                 <motion.div
-                  key={`${area.areaId}-error`}
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md"
@@ -341,19 +341,16 @@ export default function GenerationProgressInline({
         >
           <div className="inline-flex items-center space-x-2 text-gray-600">
             <motion.div
-              key="dot-1"
               animate={{ scale: [1, 1.2, 1] }}
               transition={{ repeat: Infinity, duration: ANIMATION_DURATION.pulse }}
               className="w-2 h-2 bg-blue-500 rounded-full"
             />
             <motion.div
-              key="dot-2"
               animate={{ scale: [1, 1.2, 1] }}
               transition={{ repeat: Infinity, duration: ANIMATION_DURATION.pulse, delay: ANIMATION_DELAY.medium }}
               className="w-2 h-2 bg-blue-500 rounded-full"
             />
             <motion.div
-              key="dot-3"
               animate={{ scale: [1, 1.2, 1] }}
               transition={{ repeat: Infinity, duration: ANIMATION_DURATION.pulse, delay: ANIMATION_DELAY.long }}
               className="w-2 h-2 bg-blue-500 rounded-full"
