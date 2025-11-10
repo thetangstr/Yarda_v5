@@ -132,8 +132,8 @@ test.describe('US1 + US5: Single-Page Generation Flow with Polling', () => {
     // Verify results are displayed inline
     await expect(page.locator('[data-testid="result-image-front_yard"]')).toBeVisible();
 
-    // Verify "Start New Generation" button appears
-    await expect(page.locator('button:has-text("Start New Generation")')).toBeVisible();
+    // Verify "Create New Design" button appears (staging uses this text)
+    await expect(page.locator('button:has-text("Create New Design")')).toBeVisible();
   });
 
   /**
@@ -250,7 +250,7 @@ test.describe('US1 + US5: Single-Page Generation Flow with Polling', () => {
     ).toBeVisible();
 
     // Verify form is ready for new generation
-    await expect(page.locator('button:has-text("Start New Generation")')).toBeVisible();
+    await expect(page.locator('button:has-text("Create New Design")')).toBeVisible();
   });
 
   /**
@@ -379,7 +379,7 @@ test.describe('US1 + US5: Single-Page Generation Flow with Polling', () => {
     ).toBeVisible({ timeout: 15000 });
 
     // Verify user can start new generation
-    await expect(page.locator('button:has-text("Start New Generation")')).toBeVisible();
+    await expect(page.locator('button:has-text("Create New Design")')).toBeVisible();
   });
 });
 
@@ -430,11 +430,11 @@ test.describe('US1: Start New Generation Flow', () => {
       timeout: MAX_GENERATION_TIME,
     });
 
-    // Get URL before clicking "Start New Generation"
+    // Get URL before clicking "Create New Design"
     const urlBeforeReset = page.url();
 
-    // Click "Start New Generation"
-    await page.click('button:has-text("Start New Generation")');
+    // Click "Create New Design" (staging uses this text)
+    await page.click('button:has-text("Create New Design")');
 
     // Verify URL has NOT changed (no page reload)
     expect(page.url()).toBe(urlBeforeReset);
