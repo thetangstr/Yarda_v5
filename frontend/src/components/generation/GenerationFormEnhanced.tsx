@@ -16,6 +16,7 @@ import { YardArea, DesignStyle, type LandscapeStyle } from '@/types/generation';
 
 import AddressInput from './AddressInput';
 import AreaSelectorEnhanced from './AreaSelectorEnhanced';
+import LocationPreviewThumbnails from './LocationPreviewThumbnails';
 import StyleSelectorEnhanced from './StyleSelectorEnhanced';
 import { PreservationStrengthSlider } from './PreservationStrengthSlider';
 
@@ -378,66 +379,6 @@ export const GenerationFormEnhanced: React.FC<GenerationFormEnhancedProps> = ({
         </motion.div>
       )}
 
-      {/* Payment status indicator */}
-      {paymentStatus && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`p-4 rounded-lg border-2 ${
-            canGenerate()
-              ? 'bg-brand-sage border-brand-green'
-              : 'bg-warning-50 border-warning-300'
-          }`}
-          data-testid="payment-status"
-        >
-          <div className="flex items-center gap-3">
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                canGenerate() ? 'bg-brand-green' : 'bg-warning-500'
-              }`}
-            >
-              <svg
-                className="w-6 h-6 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                {canGenerate() ? (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                ) : (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                  />
-                )}
-              </svg>
-            </div>
-            <div>
-              <p
-                className={`text-sm font-semibold ${
-                  canGenerate() ? 'text-brand-dark-green' : 'text-warning-800'
-                }`}
-              >
-                {canGenerate() ? 'Ready to Generate' : 'No Credits Available'}
-              </p>
-              <p
-                className={`text-xs ${
-                  canGenerate() ? 'text-brand-dark-green' : 'text-warning-700'
-                }`}
-              >
-                {getPaymentMethodText()}
-              </p>
-            </div>
-          </div>
-        </motion.div>
-      )}
 
       {/* Section 1: Address Input */}
       <motion.div
@@ -481,6 +422,22 @@ export const GenerationFormEnhanced: React.FC<GenerationFormEnhancedProps> = ({
           error={errors.area}
         />
       </motion.div>
+
+      {/* Location Preview Thumbnails - Show Street View & Satellite previews */}
+      {address && selectedAreas.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.5, delay: 0.25 }}
+          className="mt-8"
+        >
+          <LocationPreviewThumbnails
+            address={address}
+            selectedAreas={selectedAreas.map((a) => a.area)}
+          />
+        </motion.div>
+      )}
 
       {/* Section 3: Style Selection (v2 enhancement: passes first selected area for suggested prompts) */}
       <motion.div
