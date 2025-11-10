@@ -327,17 +327,126 @@ test('generation flow end-to-end', async ({ page }) => {
 
 ## Testing Strategy
 
-**Backend Unit Tests** - `backend/tests/`
+### **CRITICAL: Automated Testing First, Manual Testing LAST**
+
+**Golden Rule:** NEVER request manual (human) testing until ALL automated tests pass and ALL Critical User Journeys (CUJs) work perfectly, frictionlessly, and beautifully.
+
+### Testing Hierarchy
+
+**1. Automated Testing with Playwright MCP** ✅ **ALWAYS USE THIS FIRST**
+- Use Playwright MCP to validate ALL functionality automatically
+- Test against local, staging, and production environments
+- Verify E2E user flows, UI interactions, and backend integration
+- Fix ALL issues discovered through automated testing before proceeding
+
+**2. Backend Unit Tests** (`backend/tests/`)
 - Test services independently with mocked database
 - Use `pytest` fixtures for test data
+- Validate business logic and atomic operations
+- Run: `pytest tests/ -v`
 
-**Frontend E2E Tests** - `frontend/tests/e2e/`
-- Playwright tests for critical flows
-- Run against local backend (port 8000)
+**3. Frontend E2E Tests** (`frontend/tests/e2e/`)
+- Playwright tests for all critical user journeys
+- Test against local backend (port 8000) AND staging (Railway)
+- Validate single-page flows, polling, results display
+- Run locally: `npm run test:e2e`
+- Run staging: `npx playwright test --config=playwright.config.staging.ts`
 
-**Integration Tests**
+**4. Integration Tests**
 - Full flow testing with real database
-- Use separate test database
+- Use separate test database for safety
+- Validate end-to-end scenarios with actual services
+
+**5. Manual (Human) Testing** ⚠️ **ONLY AS FINAL SIGN-OFF**
+- **Prerequisite:** ALL automated tests must pass 100%
+- **Prerequisite:** ALL CUJs must work perfectly (no bugs, no issues)
+- **Prerequisite:** User experience must be frictionless and polished
+- **Prerequisite:** Design must be beautiful and production-ready
+- **Purpose:** Final user experience validation and aesthetic review ONLY
+
+### When to Request Manual Testing
+
+**✅ YES - Request manual testing when:**
+- All Playwright E2E tests pass (100%)
+- All backend unit tests pass (100%)
+- All CUJs verified working through automated tests
+- No known bugs or issues exist
+- UI/UX is polished and frictionless
+- Design is beautiful and production-ready
+- Ready for production deployment
+
+**❌ NO - Do NOT request manual testing when:**
+- Any automated tests are failing
+- Known bugs or issues exist
+- Features are incomplete or partially working
+- UI has rough edges or usability issues
+- Design needs polish
+- Backend errors occur during automated testing
+
+### Critical User Journeys (CUJs) Checklist
+
+Before requesting manual testing, verify these CUJs work perfectly via Playwright:
+
+**CUJ1: New User Registration & Trial Flow**
+- ✅ Google OAuth sign-in works
+- ✅ User created in database with 3 trial credits
+- ✅ Redirected to /generate page
+- ✅ Can submit first generation using trial credit
+- ✅ Trial credits decrement correctly (3 → 2)
+
+**CUJ2: Generation Flow (Feature 005 - Single Page)**
+- ✅ Form submission works without page navigation
+- ✅ Progress updates appear inline every 2 seconds
+- ✅ Results display inline when complete
+- ✅ Images load successfully (Vercel Blob)
+- ✅ "Create New Design" button resets form
+- ✅ No console errors throughout flow
+
+**CUJ3: Token Purchase & Payment**
+- ✅ Purchase page displays packages correctly
+- ✅ Stripe Checkout session creates successfully
+- ✅ Payment succeeds with test card (4242...)
+- ✅ Webhook processes payment and adds tokens
+- ✅ Token balance updates in UI immediately
+- ✅ Can generate with purchased tokens
+
+**CUJ4: Subscription Flow**
+- ✅ Subscription page displays plans
+- ✅ Can subscribe to Pro plan
+- ✅ Active subscription allows unlimited generations
+- ✅ Can manage subscription via Customer Portal
+- ✅ Cancellation works correctly
+
+### Playwright MCP Commands
+
+```bash
+# Local testing (use this for development)
+cd frontend && npm run test:e2e
+
+# Staging testing (use this before deployment)
+cd frontend && npx playwright test --config=playwright.config.staging.ts
+
+# Production smoke tests (use this after deployment)
+cd frontend && npx playwright test --config=playwright.config.production.ts
+
+# Specific test file
+npx playwright test tests/e2e/generation-flow-v2.spec.ts
+
+# With UI mode for debugging
+npx playwright test --ui
+
+# Generate test report
+npx playwright show-report
+```
+
+### Test-Driven Development Workflow
+
+1. **Write test FIRST** (Red) - Define expected behavior in Playwright test
+2. **Implement feature** (Green) - Make the test pass
+3. **Refactor** (Refactor) - Clean up code while tests still pass
+4. **Validate with Playwright MCP** - Run full E2E suite
+5. **Fix all issues** - Iterate until 100% pass rate
+6. **Request manual review** - ONLY when everything is perfect
 
 ## Environment Variables
 
