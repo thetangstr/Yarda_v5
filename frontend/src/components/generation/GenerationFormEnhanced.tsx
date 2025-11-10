@@ -161,25 +161,6 @@ export const GenerationFormEnhanced: React.FC<GenerationFormEnhancedProps> = ({
   };
 
   /**
-   * Get payment method display text
-   */
-  const getPaymentMethodText = (): string => {
-    if (!paymentStatus) return 'Loading...';
-
-    const method = paymentStatus.active_payment_method;
-
-    if (method === 'subscription') {
-      return 'Unlimited (Subscription)';
-    } else if (method === 'trial') {
-      return `Trial Credit (${paymentStatus.trial_remaining} remaining)`;
-    } else if (method === 'token') {
-      return `1 Token (${paymentStatus.token_balance} available)`;
-    } else {
-      return 'No payment method';
-    }
-  };
-
-  /**
    * Handle yard area toggle
    */
   const handleAreaToggle = (area: YardArea) => {
