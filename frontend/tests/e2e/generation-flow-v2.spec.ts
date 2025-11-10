@@ -107,7 +107,7 @@ test.describe('US1 + US5: Single-Page Generation Flow with Polling', () => {
     // Scroll to submit button and submit form
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForTimeout(500);
-    await page.click('button:has-text("Generate Design")');
+    await page.click('button:has-text("Generate Landscape Design")');
 
     // Wait for progress section to appear (should be inline)
     await expect(page.locator('[data-testid="generation-progress"]')).toBeVisible({
@@ -160,7 +160,7 @@ test.describe('US1 + US5: Single-Page Generation Flow with Polling', () => {
     // Scroll to submit button and submit form
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForTimeout(500);
-    await page.click('button:has-text("Generate Design")');
+    await page.click('button:has-text("Generate Landscape Design")');
 
     // Wait for progress section
     await expect(page.locator('[data-testid="generation-progress"]')).toBeVisible({
@@ -224,7 +224,7 @@ test.describe('US1 + US5: Single-Page Generation Flow with Polling', () => {
     // Scroll to submit button and submit form
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForTimeout(500);
-    await page.click('button:has-text("Generate Design")');
+    await page.click('button:has-text("Generate Landscape Design")');
 
     // Wait for results section to appear
     await expect(page.locator('[data-testid="generation-results"]')).toBeVisible({
@@ -277,7 +277,7 @@ test.describe('US1 + US5: Single-Page Generation Flow with Polling', () => {
     // Scroll to submit button and submit form
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForTimeout(500);
-    await page.click('button:has-text("Generate Design")');
+    await page.click('button:has-text("Generate Landscape Design")');
 
     // Wait for progress to start
     await expect(page.locator('[data-testid="generation-progress"]')).toBeVisible({
@@ -362,7 +362,7 @@ test.describe('US1 + US5: Single-Page Generation Flow with Polling', () => {
     // Scroll to submit button and submit form
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForTimeout(500);
-    await page.click('button:has-text("Generate Design")');
+    await page.click('button:has-text("Generate Landscape Design")');
 
     // Wait for progress to start
     await expect(page.locator('[data-testid="generation-progress"]')).toBeVisible({
@@ -423,7 +423,7 @@ test.describe('US1: Start New Generation Flow', () => {
     // Scroll to submit button and submit form
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForTimeout(500);
-    await page.click('button:has-text("Generate Design")');
+    await page.click('button:has-text("Generate Landscape Design")');
 
     // Wait for completion
     await expect(page.locator('[data-testid="generation-results"]')).toBeVisible({
@@ -454,6 +454,6 @@ test.describe('US1: Start New Generation Flow', () => {
     await expect(page.locator('[data-testid="generation-progress"]')).not.toBeVisible();
 
     // Verify form is enabled and ready
-    await expect(page.locator('button:has-text("Generate Design")')).toBeEnabled();
+    await expect(page.locator('button:has-text("Generate Landscape Design")')).toBeEnabled();
   });
 });
