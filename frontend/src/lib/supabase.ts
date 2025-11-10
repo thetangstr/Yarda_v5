@@ -50,6 +50,30 @@ export async function signInWithGoogle(redirectTo?: string) {
 }
 
 /**
+ * Sign in with Apple OAuth
+ *
+ * Redirects user to Apple Sign In OAuth flow.
+ * After authentication, Apple redirects back to your app with the session.
+ *
+ * @param redirectTo - Optional redirect URL after successful authentication
+ */
+export async function signInWithApple(redirectTo?: string) {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'apple',
+    options: {
+      redirectTo: redirectTo || (typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : '/auth/callback'),
+      scopes: 'name email',
+    },
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+/**
  * Sign out current user
  */
 export async function signOut() {
@@ -79,4 +103,35 @@ export async function getUser() {
     throw error;
   }
   return user;
+}
+
+/**
+ * Send magic link authentication email
+ *
+ * Sends a one-time authentication link to the user's email address.
+ * User clicks the link in their email to authenticate without a password.
+ *
+ * @param email - User's email address (validated before calling)
+ * @param redirectTo - Optional redirect URL after successful authentication (default: /auth/callback)
+ * @returns Promise with user and session (both null until link is clicked)
+ * @throws Error if rate limited (3 requests/hour) or email invalid
+ *
+ * @example
+ * await sendMagicLink('user@example.com');
+ * // User receives email with magic link
+ * // Clicking link authenticates and redirects to /auth/callback
+ */
+export async function sendMagicLink(email: string, redirectTo?: string) {
+  const { data, error } = await supabase.auth.signInWithOtp({
+    email: email,
+    options: {
+      emailRedirectTo: redirectTo || (typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : '/auth/callback'),
+    },
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
 }

@@ -19,6 +19,7 @@ import { authAPI, getErrorMessage } from '@/lib/api';
 import { useUserStore } from '@/store/userStore';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
 import GoogleOneTap from '@/components/GoogleOneTap';
+import { MagicLinkForm } from '@/components/auth/MagicLinkForm';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -283,11 +284,30 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Google Sign-In Button */}
-        <div className="mt-6">
+        {/* Social Sign-In Buttons */}
+        <div className="mt-6 space-y-3">
           <GoogleSignInButton
             disabled={isLoading}
           />
+        </div>
+
+        {/* Magic Link Divider */}
+        <div className="mt-6">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">
+                Or sign in with magic link
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Magic Link Form */}
+        <div className="mt-6">
+          <MagicLinkForm />
         </div>
 
         {/* Divider */}
