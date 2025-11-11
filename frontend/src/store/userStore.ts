@@ -2,10 +2,16 @@
  * User state management using Zustand
  *
  * Manages user authentication state, profile data, and trial/token balance.
+ *
+ * Credit Systems Consolidation (2025-11-11):
+ * - Added unified `balances` field for all credit types
+ * - Maintains backward compatibility with existing `tokenBalance` and user fields
+ * - Use CreditSyncManager for automatic sync with backend
  */
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { UnifiedBalanceResponse } from '@/lib/api';
 
 export interface User {
   id: string;
@@ -39,13 +45,17 @@ interface UserState {
   isAuthenticated: boolean;
   _hasHydrated: boolean; // Track if store has loaded from localStorage
 
-  // Token/Trial balance
+  // Token/Trial balance (legacy, for backward compatibility)
   tokenBalance: TokenBalance | null;
+
+  // Unified credit balances (Credit Systems Consolidation)
+  balances: UnifiedBalanceResponse | null;
 
   // Actions
   setUser: (user: User | null) => void;
   setAccessToken: (token: string | null) => void;
   setTokenBalance: (balance: TokenBalance | null) => void;
+  setBalances: (balances: UnifiedBalanceResponse | null) => void;
   updateTrialRemaining: (trial_remaining: number) => void;
   updateHolidayCredits: (holiday_credits: number, holiday_credits_earned?: number) => void;
   markWhatsNewModalShown: () => void;
@@ -62,6 +72,7 @@ export const useUserStore = create<UserState>()(
       isAuthenticated: false,
       _hasHydrated: false,
       tokenBalance: null,
+      balances: null,
 
       // Actions
       setUser: (user) =>
@@ -79,6 +90,33 @@ export const useUserStore = create<UserState>()(
       setTokenBalance: (balance) =>
         set({
           tokenBalance: balance,
+        }),
+
+      setBalances: (balances) =>
+        set((state) => {
+          // Update both unified balances and legacy fields for backward compatibility
+          const updates: Partial<UserState> = {
+            balances,
+          };
+
+          // Update user object with credit balances from unified response
+          if (balances && state.user) {
+            updates.user = {
+              ...state.user,
+              trial_remaining: balances.trial.remaining,
+              trial_used: balances.trial.used,
+              holiday_credits: balances.holiday.credits,
+              holiday_credits_earned: balances.holiday.earned,
+            };
+
+            // Update legacy tokenBalance for backward compatibility
+            updates.tokenBalance = {
+              balance: balances.token.balance,
+              trial_remaining: balances.trial.remaining,
+            };
+          }
+
+          return updates;
         }),
 
       updateTrialRemaining: (trial_remaining) =>
@@ -116,6 +154,7 @@ export const useUserStore = create<UserState>()(
           accessToken: null,
           isAuthenticated: false,
           tokenBalance: null,
+          balances: null,
         }),
 
       setHasHydrated: (hasHydrated) =>
@@ -130,6 +169,7 @@ export const useUserStore = create<UserState>()(
         accessToken: state.accessToken,
         isAuthenticated: state.isAuthenticated,
         tokenBalance: state.tokenBalance,
+        balances: state.balances, // Include unified balances in localStorage
       }),
       onRehydrateStorage: () => (state) => {
         // Called when store finishes rehydrating from localStorage

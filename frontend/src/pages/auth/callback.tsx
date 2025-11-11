@@ -9,11 +9,33 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabase';
 import { useUserStore } from '@/store/userStore';
+import { creditsAPI } from '@/lib/api';
 
 export default function AuthCallback() {
   const router = useRouter();
-  const { setUser, setAccessToken } = useUserStore();
+  const { setUser, setAccessToken, setBalances } = useUserStore();
   const [error, setError] = useState<string | null>(null);
+
+  /**
+   * Fetch and sync ALL credits (trial, token, holiday) after user login
+   * Uses unified credit API endpoint for atomic balance retrieval
+   * This ensures the frontend Zustand store always has current credit balances
+   */
+  const syncAllCredits = async () => {
+    try {
+      console.log('[Auth Callback] Fetching unified credit balances...');
+      const balances = await creditsAPI.getBalance();
+      console.log('[Auth Callback] Unified balances response:', balances);
+
+      // Update store with all credit balances (automatically updates user and tokenBalance)
+      setBalances(balances);
+      console.log('[Auth Callback] Updated store with all credit balances');
+    } catch (err) {
+      // Non-fatal error - user can still use app, just without updated credits
+      // If this fails, credit fields will come from localStorage
+      console.warn('[Auth Callback] Failed to fetch unified balances:', err);
+    }
+  };
 
   useEffect(() => {
     let authSubscription: { unsubscribe: () => void } | null = null;
@@ -107,6 +129,10 @@ export default function AuthCallback() {
                 } as any);
               }
 
+              // CRITICAL: Sync all credits after user is set
+              // This ensures the frontend always has current credit balances (trial, token, holiday)
+              await syncAllCredits();
+
               // Store in localStorage for persistence
               localStorage.setItem('access_token', session.access_token);
               const userStorage = localStorage.getItem('user-storage');
@@ -180,6 +206,10 @@ export default function AuthCallback() {
               avatar_url: googleMetadata?.avatar_url || googleMetadata?.picture,
               full_name: googleMetadata?.full_name || googleMetadata?.name,
             } as any);
+
+            // CRITICAL: Sync all credits for existing session
+            // This ensures the frontend always has current credit balances (trial, token, holiday)
+            await syncAllCredits();
           }
 
           const redirectTo = router.query.redirect as string || '/generate';

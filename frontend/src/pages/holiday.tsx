@@ -15,15 +15,22 @@
  * - Inline progress tracking (polling)
  * - Inline results display with download
  *
+ * Credit Management:
+ * - Uses unified CreditSyncManager for automatic 15-second refresh
+ * - Credits synced from userStore (automatically updated by CreditSyncManager)
+ * - Manual refresh on 403 errors for immediate feedback
+ * - No manual localStorage management needed
+ *
  * Feature: 007-holiday-decorator (T032)
  * User Story 1: New User Discovery & First Generation
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Head from 'next/head';
 
 import { useUserStore } from '@/store/userStore';
 import { holidayAPI } from '@/lib/api';
+import { useCredits } from '@/lib/creditSync';
 import HolidayHero from '@/components/HolidayHero';
 import StreetViewRotator from '@/components/StreetViewRotator';
 import StyleSelector, { HolidayStyle } from '@/components/StyleSelector';
@@ -32,13 +39,17 @@ import GoogleSignInButton from '@/components/GoogleSignInButton';
 export default function HolidayDecoratorPage() {
   const { user, isAuthenticated, _hasHydrated } = useUserStore();
 
+  // Initialize unified credit sync (auto-refreshes every 15 seconds)
+  const { refresh: refreshCredits } = useCredits();
+
   // Form state
   const [address, setAddress] = useState<string>('');
   const [heading, setHeading] = useState<number>(180);
+  const [streetOffsetFeet, setStreetOffsetFeet] = useState<number>(0);
   const [selectedStyle, setSelectedStyle] = useState<HolidayStyle | null>(null);
 
-  // Credit state
-  const [credits, setCredits] = useState<number>(user?.holiday_credits ?? 0);
+  // Credit state (synced from userStore via CreditSyncManager)
+  const credits = user?.holiday_credits ?? 0;
 
   // Generation state
   const [isGenerating, setIsGenerating] = useState(false);
@@ -54,13 +65,6 @@ export default function HolidayDecoratorPage() {
   // Validation
   const canGenerate = address.trim() !== '' && selectedStyle !== null && credits > 0 && !isGenerating;
 
-  // Sync credits from user state (localStorage)
-  useEffect(() => {
-    if (user?.holiday_credits !== undefined) {
-      setCredits(user.holiday_credits);
-    }
-  }, [user]);
-
   const handleGenerate = async () => {
     if (!canGenerate) return;
 
@@ -74,20 +78,25 @@ export default function HolidayDecoratorPage() {
         heading,
         pitch: 0,
         style: selectedStyle!,
+        street_offset_feet: streetOffsetFeet || undefined, // Only include if non-zero
       });
 
       setGenerationId(response.id);
       setGenerationStatus(response.status);
 
-      // Update credits from response (already deducted)
-      if (response.credits_remaining !== undefined) {
-        setCredits(response.credits_remaining);
-      }
+      // Credits are automatically updated by CreditSyncManager via backend response
+      // No manual sync needed - setBalances() handles everything
 
       // Start polling for status
       pollGenerationStatus(response.id);
     } catch (error: any) {
       console.error('Generation failed:', error);
+
+      // If 403 (insufficient credits), immediately refresh from backend
+      if (error.response?.status === 403) {
+        await refreshCredits(); // Unified credit sync handles all credit types
+      }
+
       setGenerationError(error.response?.data?.detail?.message || 'Generation failed. Please try again.');
       setIsGenerating(false);
       setGenerationStatus(null);
@@ -139,6 +148,7 @@ export default function HolidayDecoratorPage() {
   const resetForm = () => {
     setAddress('');
     setHeading(180);
+    setStreetOffsetFeet(0);
     setSelectedStyle(null);
     setGenerationId(null);
     setGenerationStatus(null);
@@ -178,7 +188,7 @@ export default function HolidayDecoratorPage() {
               Sign in to Get Started
             </h2>
             <p className="text-gray-600 mb-6 text-center">
-              Get 1 free holiday credit and transform your home into a winter wonderland! 🎄
+              Transform your home into a winter wonderland! New users get 1 free credit. 🎄
             </p>
             <GoogleSignInButton redirectTo="/holiday" />
           </div>
@@ -249,6 +259,7 @@ export default function HolidayDecoratorPage() {
                   address={address}
                   initialHeading={heading}
                   onHeadingChange={setHeading}
+                  onStreetOffsetChange={setStreetOffsetFeet}
                   disabled={isGenerating}
                 />
               )}
@@ -328,34 +339,31 @@ export default function HolidayDecoratorPage() {
                 ✨ Your Holiday Decorated Home! ✨
               </h2>
 
-              {/* Before/After image */}
-              {beforeAfterImageUrl && (
+              {/* Before/After comparison */}
+              {beforeAfterImageUrl ? (
                 <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-3 text-center">
+                    Before & After Comparison
+                  </h3>
                   <img
                     data-testid="before-after-image"
                     src={beforeAfterImageUrl}
-                    alt="Before and After"
+                    alt="Before and After Comparison"
                     className="w-full rounded-lg shadow-lg"
                   />
                 </div>
-              )}
-
-              {/* Individual images for testing */}
-              {originalImageUrl && (
-                <img
-                  data-testid="before-image"
-                  src={originalImageUrl}
-                  alt="Original"
-                  className="w-full rounded-lg shadow-lg"
-                />
-              )}
-              {decoratedImageUrl && (
-                <img
-                  data-testid="after-image"
-                  src={decoratedImageUrl}
-                  alt="Decorated"
-                  className="w-full rounded-lg shadow-lg"
-                />
+              ) : (
+                /* Fallback: Show decorated image only if no composite */
+                decoratedImageUrl && (
+                  <div className="mb-6">
+                    <img
+                      data-testid="decorated-image"
+                      src={decoratedImageUrl}
+                      alt="Your Decorated Home"
+                      className="w-full rounded-lg shadow-lg"
+                    />
+                  </div>
+                )
               )}
 
               {/* Action buttons */}
