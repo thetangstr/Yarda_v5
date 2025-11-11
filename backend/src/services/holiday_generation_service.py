@@ -116,9 +116,9 @@ class HolidayGenerationService:
                 f"Remaining: {deduction_result.credits_remaining}"
             )
 
-            # Step 2: Geocode address
-            coords = await self.maps_service.geocode_address(address)
-            if not coords:
+            # Step 2: Geocode address with accuracy validation
+            geocode_result = await self.maps_service.geocode_address(address)
+            if not geocode_result:
                 # Refund credit on geocoding failure
                 await self.credit_service.grant_credit(
                     user_id,
@@ -126,6 +126,18 @@ class HolidayGenerationService:
                     reason="geocoding_failure_refund"
                 )
                 raise RuntimeError(f"Failed to geocode address: {address}")
+
+            coords = geocode_result.coordinates
+
+            # Log accuracy warning for holiday decorator
+            if geocode_result.location_type != "ROOFTOP":
+                logger.warning(
+                    "holiday_geocoding_accuracy",
+                    address=address,
+                    location_type=geocode_result.location_type,
+                    has_street_number=geocode_result.has_street_number,
+                    message="Non-ROOFTOP geocoding may affect decoration accuracy"
+                )
 
             # Step 3: Fetch Street View image with user-selected heading
             street_view_bytes = await self.maps_service.fetch_street_view_image(
@@ -298,20 +310,76 @@ class HolidayGenerationService:
         """
         Call Gemini AI to generate holiday-decorated image.
 
-        TODO: Implement actual Gemini prompt engineering.
-        For now, returns placeholder.
+        Transforms the Street View image by adding festive holiday decorations
+        while preserving the house structure and architectural details.
 
         Args:
             image_bytes: Original Street View image
-            style: Decoration style ('classic', 'modern', 'over_the_top')
+            style: Decoration style ('classic', 'modern_minimalist', 'over_the_top')
 
         Returns:
-            Decorated image bytes
+            Decorated image bytes (JPEG)
         """
-        # TODO: Implement Gemini prompt based on style
-        # For now, return original image as placeholder
-        logger.warning("Using placeholder Gemini implementation - returning original image")
-        return image_bytes
+        try:
+            # Map style to custom prompt
+            style_prompts = {
+                "classic": (
+                    "Classic traditional holiday decorations: "
+                    "Red and green color scheme, wreaths on doors and windows, "
+                    "warm white string lights along roofline and eaves, "
+                    "traditional ornaments, garland on railings, "
+                    "candy canes along walkway, classic red bow accents."
+                ),
+                "modern_minimalist": (
+                    "Modern minimalist holiday decorations: "
+                    "White and silver color palette, geometric light patterns, "
+                    "minimal clean-lined LED lighting, elegant simple wreath, "
+                    "understated sophistication, contemporary style."
+                ),
+                "over_the_top": (
+                    "Maximum festive decorations (Clark Griswold style): "
+                    "Colorful synchronized lights covering entire house, "
+                    "inflatable Santa and reindeer on lawn, "
+                    "animated light displays, massive light-up snowman, "
+                    "candy cane path lining, projector effects, "
+                    "every surface covered in lights and decorations."
+                )
+            }
+
+            custom_prompt = style_prompts.get(style, style_prompts["classic"])
+
+            logger.info(f"Calling Gemini for holiday decoration with style: {style}")
+
+            # Use Gemini to generate decorated version
+            # CRITICAL: preservation_strength=0.35 for VISIBLE decorations (0.0-0.4 = dramatic transformation)
+            # With 0.8+ the AI only does subtle refinement and decorations won't be visible!
+            decorated_bytes = await self.gemini.generate_landscape_design(
+                input_image=image_bytes,
+                address=None,  # Not needed, we have the image
+                area_type="front_yard",
+                style="holiday_decorator",
+                custom_prompt=(
+                    f"{custom_prompt}\n\n"
+                    f"CRITICAL INSTRUCTIONS:\n"
+                    f"1. Add VISIBLE, PROMINENT holiday decorations to the house exterior\n"
+                    f"2. Make the decorations OBVIOUS and clearly visible in the image\n"
+                    f"3. Keep the original house structure, walls, roof, and basic architecture intact\n"
+                    f"4. Only modify the appearance by ADDING decorations on top of existing elements\n"
+                    f"5. Do NOT remove or change structural elements - only ADD festive decorations\n"
+                    f"6. Ensure decorations are bright, colorful, and eye-catching\n"
+                    f"7. The decorated version should look dramatically more festive while keeping the same house"
+                ),
+                preservation_strength=0.35  # Dramatic transformation (0.0-0.4 range) for VISIBLE decorations
+            )
+
+            logger.info("Successfully generated holiday-decorated image")
+            return decorated_bytes
+
+        except Exception as e:
+            logger.error(f"Gemini decoration failed: {str(e)}")
+            # Return original image on failure so user still sees something
+            logger.warning("Returning original image due to Gemini failure")
+            return image_bytes
 
     async def _create_generation_record(
         self,
