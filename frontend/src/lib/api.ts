@@ -725,4 +725,33 @@ export function getGenerationStats(response: GenerationStatusResponse): {
   };
 }
 
+// ============================================================================
+// Users APIs
+// ============================================================================
+
+export interface UpdateModalStateRequest {
+  modal_shown: boolean;
+}
+
+export interface UpdateModalStateResponse {
+  success: boolean;
+  whats_new_modal_shown: boolean;
+}
+
+export const usersAPI = {
+  /**
+   * Mark the "What's New" modal as shown for the current user
+   *
+   * @param modalShown - Whether the modal has been shown (default: true)
+   * @returns Response with success status and updated modal state
+   */
+  async updateWhatsNewModalState(modalShown: boolean = true): Promise<UpdateModalStateResponse> {
+    const response = await apiClient.patch<UpdateModalStateResponse>(
+      '/v1/users/me/whats-new-modal',
+      { modal_shown: modalShown }
+    );
+    return response.data;
+  },
+};
+
 export default apiClient;
