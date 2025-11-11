@@ -58,7 +58,8 @@ export default function HolidayDecoratorPage() {
   const [generationError, setGenerationError] = useState<string | null>(null);
 
   // Results state
-  const [originalImageUrl, setOriginalImageUrl] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_originalImageUrl, setOriginalImageUrl] = useState<string | null>(null);
   const [decoratedImageUrl, setDecoratedImageUrl] = useState<string | null>(null);
   const [beforeAfterImageUrl, setBeforeAfterImageUrl] = useState<string | null>(null);
 

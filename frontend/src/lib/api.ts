@@ -571,6 +571,68 @@ export const holidayAPI = {
 };
 
 // ============================================================================
+// Unified Credits API (Credit Systems Consolidation)
+// ============================================================================
+
+export interface TrialBalanceDetail {
+  remaining: number;
+  used: number;
+  total_granted: number;
+}
+
+export interface TokenBalanceDetail {
+  balance: number;
+  total_purchased: number;
+  total_spent: number;
+  total_refunded: number;
+}
+
+export interface HolidayEarningsBreakdown {
+  signup_bonus: number;
+  social_shares: number;
+  other: number;
+}
+
+export interface HolidayBalanceDetail {
+  credits: number;
+  earned: number;
+  can_generate: boolean;
+  earnings_breakdown: HolidayEarningsBreakdown;
+}
+
+export interface UnifiedBalanceResponse {
+  trial: TrialBalanceDetail;
+  token: TokenBalanceDetail;
+  holiday: HolidayBalanceDetail;
+}
+
+export interface SimpleBalanceResponse {
+  trial: number;
+  token: number;
+  holiday: number;
+}
+
+export const creditsAPI = {
+  /**
+   * Get unified balance for all credit types (detailed)
+   * GET /v1/credits/balance
+   */
+  getBalance: async (): Promise<UnifiedBalanceResponse> => {
+    const response = await apiClient.get('/v1/credits/balance');
+    return response.data;
+  },
+
+  /**
+   * Get lightweight balance (numbers only)
+   * GET /v1/credits/balance/simple
+   */
+  getSimpleBalance: async (): Promise<SimpleBalanceResponse> => {
+    const response = await apiClient.get('/v1/credits/balance/simple');
+    return response.data;
+  },
+};
+
+// ============================================================================
 // Error handling utilities
 // ============================================================================
 

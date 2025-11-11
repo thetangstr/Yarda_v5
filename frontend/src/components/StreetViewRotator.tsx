@@ -23,6 +23,7 @@ interface StreetViewRotatorProps {
   address: string;
   initialHeading?: number;
   onHeadingChange: (heading: number) => void;
+  onStreetOffsetChange?: (offsetFeet: number) => void;
   disabled?: boolean;
 }
 
@@ -30,14 +31,21 @@ export default function StreetViewRotator({
   address,
   initialHeading = 180,
   onHeadingChange,
+  onStreetOffsetChange: _onStreetOffsetChange,
   disabled = false,
 }: StreetViewRotatorProps) {
   const [heading, setHeading] = useState(initialHeading);
   const [isLoading, setIsLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showFineTuneControls, setShowFineTuneControls] = useState(false);
+  // Street offset: move camera position along the street (in feet)
+  // 1 foot = 0.3048 meters, so we convert for backend use
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_streetOffsetFeet, _setStreetOffsetFeet] = useState(0);
 
   // Fetch Street View preview when heading changes
+  // Uses backend preview endpoint to get EXACT same image that will be sent to Gemini
   useEffect(() => {
     if (!address) return;
 
@@ -46,27 +54,30 @@ export default function StreetViewRotator({
       setError(null);
 
       try {
-        // Simulate slight delay for loading state
-        await new Promise((resolve) => setTimeout(resolve, 300));
+        // Call backend preview endpoint to get geocoded Street View URL
+        // This ensures preview matches exactly what will be sent to Gemini
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        const response = await fetch(`${apiUrl}/holiday/preview`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            address,
+            heading,
+            pitch: 0,
+          }),
+        });
 
-        // Build Google Maps Street View Static API URL
-        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-        if (!apiKey) {
-          throw new Error('Google Maps API key not configured');
+        if (!response.ok) {
+          throw new Error('Failed to fetch preview');
         }
 
-        const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?` +
-          `size=800x450` +
-          `&location=${encodeURIComponent(address)}` +
-          `&heading=${heading}` +
-          `&fov=90` +
-          `&pitch=0` +
-          `&key=${apiKey}`;
-
-        setPreviewUrl(streetViewUrl);
+        const data = await response.json();
+        setPreviewUrl(data.street_view_url);
       } catch (err: any) {
         console.error('Street View preview error:', err);
-        setError('Failed to load Street View preview');
+        setError('Failed to load Street View preview. Try a different address.');
       } finally {
         setIsLoading(false);
       }
@@ -253,32 +264,50 @@ export default function StreetViewRotator({
           </button>
         </div>
 
-        {/* Slider Control */}
-        <div className="px-4">
-          <label htmlFor="heading-slider" className="block text-sm font-medium text-gray-700 mb-2">
-            Fine-tune angle:
-          </label>
-          <input
-            id="heading-slider"
-            type="range"
-            min="0"
-            max="359"
-            value={heading}
-            onChange={handleSliderChange}
+        {/* Toggle Fine-Tune Button */}
+        <div className="flex justify-center mt-4">
+          <button
+            onClick={() => setShowFineTuneControls(!showFineTuneControls)}
             disabled={disabled}
             className="
-              w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer
-              accent-green-500
+              text-sm text-gray-600 hover:text-gray-900
+              underline underline-offset-2
+              transition-colors duration-200
+              disabled:opacity-50 disabled:cursor-not-allowed
             "
-          />
-          <div className="flex justify-between text-xs text-gray-500 mt-1">
-            <span>0° (N)</span>
-            <span>90° (E)</span>
-            <span>180° (S)</span>
-            <span>270° (W)</span>
-            <span>359° (N)</span>
-          </div>
+          >
+            {showFineTuneControls ? '▼ Hide fine-tune controls' : '▶ Show fine-tune controls'}
+          </button>
         </div>
+
+        {/* Slider Control (Hidden by Default) */}
+        {showFineTuneControls && (
+          <div className="px-4 animate-in fade-in slide-in-from-top-2 duration-300">
+            <label htmlFor="heading-slider" className="block text-sm font-medium text-gray-700 mb-2">
+              Fine-tune angle:
+            </label>
+            <input
+              id="heading-slider"
+              type="range"
+              min="0"
+              max="359"
+              value={heading}
+              onChange={handleSliderChange}
+              disabled={disabled}
+              className="
+                w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer
+                accent-green-500
+              "
+            />
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>0° (N)</span>
+              <span>90° (E)</span>
+              <span>180° (S)</span>
+              <span>270° (W)</span>
+              <span>359° (N)</span>
+            </div>
+          </div>
+        )}
 
         {/* Tips */}
         <div className="mt-4 p-3 rounded-lg bg-blue-50 border border-blue-200">
