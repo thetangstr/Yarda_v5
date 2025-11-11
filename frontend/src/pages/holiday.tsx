@@ -66,7 +66,7 @@ export default function HolidayDecoratorPage() {
   const [beforeAfterImageUrl, setBeforeAfterImageUrl] = useState<string | null>(null);
 
   // Validation
-  const canGenerate = address.trim() !== '' && selectedStyle !== null && credits > 0 && !isGenerating;
+  const canGenerate = isAuthenticated && address.trim() !== '' && selectedStyle !== null && credits > 0 && !isGenerating;
 
   const handleGenerate = async () => {
     if (!canGenerate) return;
