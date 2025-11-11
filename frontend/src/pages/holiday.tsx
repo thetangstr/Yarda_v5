@@ -23,6 +23,8 @@
  *
  * Feature: 007-holiday-decorator (T032)
  * User Story 1: New User Discovery & First Generation
+ *
+ * Build: 2025-11-11 (cache bust)
  */
 
 import React, { useState } from 'react';
