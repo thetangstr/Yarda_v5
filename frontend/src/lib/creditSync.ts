@@ -141,6 +141,7 @@ export class CreditSyncManager {
         token: balances.token.balance,
         holiday: balances.holiday.credits,
       });
+      console.log('[CreditSync] Updated user store with fresh balances');
 
       return balances;
     } catch (error) {
@@ -223,6 +224,12 @@ export function useCredits(options?: CreditSyncOptions): {
 
     // Start auto-refresh
     syncManager.current.start();
+
+    // Immediately do a sync to ensure fresh data on page load
+    setIsRefreshing(true);
+    syncManager.current.refreshNow().finally(() => {
+      setIsRefreshing(false);
+    });
 
     // Cleanup on unmount
     return () => {
