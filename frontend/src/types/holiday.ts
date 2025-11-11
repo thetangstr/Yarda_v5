@@ -39,6 +39,7 @@ export interface HolidayGenerationRequest {
   heading: number;               // Street View heading (0-359 degrees)
   pitch?: number;                // Street View pitch (-90 to 90, default: 0)
   style: HolidayStyle;
+  street_offset_feet?: number;   // Optional: offset camera position left/right along street (in feet)
 }
 
 /**
