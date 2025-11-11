@@ -233,7 +233,7 @@ function getDaySuffix(day: number): string {
  * console.log(isHolidaySeasonActive()); // true
  * ```
  */
-export function setTestDate(date: Date): void {
+export function setTestDate(_date: Date): void {
   if (process.env.NODE_ENV !== 'production') {
     // In production, this function does nothing
     // In development, you would need to implement time mocking

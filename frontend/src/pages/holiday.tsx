@@ -20,7 +20,6 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
 import Head from 'next/head';
 
 import { useUserStore } from '@/store/userStore';
@@ -31,7 +30,6 @@ import StyleSelector, { HolidayStyle } from '@/components/StyleSelector';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
 
 export default function HolidayDecoratorPage() {
-  const router = useRouter();
   const { user, isAuthenticated, _hasHydrated } = useUserStore();
 
   // Form state
@@ -41,11 +39,10 @@ export default function HolidayDecoratorPage() {
 
   // Credit state
   const [credits, setCredits] = useState<number>(user?.holiday_credits ?? 0);
-  const [isLoadingCredits, setIsLoadingCredits] = useState(false);
 
   // Generation state
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generationId, setGenerationId] = useState<string | null>(null);
+  const [_generationId, setGenerationId] = useState<string | null>(null);
   const [generationStatus, setGenerationStatus] = useState<string | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
 
@@ -63,18 +60,6 @@ export default function HolidayDecoratorPage() {
       setCredits(user.holiday_credits);
     }
   }, [user]);
-
-  const fetchCredits = async () => {
-    setIsLoadingCredits(true);
-    try {
-      const response = await holidayAPI.getCredits();
-      setCredits(response.holiday_credits);
-    } catch (error: any) {
-      console.error('Failed to fetch credits:', error);
-    } finally {
-      setIsLoadingCredits(false);
-    }
-  };
 
   const handleGenerate = async () => {
     if (!canGenerate) return;
@@ -231,7 +216,7 @@ export default function HolidayDecoratorPage() {
                 <div>
                   <p className="text-xs text-gray-500">Holiday Credits</p>
                   <p className="text-2xl font-bold text-green-600">
-                    {isLoadingCredits ? '...' : credits}
+                    {credits}
                   </p>
                 </div>
               </div>

@@ -12,7 +12,7 @@
  * User Story 1: New User Discovery & First Generation
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 
 // Type definition matching backend contract
 export type HolidayStyle = 'classic' | 'modern' | 'over_the_top';

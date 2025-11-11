@@ -69,12 +69,12 @@ CREATE TABLE IF NOT EXISTS holiday_generations (
 );
 
 -- Indexes for common queries
-CREATE INDEX idx_holiday_generations_user_id ON holiday_generations(user_id);
-CREATE INDEX idx_holiday_generations_status ON holiday_generations(status);
-CREATE INDEX idx_holiday_generations_created_at ON holiday_generations(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_holiday_generations_user_id ON holiday_generations(user_id);
+CREATE INDEX IF NOT EXISTS idx_holiday_generations_status ON holiday_generations(status);
+CREATE INDEX IF NOT EXISTS idx_holiday_generations_created_at ON holiday_generations(created_at DESC);
 
 -- Composite index for user's recent generations
-CREATE INDEX idx_holiday_generations_user_recent ON holiday_generations(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_holiday_generations_user_recent ON holiday_generations(user_id, created_at DESC);
 
 COMMENT ON TABLE holiday_generations IS 'Track each holiday decoration generation request, status, and results';
 
@@ -82,19 +82,40 @@ COMMENT ON TABLE holiday_generations IS 'Track each holiday decoration generatio
 ALTER TABLE holiday_generations ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Users can only view their own generations
-CREATE POLICY holiday_generations_select_own ON holiday_generations
-    FOR SELECT
-    USING (auth.uid() = user_id);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE tablename = 'holiday_generations' AND policyname = 'holiday_generations_select_own'
+    ) THEN
+        CREATE POLICY holiday_generations_select_own ON holiday_generations
+            FOR SELECT
+            USING (auth.uid() = user_id);
+    END IF;
+END $$;
 
 -- Policy: Users can only insert their own generations
-CREATE POLICY holiday_generations_insert_own ON holiday_generations
-    FOR INSERT
-    WITH CHECK (auth.uid() = user_id);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE tablename = 'holiday_generations' AND policyname = 'holiday_generations_insert_own'
+    ) THEN
+        CREATE POLICY holiday_generations_insert_own ON holiday_generations
+            FOR INSERT
+            WITH CHECK (auth.uid() = user_id);
+    END IF;
+END $$;
 
 -- Policy: Users can update their own generations (for status polling)
-CREATE POLICY holiday_generations_update_own ON holiday_generations
-    FOR UPDATE
-    USING (auth.uid() = user_id);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE tablename = 'holiday_generations' AND policyname = 'holiday_generations_update_own'
+    ) THEN
+        CREATE POLICY holiday_generations_update_own ON holiday_generations
+            FOR UPDATE
+            USING (auth.uid() = user_id);
+    END IF;
+END $$;
 
 -- ============================================================================
 -- SECTION 3: Social Shares Table
@@ -129,12 +150,12 @@ CREATE TABLE IF NOT EXISTS social_shares (
 );
 
 -- Indexes for common queries
-CREATE INDEX idx_social_shares_user_id ON social_shares(user_id);
-CREATE INDEX idx_social_shares_created_at ON social_shares(created_at DESC);
-CREATE INDEX idx_social_shares_tracking_code ON social_shares(tracking_code);
+CREATE INDEX IF NOT EXISTS idx_social_shares_user_id ON social_shares(user_id);
+CREATE INDEX IF NOT EXISTS idx_social_shares_created_at ON social_shares(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_social_shares_tracking_code ON social_shares(tracking_code);
 
 -- Composite index for daily share limit check
-CREATE INDEX idx_social_shares_user_daily ON social_shares(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_social_shares_user_daily ON social_shares(user_id, created_at DESC);
 
 COMMENT ON TABLE social_shares IS 'Track social media shares for credit rewards and abuse prevention';
 
@@ -142,19 +163,40 @@ COMMENT ON TABLE social_shares IS 'Track social media shares for credit rewards 
 ALTER TABLE social_shares ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Users can only view their own shares
-CREATE POLICY social_shares_select_own ON social_shares
-    FOR SELECT
-    USING (auth.uid() = user_id);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE tablename = 'social_shares' AND policyname = 'social_shares_select_own'
+    ) THEN
+        CREATE POLICY social_shares_select_own ON social_shares
+            FOR SELECT
+            USING (auth.uid() = user_id);
+    END IF;
+END $$;
 
 -- Policy: Users can only insert their own shares
-CREATE POLICY social_shares_insert_own ON social_shares
-    FOR INSERT
-    WITH CHECK (auth.uid() = user_id);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE tablename = 'social_shares' AND policyname = 'social_shares_insert_own'
+    ) THEN
+        CREATE POLICY social_shares_insert_own ON social_shares
+            FOR INSERT
+            WITH CHECK (auth.uid() = user_id);
+    END IF;
+END $$;
 
 -- Policy: Users can update their own shares (for tracking clicks)
-CREATE POLICY social_shares_update_own ON social_shares
-    FOR UPDATE
-    USING (auth.uid() = user_id);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE tablename = 'social_shares' AND policyname = 'social_shares_update_own'
+    ) THEN
+        CREATE POLICY social_shares_update_own ON social_shares
+            FOR UPDATE
+            USING (auth.uid() = user_id);
+    END IF;
+END $$;
 
 -- ============================================================================
 -- SECTION 4: Email Nurture List Table
@@ -190,12 +232,12 @@ CREATE TABLE IF NOT EXISTS email_nurture_list (
 );
 
 -- Indexes
-CREATE INDEX idx_email_nurture_list_email ON email_nurture_list(email);
-CREATE INDEX idx_email_nurture_list_user_id ON email_nurture_list(user_id);
-CREATE INDEX idx_email_nurture_list_campaign_tag ON email_nurture_list(campaign_tag);
+CREATE INDEX IF NOT EXISTS idx_email_nurture_list_email ON email_nurture_list(email);
+CREATE INDEX IF NOT EXISTS idx_email_nurture_list_user_id ON email_nurture_list(user_id);
+CREATE INDEX IF NOT EXISTS idx_email_nurture_list_campaign_tag ON email_nurture_list(campaign_tag);
 
 -- Unique constraint: One entry per email per campaign
-CREATE UNIQUE INDEX idx_email_nurture_unique ON email_nurture_list(email, campaign_tag);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_email_nurture_unique ON email_nurture_list(email, campaign_tag);
 
 COMMENT ON TABLE email_nurture_list IS 'Track users who requested HD downloads for email marketing campaigns';
 
@@ -203,14 +245,28 @@ COMMENT ON TABLE email_nurture_list IS 'Track users who requested HD downloads f
 ALTER TABLE email_nurture_list ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Users can only view their own email entries
-CREATE POLICY email_nurture_list_select_own ON email_nurture_list
-    FOR SELECT
-    USING (auth.uid() = user_id OR user_id IS NULL);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE tablename = 'email_nurture_list' AND policyname = 'email_nurture_list_select_own'
+    ) THEN
+        CREATE POLICY email_nurture_list_select_own ON email_nurture_list
+            FOR SELECT
+            USING (auth.uid() = user_id OR user_id IS NULL);
+    END IF;
+END $$;
 
 -- Policy: Users can insert their own email entries
-CREATE POLICY email_nurture_list_insert_own ON email_nurture_list
-    FOR INSERT
-    WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE tablename = 'email_nurture_list' AND policyname = 'email_nurture_list_insert_own'
+    ) THEN
+        CREATE POLICY email_nurture_list_insert_own ON email_nurture_list
+            FOR INSERT
+            WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
+    END IF;
+END $$;
 
 -- ============================================================================
 -- SECTION 5: Discount Codes Table (Optional)
@@ -378,6 +434,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS grant_initial_holiday_credit_trigger ON users;
 CREATE TRIGGER grant_initial_holiday_credit_trigger
     BEFORE INSERT ON users
     FOR EACH ROW
@@ -399,21 +456,25 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Apply update_updated_at trigger to holiday tables
+DROP TRIGGER IF EXISTS update_holiday_generations_updated_at ON holiday_generations;
 CREATE TRIGGER update_holiday_generations_updated_at
     BEFORE UPDATE ON holiday_generations
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_social_shares_updated_at ON social_shares;
 CREATE TRIGGER update_social_shares_updated_at
     BEFORE UPDATE ON social_shares
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_email_nurture_list_updated_at ON email_nurture_list;
 CREATE TRIGGER update_email_nurture_list_updated_at
     BEFORE UPDATE ON email_nurture_list
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_discount_codes_updated_at ON discount_codes;
 CREATE TRIGGER update_discount_codes_updated_at
     BEFORE UPDATE ON discount_codes
     FOR EACH ROW
