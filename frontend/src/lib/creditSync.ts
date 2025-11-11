@@ -76,12 +76,16 @@ export class CreditSyncManager {
       return;
     }
 
-    // Initial sync
-    this.refreshNow();
+    // Initial sync (don't await - errors are handled in refreshNow)
+    this.refreshNow().catch((error) => {
+      // Error already logged in refreshNow, just silently continue
+    });
 
     // Set up periodic refresh
     this.refreshIntervalId = setInterval(() => {
-      this.refreshNow();
+      this.refreshNow().catch((error) => {
+        // Error already logged in refreshNow, just silently continue
+      });
     }, this.options.refreshInterval);
 
     console.log(
@@ -106,6 +110,12 @@ export class CreditSyncManager {
    * Returns: Promise that resolves with updated balances or null on error
    */
   public async refreshNow(): Promise<UnifiedBalanceResponse | null> {
+    // Skip refresh if user is not authenticated
+    const { user } = useUserStore.getState();
+    if (!user || !user.isAuthenticated) {
+      return null;
+    }
+
     // Prevent concurrent refreshes
     if (this.isRefreshing) {
       console.log('[CreditSync] Refresh already in progress, skipping');
