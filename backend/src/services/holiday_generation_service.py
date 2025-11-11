@@ -1,0 +1,444 @@
+"""
+Holiday Generation Service
+
+Orchestrates holiday decoration generation workflow with holiday credits.
+
+Workflow:
+1. Validate user has holiday credits
+2. Deduct credit atomically BEFORE generation
+3. Geocode address
+4. Fetch Street View image with user-selected heading
+5. Generate decorated image via Gemini
+6. Create before/after comparison image
+7. Upload results to storage
+8. Save generation record
+9. Refund credit if generation fails
+
+Feature: 007-holiday-decorator (T027)
+User Story 1: New User Discovery & First Generation
+"""
+
+import asyncio
+import logging
+from datetime import datetime
+from typing import Optional, Tuple
+from uuid import UUID, uuid4
+
+from ..db.connection_pool import DatabasePool
+from ..services.holiday_credit_service import HolidayCreditService
+from ..services.maps_service import MapsService
+from ..services.gemini_client import GeminiClient
+from ..services.storage_service import BlobStorageService
+from ..lib.imageComposition import create_before_after_image
+
+logger = logging.getLogger(__name__)
+
+
+class HolidayGenerationService:
+    """
+    Service for holiday decoration generation workflow.
+
+    Uses holiday credits exclusively (no trial/token/subscription hierarchy).
+    Simpler payment model focused on viral sharing economy.
+    """
+
+    def __init__(
+        self,
+        db_pool: DatabasePool,
+        credit_service: HolidayCreditService,
+        maps_service: MapsService,
+        gemini_client: GeminiClient,
+        storage_service: BlobStorageService,
+    ):
+        """
+        Initialize holiday generation service.
+
+        Args:
+            db_pool: Database connection pool
+            credit_service: Holiday credit service for atomic deductions
+            maps_service: Google Maps service for geocoding/Street View
+            gemini_client: Gemini AI client for image generation
+            storage_service: Vercel Blob storage service
+        """
+        self.db = db_pool
+        self.credit_service = credit_service
+        self.maps_service = maps_service
+        self.gemini = gemini_client
+        self.storage = storage_service
+
+    # ========================================================================
+    # Main Generation Workflow
+    # ========================================================================
+
+    async def create_generation(
+        self,
+        user_id: UUID,
+        address: str,
+        heading: int,
+        pitch: int,
+        style: str,
+    ) -> Tuple[UUID, str]:
+        """
+        Create holiday decoration generation.
+
+        Main entry point for generation workflow. Handles full flow from
+        credit validation to final result upload.
+
+        Args:
+            user_id: User UUID
+            address: Street address for decoration
+            heading: Street View heading (0-359 degrees, user-selected)
+            pitch: Street View pitch (-90 to 90, default 0)
+            style: Decoration style ('classic', 'modern', 'over_the_top')
+
+        Returns:
+            Tuple of (generation_id, status_message)
+
+        Raises:
+            ValueError: If user has insufficient credits
+            RuntimeError: If generation workflow fails
+        """
+        generation_id = uuid4()
+
+        try:
+            # Step 1: Deduct credit atomically BEFORE generation
+            # CRITICAL: Deduct first to prevent free generations on failure
+            deduction_result = await self.credit_service.deduct_credit(user_id)
+
+            if not deduction_result.success:
+                raise ValueError(
+                    f"Insufficient holiday credits. "
+                    f"Current balance: {deduction_result.credits_remaining}"
+                )
+
+            logger.info(
+                f"Credit deducted for generation {generation_id}. "
+                f"Remaining: {deduction_result.credits_remaining}"
+            )
+
+            # Step 2: Geocode address
+            coords = await self.maps_service.geocode_address(address)
+            if not coords:
+                # Refund credit on geocoding failure
+                await self.credit_service.grant_credit(
+                    user_id,
+                    amount=1,
+                    reason="geocoding_failure_refund"
+                )
+                raise RuntimeError(f"Failed to geocode address: {address}")
+
+            # Step 3: Fetch Street View image with user-selected heading
+            street_view_bytes = await self.maps_service.fetch_street_view_image(
+                coords,
+                heading=heading,
+                pitch=pitch
+            )
+
+            if not street_view_bytes:
+                # Refund credit on Street View failure
+                await self.credit_service.grant_credit(
+                    user_id,
+                    amount=1,
+                    reason="street_view_failure_refund"
+                )
+                raise RuntimeError(
+                    f"Street View not available for address: {address}. "
+                    f"Try a different address or adjust the heading."
+                )
+
+            # Step 4: Upload original image to storage
+            original_image_url = await self.storage.upload_image(
+                image_data=street_view_bytes,
+                filename=f"holiday/{generation_id}/original.jpg"
+            )
+
+            # Step 5: Create generation record (status: pending)
+            await self._create_generation_record(
+                generation_id=generation_id,
+                user_id=user_id,
+                address=address,
+                geocoded_lat=coords.lat,
+                geocoded_lng=coords.lng,
+                heading=heading,
+                pitch=pitch,
+                style=style,
+                original_image_url=original_image_url,
+            )
+
+            # Step 6: Generate decorated image (async via Gemini)
+            # This will update status to 'processing' -> 'completed' or 'failed'
+            asyncio.create_task(
+                self._generate_decorated_image(
+                    generation_id=generation_id,
+                    user_id=user_id,
+                    street_view_bytes=street_view_bytes,
+                    style=style,
+                    original_image_url=original_image_url,
+                )
+            )
+
+            logger.info(f"Generation {generation_id} created and queued for processing")
+
+            return (
+                generation_id,
+                f"Generation created successfully. Estimated completion: 10 seconds"
+            )
+
+        except Exception as e:
+            logger.error(f"Generation creation failed for user {user_id}: {str(e)}")
+            raise
+
+    async def _generate_decorated_image(
+        self,
+        generation_id: UUID,
+        user_id: UUID,
+        street_view_bytes: bytes,
+        style: str,
+        original_image_url: str,
+    ):
+        """
+        Generate decorated image via Gemini AI.
+
+        Runs asynchronously after generation record is created.
+        Updates status to 'processing' -> 'completed' or 'failed'.
+
+        Args:
+            generation_id: Generation UUID
+            user_id: User UUID
+            street_view_bytes: Original Street View image bytes
+            style: Decoration style
+            original_image_url: URL of original image
+        """
+        try:
+            # Update status to processing
+            await self.db.execute(
+                """
+                UPDATE holiday_generations
+                SET status = 'processing', updated_at = NOW()
+                WHERE id = $1
+                """,
+                generation_id
+            )
+
+            # Call Gemini AI to generate decorated image
+            # TODO: Implement actual Gemini prompt for holiday decoration
+            # For now, use placeholder
+            decorated_image_bytes = await self._call_gemini_for_decoration(
+                street_view_bytes,
+                style
+            )
+
+            # Upload decorated image
+            decorated_image_url = await self.storage.upload_image(
+                image_data=decorated_image_bytes,
+                filename=f"holiday/{generation_id}/decorated.jpg"
+            )
+
+            # Create before/after comparison image
+            before_after_bytes = await create_before_after_image(
+                before_image_bytes=street_view_bytes,
+                after_image_bytes=decorated_image_bytes
+            )
+
+            # Upload before/after image
+            before_after_url = await self.storage.upload_image(
+                image_data=before_after_bytes,
+                filename=f"holiday/{generation_id}/before-after.jpg"
+            )
+
+            # Update generation record with results
+            await self.db.execute(
+                """
+                UPDATE holiday_generations
+                SET
+                    status = 'completed',
+                    decorated_image_url = $2,
+                    before_after_image_url = $3,
+                    updated_at = NOW()
+                WHERE id = $1
+                """,
+                generation_id,
+                decorated_image_url,
+                before_after_url
+            )
+
+            logger.info(f"Generation {generation_id} completed successfully")
+
+        except Exception as e:
+            logger.error(f"Generation {generation_id} failed: {str(e)}")
+
+            # Update status to failed
+            await self.db.execute(
+                """
+                UPDATE holiday_generations
+                SET
+                    status = 'failed',
+                    error_message = $2,
+                    updated_at = NOW()
+                WHERE id = $1
+                """,
+                generation_id,
+                str(e)
+            )
+
+            # Refund credit on generation failure
+            await self.credit_service.grant_credit(
+                user_id,
+                amount=1,
+                reason="generation_failure_refund"
+            )
+
+            logger.info(f"Refunded 1 credit to user {user_id} due to generation failure")
+
+    async def _call_gemini_for_decoration(
+        self,
+        image_bytes: bytes,
+        style: str
+    ) -> bytes:
+        """
+        Call Gemini AI to generate holiday-decorated image.
+
+        TODO: Implement actual Gemini prompt engineering.
+        For now, returns placeholder.
+
+        Args:
+            image_bytes: Original Street View image
+            style: Decoration style ('classic', 'modern', 'over_the_top')
+
+        Returns:
+            Decorated image bytes
+        """
+        # TODO: Implement Gemini prompt based on style
+        # For now, return original image as placeholder
+        logger.warning("Using placeholder Gemini implementation - returning original image")
+        return image_bytes
+
+    async def _create_generation_record(
+        self,
+        generation_id: UUID,
+        user_id: UUID,
+        address: str,
+        geocoded_lat: float,
+        geocoded_lng: float,
+        heading: int,
+        pitch: int,
+        style: str,
+        original_image_url: str,
+    ):
+        """
+        Create holiday_generations database record.
+
+        Args:
+            generation_id: Generation UUID
+            user_id: User UUID
+            address: Geocoded address
+            geocoded_lat: Latitude
+            geocoded_lng: Longitude
+            heading: Street View heading
+            pitch: Street View pitch
+            style: Decoration style
+            original_image_url: URL of original image
+        """
+        await self.db.execute(
+            """
+            INSERT INTO holiday_generations (
+                id, user_id, address,
+                geocoded_lat, geocoded_lng,
+                street_view_heading, street_view_pitch,
+                style, original_image_url,
+                status, credit_deducted
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', true
+            )
+            """,
+            generation_id,
+            user_id,
+            address,
+            geocoded_lat,
+            geocoded_lng,
+            heading,
+            pitch,
+            style,
+            original_image_url
+        )
+
+    # ========================================================================
+    # Query Methods
+    # ========================================================================
+
+    async def get_generation(self, generation_id: UUID) -> Optional[dict]:
+        """
+        Get generation by ID.
+
+        Args:
+            generation_id: Generation UUID
+
+        Returns:
+            Generation record dict or None if not found
+        """
+        row = await self.db.fetchrow(
+            """
+            SELECT
+                id, user_id, address,
+                geocoded_lat, geocoded_lng,
+                street_view_heading AS heading,
+                street_view_pitch AS pitch,
+                style, status,
+                original_image_url,
+                decorated_image_url,
+                before_after_image_url,
+                credit_deducted,
+                credit_refunded,
+                error_message,
+                created_at, updated_at
+            FROM holiday_generations
+            WHERE id = $1
+            """,
+            generation_id
+        )
+
+        return dict(row) if row else None
+
+    async def list_user_generations(
+        self,
+        user_id: UUID,
+        limit: int = 20,
+        offset: int = 0
+    ) -> list:
+        """
+        List generations for a user.
+
+        Args:
+            user_id: User UUID
+            limit: Max results (default: 20)
+            offset: Pagination offset (default: 0)
+
+        Returns:
+            List of generation dicts
+        """
+        rows = await self.db.fetch(
+            """
+            SELECT
+                id, user_id, address,
+                geocoded_lat, geocoded_lng,
+                street_view_heading AS heading,
+                street_view_pitch AS pitch,
+                style, status,
+                original_image_url,
+                decorated_image_url,
+                before_after_image_url,
+                credit_deducted,
+                credit_refunded,
+                error_message,
+                created_at, updated_at
+            FROM holiday_generations
+            WHERE user_id = $1
+            ORDER BY created_at DESC
+            LIMIT $2 OFFSET $3
+            """,
+            user_id,
+            limit,
+            offset
+        )
+
+        return [dict(row) for row in rows]

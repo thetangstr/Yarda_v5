@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import settings
 from src.db.connection_pool import db_pool
-from src.api.endpoints import auth, generations, tokens, webhooks, subscriptions, users
+from src.api.endpoints import auth, generations, tokens, webhooks, subscriptions, users, holiday
 from src.api.endpoints import debug
 
 
@@ -46,13 +46,14 @@ app = FastAPI(
 
 
 # Configure CORS
+print(f"[CORS Debug] Configured CORS origins: {settings.cors_origins}")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    # Note: Vercel preview URLs should be added to cors_origins in production
 )
 
 
@@ -63,6 +64,7 @@ app.include_router(generations.router)
 app.include_router(tokens.router)
 app.include_router(webhooks.router)
 app.include_router(subscriptions.router)  # NEW: Monthly Pro subscription endpoints
+app.include_router(holiday.router)  # NEW: Holiday decorator endpoints (Feature 007)
 app.include_router(debug.router)  # DEBUG: Admin debug logging endpoints
 
 

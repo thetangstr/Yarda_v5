@@ -11,6 +11,10 @@
 import { chromium, FullConfig } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 async function globalSetup(config: FullConfig) {
   console.log('🔧 Setting up global authentication for E2E tests...');
@@ -26,7 +30,7 @@ async function globalSetup(config: FullConfig) {
     });
 
     // Navigate to homepage first
-    await page.goto('http://localhost:3000/');
+    await page.goto('http://localhost:3003/');
 
     // Set up mock authentication in localStorage
     await page.evaluate(() => {
@@ -41,6 +45,7 @@ async function globalSetup(config: FullConfig) {
             trial_used: 0,
             subscription_status: 'inactive',
             subscription_tier: 'free',
+            holiday_credits: 1,
           },
           accessToken: 'e2e-mock-token',
           isAuthenticated: true,
@@ -60,7 +65,7 @@ async function globalSetup(config: FullConfig) {
     console.log('✅ E2E flag set:', flagSet);
 
     // Navigate to generate page to verify auth works
-    await page.goto('http://localhost:3000/generate', { waitUntil: 'domcontentloaded' });
+    await page.goto('http://localhost:3003/generate', { waitUntil: 'domcontentloaded' });
 
     // Verify E2E flag persists after navigation
     const flagAfterNav = await page.evaluate(() => (window as any).__PLAYWRIGHT_E2E__);

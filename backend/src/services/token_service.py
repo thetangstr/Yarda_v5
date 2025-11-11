@@ -131,6 +131,78 @@ class TokenService:
 
         return (True, new_balance, auto_reload_info)
 
+    async def deduct_tokens_batch(
+        self, user_id: UUID, amount: int
+    ) -> Tuple[bool, int, Optional[Dict[str, Any]]]:
+        """
+        Atomically deduct multiple tokens from user's balance in a single transaction.
+
+        This is CRITICAL for multi-area generations to prevent negative balances.
+        The entire check + deduction happens in ONE atomic transaction with FOR UPDATE lock.
+
+        Requirements:
+        - FR-026: Atomic deduction with row-level locking
+        - FR-060: Multi-area cost calculation (1 credit per area)
+        - BUGFIX-2025-11-10: Prevent negative balances when deducting multiple tokens
+
+        Args:
+            user_id: User ID
+            amount: Number of tokens to deduct (must be >= 1)
+
+        Returns:
+            Tuple of (success: bool, new_balance: int, auto_reload_info: Optional[Dict])
+            - success=True if all tokens deducted successfully
+            - success=False if insufficient balance or no account
+            - auto_reload_info contains trigger info if auto-reload should happen
+
+        Raises:
+            ValueError: If amount < 1
+        """
+        if amount < 1:
+            raise ValueError("amount must be >= 1")
+
+        async with self.db_pool.acquire() as conn:
+            async with conn.transaction():
+                # Get current balance with row lock (FOR UPDATE)
+                # This prevents other transactions from reading/modifying
+                # until this transaction completes
+                balance = await conn.fetchval(
+                    """
+                    SELECT balance
+                    FROM users_token_accounts
+                    WHERE user_id = $1
+                    FOR UPDATE
+                """,
+                    user_id,
+                )
+
+                # No account exists
+                if balance is None:
+                    return (False, 0, None)
+
+                # Insufficient balance - check TOTAL amount needed
+                if balance < amount:
+                    return (False, balance, None)
+
+                # Deduct all tokens at once
+                await conn.execute(
+                    """
+                    UPDATE users_token_accounts u
+                    SET balance = u.balance - $2,
+                        updated_at = NOW()
+                    WHERE u.user_id = $1
+                """,
+                    user_id,
+                    amount,
+                )
+
+                new_balance = balance - amount
+
+        # Check for auto-reload trigger AFTER transaction completes
+        auto_reload_info = await self.check_and_trigger_auto_reload(user_id, new_balance)
+
+        return (True, new_balance, auto_reload_info)
+
     async def refund_token(self, user_id: UUID) -> Tuple[bool, int]:
         """
         Refund 1 token to user's balance after failed generation.

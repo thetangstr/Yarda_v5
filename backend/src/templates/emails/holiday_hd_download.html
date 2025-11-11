@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Your Holiday Decorated Home - HD Image Ready!</title>
+    <!--[if mso]>
+    <style type="text/css">
+        table {border-collapse: collapse;}
+    </style>
+    <![endif]-->
+    <style>
+        /* Reset styles */
+        body, table, td, a {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+        table, td {
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+        img {
+            -ms-interpolation-mode: bicubic;
+            border: 0;
+            height: auto;
+            line-height: 100%;
+            outline: none;
+            text-decoration: none;
+        }
+        body {
+            height: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        /* Yarda brand colors */
+        .brand-green { color: #10b981; }
+        .brand-dark { color: #1f2937; }
+        .bg-brand-green { background-color: #10b981; }
+        .bg-festive { background: linear-gradient(135deg, #1e3a8a 0%, #7c3aed 100%); }
+
+        /* Responsive styles */
+        @media screen and (max-width: 600px) {
+            .email-container {
+                width: 100% !important;
+            }
+            .mobile-padding {
+                padding: 20px !important;
+            }
+            h1 {
+                font-size: 24px !important;
+                line-height: 32px !important;
+            }
+            .cta-button {
+                padding: 14px 24px !important;
+                font-size: 16px !important;
+            }
+            .preview-image {
+                width: 100% !important;
+                height: auto !important;
+            }
+        }
+
+        /* Festive decorations */
+        .snowflake {
+            color: #ffffff;
+            font-size: 20px;
+            opacity: 0.8;
+        }
+        .twinkle {
+            color: #fbbf24;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f3f4f6;">
+    <!-- Preheader text (hidden in email body, visible in preview) -->
+    <div style="display: none; max-height: 0; overflow: hidden;">
+        Your HD holiday decorated home image is ready to download! 🎄✨
+    </div>
+
+    <!-- Email wrapper -->
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f3f4f6;">
+        <tr>
+            <td style="padding: 40px 20px;">
+                <!-- Email container (600px max width) -->
+                <table role="presentation" class="email-container" cellspacing="0" cellpadding="0" border="0" width="600" style="margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+
+                    <!-- Festive header with gradient -->
+                    <tr>
+                        <td class="bg-festive" style="padding: 40px 30px; text-align: center; background: linear-gradient(135deg, #1e3a8a 0%, #7c3aed 100%);">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <span class="snowflake">❄️</span>
+                                        <span class="twinkle">✨</span>
+                                        <span class="snowflake">🎄</span>
+                                        <span class="twinkle">✨</span>
+                                        <span class="snowflake">❄️</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 20px 0;">
+                                        <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; line-height: 36px;">
+                                            Your HD Image is Ready! 🎁
+                                        </h1>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Email body -->
+                    <tr>
+                        <td class="mobile-padding" style="padding: 40px 30px;">
+                            <!-- Greeting -->
+                            <p style="margin: 0 0 20px; color: #1f2937; font-size: 16px; line-height: 24px;">
+                                Hi <strong>{{ user_name }}</strong>,
+                            </p>
+
+                            <p style="margin: 0 0 30px; color: #4b5563; font-size: 16px; line-height: 24px;">
+                                Your professionally decorated holiday home image is ready to download in stunning high-definition! Perfect for printing, sharing on social media, or sending to friends and family.
+                            </p>
+
+                            <!-- Preview image (if available) -->
+                            {% if preview_image_url %}
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0 0 30px;">
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <img src="{{ preview_image_url }}" alt="Your decorated home" class="preview-image" width="540" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
+                                    </td>
+                                </tr>
+                            </table>
+                            {% endif %}
+
+                            <!-- Primary CTA - Download HD Image -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0 0 30px;">
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <a href="{{ download_url }}" class="cta-button" style="display: inline-block; padding: 16px 32px; background-color: #10b981; color: #ffffff; font-size: 18px; font-weight: 600; text-decoration: none; border-radius: 8px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">
+                                            📥 Download HD Image
+                                        </a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding-top: 12px; text-align: center;">
+                                        <p style="margin: 0; color: #6b7280; font-size: 13px;">
+                                            High-resolution 4K image ({{ file_size }} MB)
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Divider -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 30px 0;">
+                                <tr>
+                                    <td style="border-top: 1px solid #e5e7eb;"></td>
+                                </tr>
+                            </table>
+
+                            <!-- Social sharing encouragement -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0 0 30px; padding: 20px; background-color: #f9fafb; border-radius: 8px;">
+                                <tr>
+                                    <td>
+                                        <h2 style="margin: 0 0 12px; color: #1f2937; font-size: 18px; font-weight: 600;">
+                                            ✨ Share the Holiday Magic
+                                        </h2>
+                                        <p style="margin: 0 0 16px; color: #4b5563; font-size: 14px; line-height: 20px;">
+                                            Share your decorated home on social media and earn <strong class="brand-green">1 free credit</strong> per share (up to 3/day)!
+                                        </p>
+                                        <p style="margin: 0; color: #6b7280; font-size: 13px; line-height: 18px;">
+                                            Tag us <strong>@YardaAI</strong> for a chance to be featured! 🎄
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Upgrade CTA -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0 0 30px; padding: 20px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 8px; border: 2px solid #fbbf24;">
+                                <tr>
+                                    <td>
+                                        <h2 style="margin: 0 0 12px; color: #78350f; font-size: 18px; font-weight: 600;">
+                                            🎁 Want More Holiday Magic?
+                                        </h2>
+                                        <p style="margin: 0 0 16px; color: #92400e; font-size: 14px; line-height: 20px;">
+                                            Upgrade to unlock <strong>unlimited generations</strong>, premium styles, and priority processing!
+                                        </p>
+                                        <a href="{{ upgrade_url }}" style="display: inline-block; padding: 12px 24px; background-color: #f59e0b; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 6px;">
+                                            View Plans →
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Helpful tips -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0 0 20px;">
+                                <tr>
+                                    <td>
+                                        <h3 style="margin: 0 0 12px; color: #1f2937; font-size: 16px; font-weight: 600;">
+                                            💡 Pro Tips
+                                        </h3>
+                                        <ul style="margin: 0; padding-left: 20px; color: #4b5563; font-size: 14px; line-height: 22px;">
+                                            <li>Print your image at local print shops for stunning 8x10" or 11x14" sizes</li>
+                                            <li>Use as your holiday greeting card design</li>
+                                            <li>Share on Instagram, Facebook, or TikTok to inspire friends</li>
+                                            <li>Download expires in 30 days - save it now!</li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Closing -->
+                            <p style="margin: 30px 0 0; color: #4b5563; font-size: 16px; line-height: 24px;">
+                                Happy Holidays! 🎄✨<br>
+                                <span style="color: #10b981; font-weight: 600;">The Yarda Team</span>
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 30px; background-color: #f9fafb; border-top: 1px solid #e5e7eb;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <!-- Logo/Brand -->
+                                        <p style="margin: 0 0 12px; color: #10b981; font-size: 20px; font-weight: 700;">
+                                            Yarda AI
+                                        </p>
+                                        <p style="margin: 0 0 16px; color: #6b7280; font-size: 13px; line-height: 18px;">
+                                            AI-Powered Landscape Design Studio
+                                        </p>
+
+                                        <!-- Social links -->
+                                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto 20px;">
+                                            <tr>
+                                                <td style="padding: 0 8px;">
+                                                    <a href="{{ instagram_url }}" style="color: #6b7280; text-decoration: none; font-size: 24px;">📷</a>
+                                                </td>
+                                                <td style="padding: 0 8px;">
+                                                    <a href="{{ facebook_url }}" style="color: #6b7280; text-decoration: none; font-size: 24px;">📘</a>
+                                                </td>
+                                                <td style="padding: 0 8px;">
+                                                    <a href="{{ tiktok_url }}" style="color: #6b7280; text-decoration: none; font-size: 24px;">🎵</a>
+                                                </td>
+                                            </tr>
+                                        </table>
+
+                                        <!-- Unsubscribe -->
+                                        <p style="margin: 0; color: #9ca3af; font-size: 12px; line-height: 16px;">
+                                            You're receiving this email because you requested an HD download.<br>
+                                            <a href="{{ unsubscribe_url }}" style="color: #9ca3af; text-decoration: underline;">Unsubscribe from marketing emails</a> |
+                                            <a href="{{ support_url }}" style="color: #9ca3af; text-decoration: underline;">Contact Support</a>
+                                        </p>
+
+                                        <!-- Legal -->
+                                        <p style="margin: 16px 0 0; color: #9ca3af; font-size: 11px; line-height: 14px;">
+                                            © {{ current_year }} Yarda AI. All rights reserved.<br>
+                                            {{ company_address }}
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Gmail iOS app fix -->
+    <div style="display:none; white-space:nowrap; font:15px courier; line-height:0;">
+        &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+    </div>
+</body>
+</html>

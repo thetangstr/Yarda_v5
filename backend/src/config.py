@@ -50,8 +50,13 @@ class Settings(BaseSettings):
     api_url: str = "http://localhost:8000"
     environment: str = "development"
 
-    # CORS
-    cors_origins: Union[list[str], str] = ["http://localhost:3000"]
+    # CORS (supports ports 3000-3003 for Next.js dev server auto-port selection)
+    cors_origins: Union[list[str], str] = [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3002",
+        "http://localhost:3003"
+    ]
 
     @field_validator("cors_origins", mode="before")
     @classmethod

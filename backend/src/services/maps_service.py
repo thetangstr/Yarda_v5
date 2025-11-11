@@ -487,12 +487,15 @@ class MapsService:
     async def get_property_images(
         self,
         address: str,
-        area: str
+        area: str,
+        custom_heading: Optional[int] = None,
+        custom_pitch: Optional[int] = None
     ) -> Tuple[Optional[bytes], Optional[StreetViewMetadata], Optional[bytes], str]:
         """
         Main method: Get property images with automatic fallback.
 
         Feature: 004-generation-flow (T011)
+        Extended for: 007-holiday-decorator (T017)
 
         Workflow:
         1. Geocode address → coordinates
@@ -506,6 +509,8 @@ class MapsService:
         Args:
             address: Full street address
             area: Landscape area (front_yard, backyard, walkway, side_yard, patio, pool_area)
+            custom_heading: Optional Street View heading (0-359 degrees) - overrides automatic calculation
+            custom_pitch: Optional Street View pitch (-90 to 90 degrees) - overrides default 0
 
         Returns:
             Tuple of (street_view_bytes, street_view_metadata, satellite_bytes, image_source)
@@ -546,10 +551,17 @@ class MapsService:
                 # Use the Street View camera location from metadata for accurate positioning
                 camera_coords = metadata.location if metadata.location else coords
 
-                # Calculate heading from camera to target property
-                # This ensures the camera points AT the property, not just uses a default heading
-                if metadata.location:
-                    # Always calculate heading to ensure camera points at the target
+                # Determine heading: use custom_heading if provided, otherwise auto-calculate
+                if custom_heading is not None:
+                    # Holiday Decorator: Use user-selected heading from Street View preview
+                    heading = custom_heading
+                    logger.info(
+                        "street_view_custom_heading",
+                        heading=heading,
+                        source="user_selected"
+                    )
+                elif metadata.location:
+                    # Auto-calculate heading to ensure camera points at the target
                     heading = calculate_heading(camera_coords, coords)
                     logger.info(
                         "street_view_heading_calculated",
@@ -557,15 +569,20 @@ class MapsService:
                         camera_lng=camera_coords.lng,
                         target_lat=coords.lat,
                         target_lng=coords.lng,
-                        heading=heading
+                        heading=heading,
+                        source="auto_calculated"
                     )
                 else:
-                    # If no metadata location, use default heading
+                    # If no metadata location and no custom heading, use default
                     heading = 0
+
+                # Determine pitch: use custom_pitch if provided, otherwise default to 0
+                pitch = custom_pitch if custom_pitch is not None else 0
 
                 street_view_bytes = await self.fetch_street_view_image(
                     camera_coords,
-                    heading=heading
+                    heading=heading,
+                    pitch=pitch
                 )
 
                 if street_view_bytes:

@@ -20,6 +20,11 @@ export interface User {
   stripe_subscription_id?: string;
   avatar_url?: string;
   full_name?: string;
+
+  // Holiday Decorator credits (Feature 007)
+  holiday_credits?: number;           // Current balance (default: 0)
+  holiday_credits_earned?: number;    // Total earned (lifetime)
+  whats_new_modal_shown?: boolean;    // Has user seen Holiday feature modal
 }
 
 export interface TokenBalance {
@@ -42,6 +47,8 @@ interface UserState {
   setAccessToken: (token: string | null) => void;
   setTokenBalance: (balance: TokenBalance | null) => void;
   updateTrialRemaining: (trial_remaining: number) => void;
+  updateHolidayCredits: (holiday_credits: number, holiday_credits_earned?: number) => void;
+  markWhatsNewModalShown: () => void;
   logout: () => void;
   setHasHydrated: (hasHydrated: boolean) => void;
 }
@@ -81,6 +88,25 @@ export const useUserStore = create<UserState>()(
             : null,
           tokenBalance: state.tokenBalance
             ? { ...state.tokenBalance, trial_remaining }
+            : null,
+        })),
+
+      updateHolidayCredits: (holiday_credits, holiday_credits_earned) =>
+        set((state) => ({
+          user: state.user
+            ? {
+                ...state.user,
+                holiday_credits,
+                holiday_credits_earned:
+                  holiday_credits_earned ?? state.user.holiday_credits_earned ?? 0,
+              }
+            : null,
+        })),
+
+      markWhatsNewModalShown: () =>
+        set((state) => ({
+          user: state.user
+            ? { ...state.user, whats_new_modal_shown: true }
             : null,
         })),
 

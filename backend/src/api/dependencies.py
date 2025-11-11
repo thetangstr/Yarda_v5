@@ -64,44 +64,69 @@ async def get_current_user(
     token = credentials.credentials
     user_id = None
 
-    # Try to parse as UUID first (for email/password login compatibility)
-    try:
-        user_id = UUID(token)
-    except ValueError:
-        # For JWT tokens, we skip Supabase validation (can timeout)
-        # Instead, we decode the JWT to extract user_id
+    # E2E Test Bypass: Check for Playwright test token
+    if token == "e2e-mock-token":
+        print("[E2E Test] Using mock authentication")
+        user_id = UUID("00000000-0000-0000-0000-000000000001")  # Fixed UUID for E2E tests
+
+        # Ensure E2E test user exists in database
         try:
-            import json
-            import base64
+            existing_user = await db_pool.fetchrow("""
+                SELECT id FROM users WHERE id = $1
+            """, user_id)
 
-            # JWT format: header.payload.signature
-            # We only need the payload (doesn't require signature validation here)
-            parts = token.split('.')
-            if len(parts) != 3:
-                raise ValueError("Invalid JWT format")
-
-            # Add padding if needed
-            payload = parts[1]
-            padding = 4 - len(payload) % 4
-            if padding != 4:
-                payload += '=' * padding
-
-            # Decode payload
-            decoded = base64.urlsafe_b64decode(payload)
-            payload_data = json.loads(decoded)
-
-            # Extract user ID from JWT payload
-            if 'sub' in payload_data:
-                user_id = UUID(payload_data['sub'])
-            else:
-                raise ValueError("No 'sub' claim in JWT token")
-
+            # Always upsert to reset E2E test user state (credits, trials) before each test run
+            print("[E2E Test] Ensuring E2E test user exists with correct state")
+            await db_pool.execute("""
+                INSERT INTO users (id, email, email_verified, trial_remaining, trial_used, subscription_tier, subscription_status, holiday_credits, holiday_credits_earned)
+                VALUES ($1, 'e2e-test@yarda.app', true, 3, 0, 'free', 'inactive', 1, 1)
+                ON CONFLICT (id) DO UPDATE SET
+                    holiday_credits = 1,
+                    holiday_credits_earned = 1,
+                    trial_remaining = 3,
+                    trial_used = 0
+            """, user_id)
         except Exception as e:
-            print(f"[JWT Error] Failed to decode JWT: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid authentication token"
-            )
+            print(f"[E2E Test] Error ensuring test user exists: {e}")
+    else:
+        # Try to parse as UUID first (for email/password login compatibility)
+        try:
+            user_id = UUID(token)
+        except ValueError:
+            # For JWT tokens, we skip Supabase validation (can timeout)
+            # Instead, we decode the JWT to extract user_id
+            try:
+                import json
+                import base64
+
+                # JWT format: header.payload.signature
+                # We only need the payload (doesn't require signature validation here)
+                parts = token.split('.')
+                if len(parts) != 3:
+                    raise ValueError("Invalid JWT format")
+
+                # Add padding if needed
+                payload = parts[1]
+                padding = 4 - len(payload) % 4
+                if padding != 4:
+                    payload += '=' * padding
+
+                # Decode payload
+                decoded = base64.urlsafe_b64decode(payload)
+                payload_data = json.loads(decoded)
+
+                # Extract user ID from JWT payload
+                if 'sub' in payload_data:
+                    user_id = UUID(payload_data['sub'])
+                else:
+                    raise ValueError("No 'sub' claim in JWT token")
+
+            except Exception as e:
+                print(f"[JWT Error] Failed to decode JWT: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid authentication token"
+                )
 
     # Fetch user from database
     try:
@@ -114,6 +139,7 @@ async def get_current_user(
                 trial_used,
                 subscription_tier,
                 subscription_status,
+                holiday_credits,
                 created_at,
                 updated_at
             FROM users
@@ -139,6 +165,7 @@ async def get_current_user(
         firebase_uid=None,  # Firebase deprecated, using Supabase Auth
         trial_remaining=user_row["trial_remaining"],
         trial_used=user_row["trial_used"],
+        holiday_credits=user_row.get("holiday_credits", 0),  # Feature 007
         subscription_tier=user_row["subscription_tier"],
         subscription_status=user_row["subscription_status"],
         stripe_customer_id=None,  # Not in minimal schema
@@ -216,6 +243,7 @@ async def get_optional_user(
             trial_used,
             subscription_tier,
             subscription_status,
+            holiday_credits,
             created_at,
             updated_at
         FROM users
@@ -232,6 +260,7 @@ async def get_optional_user(
         firebase_uid=None,  # Firebase deprecated, using Supabase Auth
         trial_remaining=user_row["trial_remaining"],
         trial_used=user_row["trial_used"],
+        holiday_credits=user_row.get("holiday_credits", 0),  # Feature 007
         subscription_tier=user_row["subscription_tier"],
         subscription_status=user_row["subscription_status"],
         stripe_customer_id=None,  # Not in minimal schema

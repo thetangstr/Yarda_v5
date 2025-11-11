@@ -17,6 +17,8 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
+import HolidayHero from '@/components/HolidayHero';
+import { isHolidaySeasonActive } from '@/lib/seasonalFeatures';
 
 export default function Home() {
   return (
@@ -27,6 +29,9 @@ export default function Home() {
       </Head>
       <div className="min-h-screen bg-white">
       <Navigation transparent={true} />
+
+      {/* Holiday Hero (seasonal) */}
+      {isHolidaySeasonActive() && <HolidayHero />}
 
       {/* Hero Section */}
       <section className="relative bg-brand-cream pt-24 pb-16 overflow-hidden">

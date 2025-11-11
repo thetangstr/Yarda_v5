@@ -166,6 +166,9 @@ class User(BaseModel):
     trial_remaining: int = Field(ge=0, description="Trial credits remaining")
     trial_used: int = Field(ge=0, description="Trial credits used")
 
+    # Holiday Decorator Credits (Feature 007)
+    holiday_credits: Optional[int] = Field(default=0, ge=0, description="Holiday decorator credits")
+
     # Subscription
     subscription_tier: Optional[str] = Field(default=None)
     subscription_status: str = Field(default="inactive")

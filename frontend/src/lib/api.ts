@@ -465,6 +465,112 @@ export const subscriptionAPI = {
 };
 
 // ============================================================================
+// Holiday Decorator APIs (Feature 007)
+// ============================================================================
+
+// Import types from holiday.ts
+import type {
+  HolidayGenerationRequest,
+  HolidayGenerationResponse,
+  HolidayGenerationListResponse,
+  ShareRequest,
+  ShareResponse,
+  ShareListResponse,
+  HolidayCreditsResponse,
+  HolidayCreditHistoryResponse,
+  EmailHDRequest,
+  EmailHDResponse,
+} from '@/types/holiday';
+
+export const holidayAPI = {
+  /**
+   * Create a new holiday decoration generation
+   * POST /v1/holiday/generations
+   */
+  createGeneration: async (
+    data: HolidayGenerationRequest
+  ): Promise<HolidayGenerationResponse> => {
+    const response = await apiClient.post('/holiday/generations', data);
+    return response.data;
+  },
+
+  /**
+   * Get status and result of a specific generation
+   * GET /v1/holiday/generations/:id
+   */
+  getGeneration: async (generationId: string): Promise<HolidayGenerationResponse> => {
+    const response = await apiClient.get(`/holiday/generations/${generationId}`);
+    return response.data;
+  },
+
+  /**
+   * List user's holiday generations with pagination
+   * GET /v1/holiday/generations
+   */
+  listGenerations: async (
+    limit = 20,
+    offset = 0
+  ): Promise<HolidayGenerationListResponse> => {
+    const response = await apiClient.get('/holiday/generations', {
+      params: { limit, offset },
+    });
+    return response.data;
+  },
+
+  /**
+   * Create a social share tracking link
+   * POST /v1/holiday/shares
+   */
+  createShare: async (data: ShareRequest): Promise<ShareResponse> => {
+    const response = await apiClient.post('/holiday/shares', data);
+    return response.data;
+  },
+
+  /**
+   * List user's social shares with pagination
+   * GET /v1/holiday/shares
+   */
+  listShares: async (limit = 20, offset = 0): Promise<ShareListResponse> => {
+    const response = await apiClient.get('/holiday/shares', {
+      params: { limit, offset },
+    });
+    return response.data;
+  },
+
+  /**
+   * Get user's holiday credits balance and earnings breakdown
+   * GET /v1/holiday/credits
+   */
+  getCredits: async (): Promise<HolidayCreditsResponse> => {
+    const response = await apiClient.get('/holiday/credits');
+    return response.data;
+  },
+
+  /**
+   * Get holiday credit transaction history
+   * GET /v1/holiday/credits/history
+   */
+  getCreditHistory: async (
+    limit = 50,
+    offset = 0
+  ): Promise<HolidayCreditHistoryResponse> => {
+    const response = await apiClient.get('/holiday/credits/history', {
+      params: { limit, offset },
+    });
+    return response.data;
+  },
+
+  /**
+   * Request HD image delivery via email
+   * POST /v1/holiday/email/request-hd
+   */
+  requestHDEmail: async (data: EmailHDRequest): Promise<EmailHDResponse> => {
+    const response = await apiClient.post('/holiday/email/request-hd', data);
+    return response.data;
+  },
+};
+
+// ============================================================================
 // Error handling utilities
 // ============================================================================
 

@@ -104,19 +104,16 @@ class GenerationService:
             # Step 2: Check trial credits (second priority)
             trial_balance, _ = await self.trial_service.get_trial_balance(user_id)
             if trial_balance >= num_areas:
-                # Attempt to atomically deduct trial credits (one at a time for multi-area)
-                for i in range(num_areas):
-                    success, new_balance = await self.trial_service.deduct_trial(user_id)
-                    if not success:
-                        # Refund previously deducted trial credits
-                        if i > 0:
-                            await self._refund_trials(user_id, i)
-                        return (
-                            False,
-                            None,
-                            f"Trial credit deduction failed after {i} credits (race condition or insufficient balance)",
-                            None
-                        )
+                # CRITICAL: Use batch deduction to prevent negative balances (BUGFIX-2025-11-10)
+                # Previous loop-based approach caused race conditions resulting in negative trial_remaining
+                success, new_balance = await self.trial_service.deduct_trials_batch(user_id, num_areas)
+                if not success:
+                    return (
+                        False,
+                        None,
+                        f"Trial credit deduction failed (insufficient balance: {trial_balance} < {num_areas})",
+                        None
+                    )
 
                 return (
                     True,
@@ -128,19 +125,16 @@ class GenerationService:
             # Step 3: Check token balance (lowest priority)
             token_balance, _, _ = await self.token_service.get_token_balance(user_id)
             if token_balance >= num_areas:
-                # Attempt to atomically deduct tokens
-                for i in range(num_areas):
-                    success, new_balance, auto_reload_info = await self.token_service.deduct_token_atomic(user_id)
-                    if not success:
-                        # Refund previously deducted tokens
-                        if i > 0:
-                            await self._refund_tokens(user_id, i)
-                        return (
-                            False,
-                            None,
-                            f"Token deduction failed after {i} tokens (race condition or insufficient balance)",
-                            None
-                        )
+                # CRITICAL: Use batch deduction to prevent negative balances (BUGFIX-2025-11-10)
+                # Previous loop-based approach caused race conditions resulting in negative token balance
+                success, new_balance, auto_reload_info = await self.token_service.deduct_tokens_batch(user_id, num_areas)
+                if not success:
+                    return (
+                        False,
+                        None,
+                        f"Token deduction failed (insufficient balance: {token_balance} < {num_areas})",
+                        None
+                    )
 
                 return (
                     True,

@@ -66,6 +66,43 @@ class TrialService:
 
         return result['success'], result['trial_remaining']
 
+    async def deduct_trials_batch(self, user_id: UUID, amount: int) -> Tuple[bool, int]:
+        """
+        Atomically deduct multiple trial credits from user in a single transaction.
+
+        This is CRITICAL for multi-area generations to prevent negative trial_remaining.
+        The entire check + deduction happens in ONE atomic transaction with FOR UPDATE lock.
+
+        Args:
+            user_id: User UUID
+            amount: Number of trial credits to deduct (must be >= 1)
+
+        Returns:
+            Tuple of (success, trial_remaining)
+            - success: True if all credits deducted successfully, False if insufficient
+            - trial_remaining: Credits remaining after deduction
+
+        Raises:
+            ValueError: If amount < 1
+
+        Example:
+            >>> # User generating 3 areas, deduct 3 trial credits atomically
+            >>> success, remaining = await trial_service.deduct_trials_batch(user_id, 3)
+            >>> if not success:
+            >>>     raise HTTPException(403, "Insufficient trial credits")
+        """
+        if amount < 1:
+            raise ValueError("amount must be >= 1")
+
+        result = await self.db.fetchrow("""
+            SELECT * FROM deduct_trials_batch($1, $2)
+        """, user_id, amount)
+
+        if not result:
+            raise RuntimeError("deduct_trials_batch function failed")
+
+        return result['success'], result['trial_remaining']
+
     async def refund_trial(self, user_id: UUID) -> Tuple[bool, int]:
         """
         Refund one trial credit to user (when generation fails).
@@ -88,6 +125,38 @@ class TrialService:
 
         if not result:
             raise RuntimeError("refund_trial function failed")
+
+        return result['success'], result['trial_remaining']
+
+    async def refund_trials_batch(self, user_id: UUID, amount: int) -> Tuple[bool, int]:
+        """
+        Refund multiple trial credits to user (when multi-area generation fails).
+
+        Args:
+            user_id: User UUID
+            amount: Number of trial credits to refund (must be >= 1)
+
+        Returns:
+            Tuple of (success, trial_remaining)
+            - success: True if refund succeeded
+            - trial_remaining: Credits remaining after refund
+
+        Raises:
+            ValueError: If amount < 1
+
+        Example:
+            >>> # Multi-area generation failed, refund all 3 trial credits
+            >>> success, remaining = await trial_service.refund_trials_batch(user_id, 3)
+        """
+        if amount < 1:
+            raise ValueError("amount must be >= 1")
+
+        result = await self.db.fetchrow("""
+            SELECT * FROM refund_trials_batch($1, $2)
+        """, user_id, amount)
+
+        if not result:
+            raise RuntimeError("refund_trials_batch function failed")
 
         return result['success'], result['trial_remaining']
 

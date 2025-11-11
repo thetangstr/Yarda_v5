@@ -1,0 +1,348 @@
+================================================================================
+HOLIDAY DECORATOR E2E TEST EXECUTION SUMMARY
+================================================================================
+
+Date: November 10, 2025
+Feature: Holiday Decorator (007-holiday-decorator)
+Test File: frontend/tests/e2e/holiday-discovery.spec.ts
+
+================================================================================
+TEST EXECUTION RESULTS
+================================================================================
+
+Command Executed:
+  cd frontend && npx playwright test tests/e2e/holiday-discovery.spec.ts \
+    --project=chromium --reporter=list
+
+Total Tests Run: 6
+Passed: 4 (67%)
+Failed: 2 (33%)
+
+================================================================================
+PASSED TESTS (4/6)
+================================================================================
+
+✅ Test 1: "should show holiday hero on homepage during season" (1.4s)
+   Status: PASS
+   What it tests: Holiday hero component displays on homepage
+
+✅ Test 2: "meta-test: verify holiday page implementation exists" (1.5s)
+   Status: PASS
+   What it tests: /holiday route exists and loads correctly
+
+✅ Test 3: "should prevent generation when user has 0 credits" (3.5s)
+   Status: PASS
+   What it tests: Generation validation when credits = 0
+
+✅ Test 5: "should navigate to holiday page when CTA clicked" (1.7s)
+   Status: PASS
+   What it tests: CTA button navigation from hero to /holiday page
+
+================================================================================
+FAILED TESTS (2/6)
+================================================================================
+
+❌ Test 4: "should render holiday page with all components" (7.0s)
+   Status: FAIL - CRITICAL
+   Location: frontend/tests/e2e/holiday-discovery.spec.ts:122
+   
+   Failure Details:
+   └─ Expected: credit-display contains "1"
+   └─ Actual: credit-display contains "0"
+   
+   Root Cause: Backend endpoint /v1/holiday/credits does not exist
+   └─ Test mocks: holiday_credits = 1 in localStorage
+   └─ Component calls: holidayAPI.getCredits()
+   └─ API endpoint: MISSING (returns error, not found)
+   └─ State defaults to: 0 (initial value when no data received)
+   
+   Impact: Credit balance cannot be displayed to user
+   Fix Time: 30 minutes
+
+
+❌ Test 6: "should complete full generation flow: address → rotation → style → generate → results" (8.6s)
+   Status: FAIL - CRITICAL
+   Location: frontend/tests/e2e/holiday-discovery.spec.ts:156
+   
+   Failure Details:
+   └─ Expected: <img> tag visible in street-view-rotator
+   └─ Actual: No <img> element found (element not found after 5s timeout)
+   
+   Root Cause: StreetViewRotator component is a placeholder
+   └─ Component file: frontend/src/components/StreetViewRotator.tsx
+   └─ Line 49: TODO comment - "Replace with actual Google Street View API call"
+   └─ Current behavior: Renders emoji "🏠" instead of <img>
+   └─ Missing: Google Street View API integration
+   
+   Impact: Users cannot see property preview before decoration
+   Fix Time: 1-2 hours
+
+================================================================================
+SECONDARY ISSUES IDENTIFIED
+================================================================================
+
+⚠️ localStorage Key Mismatch in Test Setup
+   File: frontend/tests/e2e/holiday-discovery.spec.ts line 51
+   Issue: Uses 'user-store' but API client expects 'user-storage'
+   Impact: Inconsistent authentication setup (minor, doesn't block current tests)
+   Fix Time: 5 minutes
+
+================================================================================
+IMPACT ANALYSIS
+================================================================================
+
+Feature Completeness: 67%
+├─ Authentication & Navigation: ✅ WORKING (Tests 1, 2, 5 passing)
+├─ Credit Display: ❌ BROKEN (Test 4 failing - backend missing)
+├─ Street View Preview: ❌ BROKEN (Test 6 failing - not implemented)
+└─ Generation Flow: ❌ BLOCKED (Depends on Street View)
+
+Blocking Issues: 2
+├─ Missing backend endpoint for credits
+└─ Missing Street View image rendering
+
+Production Readiness: ❌ NOT READY
+├─ Cannot display user credits
+├─ Cannot show property previews
+└─ Generation flow incomplete
+
+Main Yarda App Impact: ✅ NO IMPACT
+├─ Holiday routes: /holiday (isolated)
+├─ Main routes: /generate (separate)
+├─ No shared state modifications
+└─ Main app unaffected (but has pre-existing test failures)
+
+================================================================================
+ROOT CAUSE ANALYSIS
+================================================================================
+
+FAILURE #1: Credit Display Shows 0
+───────────────────────────────────
+Architecture:
+  Test Setup
+    ├─ Mocks: holiday_credits = 1
+    └─ localStorage key: 'user-store'
+        ↓
+  Frontend Component (holiday.tsx)
+    ├─ useEffect on mount calls fetchCredits()
+    ├─ Calls: holidayAPI.getCredits()
+    └─ Expected to set: credits = 1
+        ↓
+  API Client (api.ts)
+    └─ GET /v1/holiday/credits
+        ↓
+  Backend (MISSING)
+    └─ Endpoint does not exist → 404 Error
+        ↓
+  Result: API call fails silently
+    └─ setCredits() never called
+    └─ credits stays at default = 0
+    └─ Display shows: "Holiday Credits0"
+
+
+FAILURE #2: Street View Not Rendering
+──────────────────────────────────────
+Current Implementation:
+  StreetViewRotator.tsx (placeholder)
+    ├─ Line 49: TODO comment
+    ├─ Line 54: Mock URL created: `/api/placeholder?heading=...`
+    ├─ Line 137-145: Renders placeholder div with emoji "🏠"
+    └─ Missing: <img> tag to display image
+        ↓
+  Test Expectation:
+    └─ Looks for: streetViewRotator.locator('img')
+    └─ Expects: <img> element visible
+        ↓
+  Result:
+    └─ No <img> element found
+    └─ Test fails with "element(s) not found" after 5s timeout
+
+Missing Components:
+  ├─ Backend API: GET /v1/holiday/street-view
+  ├─ Frontend: <img> tag rendering
+  └─ Integration: Google Street View API calls
+
+================================================================================
+FILES AFFECTED BY FAILURES
+================================================================================
+
+CRITICAL - Must be created:
+  ├─ backend/src/api/endpoints/holiday_credits.py (NEW)
+  ├─ backend/src/api/endpoints/street_view.py (NEW)
+  └─ supabase/migrations/014_add_holiday_credits.sql (NEW)
+
+CRITICAL - Must be modified:
+  ├─ frontend/src/components/StreetViewRotator.tsx (lines 49-146)
+  ├─ frontend/src/lib/api.ts (add street-view method)
+  └─ backend/src/main.py (register routers)
+
+MINOR - Must be fixed:
+  └─ frontend/tests/e2e/holiday-discovery.spec.ts (line 51)
+
+ALREADY CORRECT:
+  ├─ frontend/src/pages/holiday.tsx (page structure correct)
+  ├─ frontend/src/components/HolidayHero.tsx (hero working)
+  ├─ frontend/src/components/StyleSelector.tsx (style selector working)
+  └─ Test structure and assertions (tests are correct)
+
+================================================================================
+PRIORITY-ORDERED FIX LIST
+================================================================================
+
+PHASE 1: CRITICAL BACKEND FIXES (50 minutes)
+┌─────────────────────────────────────────────────────────────────────────────
+│ 1. Database Migration: Add holiday_credits column
+│    │  File: supabase/migrations/014_add_holiday_credits.sql
+│    │  Changes: 
+│    │    - Add holiday_credits INT to users table
+│    │    - Create holiday_credit_transactions audit table
+│    │    - Add RLS policies
+│    └─ Time: 10 min
+│
+│ 2. Backend Endpoint: GET /v1/holiday/credits
+│    │  File: backend/src/api/endpoints/holiday_credits.py
+│    │  Changes:
+│    │    - Query user credits from database
+│    │    - Return HolidayCreditsResponse
+│    │    - Add proper error handling
+│    └─ Time: 15 min
+│
+│ 3. Backend Endpoint: POST /v1/holiday/street-view/preview
+│    │  File: backend/src/api/endpoints/street_view.py
+│    │  Changes:
+│    │    - Geocode address using Google Maps API
+│    │    - Generate Street View preview URL
+│    │    - Return image_url to frontend
+│    └─ Time: 20 min
+│
+│ 4. Register Routers in Main
+│    │  File: backend/src/main.py
+│    │  Changes:
+│    │    - Import new endpoint modules
+│    │    - Register routers with app
+│    └─ Time: 5 min
+└─────────────────────────────────────────────────────────────────────────────
+
+PHASE 2: FRONTEND IMPLEMENTATION (65 minutes)
+┌─────────────────────────────────────────────────────────────────────────────
+│ 5. Frontend: Update StreetViewRotator component
+│    │  File: frontend/src/components/StreetViewRotator.tsx
+│    │  Changes:
+│    │    - Replace fetchPreview() to call backend API (lines 49-62)
+│    │    - Add <img> tag to render street view (lines 134-146)
+│    │    - Add proper error handling for image load
+│    └─ Time: 30 min
+│
+│ 6. Frontend: Add API method for Street View
+│    │  File: frontend/src/lib/api.ts
+│    │  Changes:
+│    │    - Add getStreetViewPreview() method
+│    │    - Add proper error handling
+│    └─ Time: 10 min
+│
+│ 7. Test: Fix localStorage key mismatch
+│    │  File: frontend/tests/e2e/holiday-discovery.spec.ts
+│    │  Changes:
+│    │    - Change 'user-store' to 'user-storage' (line 51)
+│    └─ Time: 5 min
+└─────────────────────────────────────────────────────────────────────────────
+
+PHASE 3: VALIDATION (10 minutes)
+┌─────────────────────────────────────────────────────────────────────────────
+│ 8. Run Full E2E Test Suite
+│    └─ Command: npm run test:e2e -- holiday-discovery.spec.ts
+│    └─ Expected: 6/6 PASS
+│    └─ Time: 5 min
+│
+│ 9. Manual Smoke Test
+│    └─ Visit http://localhost:3003/holiday
+│    └─ Verify credit balance displays correctly
+│    └─ Verify street view images load
+│    └─ Time: 5 min
+└─────────────────────────────────────────────────────────────────────────────
+
+TOTAL ESTIMATED TIME: 2 hours 5 minutes
+
+================================================================================
+BEFORE/AFTER TEST RESULTS
+================================================================================
+
+BEFORE (Current State):
+  6 tests
+  ✅ 4 passed (67%)
+  ❌ 2 failed (33%)
+  Status: INCOMPLETE - Missing core backend & Street View rendering
+
+AFTER (Expected After Fixes):
+  6 tests
+  ✅ 6 passed (100%)  ← All tests passing
+  ❌ 0 failed (0%)
+  Status: COMPLETE - Ready for production
+
+================================================================================
+VERIFICATION CHECKLIST
+================================================================================
+
+Before starting fixes:
+  ☐ Backend venv activated
+  ☐ GOOGLE_MAPS_API_KEY environment variable set
+  ☐ Frontend .env.local configured with correct API_URL
+
+After applying migration:
+  ☐ Database migration executed successfully
+  ☐ holiday_credits column added to users table
+  ☐ holiday_credit_transactions table created
+
+After implementing backend:
+  ☐ Backend compiles without errors
+  ☐ /health endpoint returns 200
+  ☐ /v1/holiday/credits endpoint responds (test with curl)
+  ☐ /v1/holiday/street-view/preview endpoint responds
+
+After updating frontend:
+  ☐ StreetViewRotator compiles without errors
+  ☐ API client has getStreetViewPreview method
+  ☐ No TypeScript errors
+
+After running tests:
+  ☐ Test 1: ✅ Hero on homepage
+  ☐ Test 2: ✅ Navigation works
+  ☐ Test 3: ✅ Credit validation
+  ☐ Test 4: ✅ All components render (credit display = "1")
+  ☐ Test 5: ✅ Full generation flow
+  ☐ Test 6: ✅ Meta-test passes
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. Review this analysis with the team
+2. Assign fixes to developers:
+   - Backend: Implement both endpoints + migration (2 people, 1 hour)
+   - Frontend: Update StreetViewRotator + API client (1 person, 1 hour)
+3. Apply all fixes in order (Phase 1 → Phase 2 → Phase 3)
+4. Run E2E test suite (should show 6/6 PASS)
+5. Once tests pass, proceed to manual testing/QA
+6. Deploy to staging and run smoke tests
+7. Deploy to production
+
+================================================================================
+RESOURCES
+================================================================================
+
+Detailed Analysis:
+  /Users/Kailor_1/Desktop/Projects/Yarda_v5/HOLIDAY_DECORATOR_E2E_TEST_ANALYSIS.md
+
+Implementation Guide:
+  /Users/Kailor_1/Desktop/Projects/Yarda_v5/HOLIDAY_DECORATOR_FIX_GUIDE.md
+
+Test File:
+  /Users/Kailor_1/Desktop/Projects/Yarda_v5/frontend/tests/e2e/holiday-discovery.spec.ts
+
+Feature Spec:
+  /Users/Kailor_1/Desktop/Projects/Yarda_v5/specs/007-holiday-decorator/
+
+Documentation:
+  CLAUDE.md (project guidelines)
+
+================================================================================

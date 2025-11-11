@@ -1,0 +1,352 @@
+================================================================================
+HOLIDAY DECORATOR E2E TEST ANALYSIS - QUICK REFERENCE CARD
+================================================================================
+
+COPY THIS FOR YOUR TEAM
+
+================================================================================
+TEST RESULTS AT A GLANCE
+================================================================================
+
+Tests Run: 6
+Passed: 4 (67%)   ✅
+Failed: 2 (33%)   ❌
+
+Status: CRITICAL - 2 blockers, not production-ready
+
+================================================================================
+WHAT'S BROKEN
+================================================================================
+
+1. Credit Balance Shows 0 Instead of 1
+   - Backend endpoint missing: GET /v1/holiday/credits
+   - Impact: Cannot display user's credit balance
+   - Fix Time: 30 minutes
+   - Files: Create backend/src/api/endpoints/holiday_credits.py
+
+2. Street View Image Not Rendering
+   - Component is placeholder (TODO comment)
+   - Impact: Cannot show property preview
+   - Fix Time: 1-2 hours
+   - Files: Update frontend/src/components/StreetViewRotator.tsx
+
+3. localStorage Key Mismatch
+   - Test uses 'user-store', code expects 'user-storage'
+   - Impact: Minor (doesn't block current tests)
+   - Fix Time: 5 minutes
+   - File: frontend/tests/e2e/holiday-discovery.spec.ts line 51
+
+================================================================================
+TOTAL FIX TIME
+================================================================================
+
+Backend Implementation:      50 minutes
+Frontend Implementation:     65 minutes
+Validation & Testing:       10 minutes
+─────────────────────────────────────
+TOTAL:                    2 hours 5 minutes
+
+================================================================================
+FILES TO CREATE
+================================================================================
+
+1. backend/src/api/endpoints/holiday_credits.py
+   Purpose: GET /v1/holiday/credits endpoint
+   Time: 15 minutes
+
+2. backend/src/api/endpoints/street_view.py
+   Purpose: POST /v1/holiday/street-view/preview endpoint
+   Time: 20 minutes
+
+3. supabase/migrations/014_add_holiday_credits.sql
+   Purpose: Add holiday_credits column to users table
+   Time: 10 minutes
+
+================================================================================
+FILES TO MODIFY
+================================================================================
+
+1. frontend/src/components/StreetViewRotator.tsx
+   Lines: 49-62 (fetchPreview), 134-146 (image rendering)
+   Time: 30 minutes
+
+2. frontend/src/lib/api.ts
+   Add: getStreetViewPreview() method
+   Time: 10 minutes
+
+3. backend/src/main.py
+   Add: Import and register new routers
+   Time: 5 minutes
+
+4. frontend/tests/e2e/holiday-discovery.spec.ts
+   Line: 51
+   Change: 'user-store' to 'user-storage'
+   Time: 5 minutes
+
+================================================================================
+DOES IT AFFECT THE MAIN APP?
+================================================================================
+
+NO - Holiday feature is completely isolated
+- Separate routes (/holiday vs /generate)
+- No shared state modifications
+- Separate API endpoints (/holiday/* vs /v1/generations)
+- Main app unaffected
+
+================================================================================
+HOW TO VERIFY THE FIX
+================================================================================
+
+Run Test Suite:
+  cd frontend && npx playwright test tests/e2e/holiday-discovery.spec.ts \
+    --project=chromium --reporter=list
+
+Expected Result:
+  ✅ 6/6 tests PASS
+  ❌ 0 failures
+
+Manual Verification:
+  1. Visit http://localhost:3003/holiday
+  2. Verify credit display shows "1" (not "0")
+  3. Enter address and verify Street View loads with <img> tag
+  4. Try generating and verify flow works
+
+================================================================================
+CRITICAL SUCCESS FACTORS
+================================================================================
+
+Must Have:
+  ☑ Backend venv activated before running uvicorn
+  ☑ GOOGLE_MAPS_API_KEY environment variable set
+  ☑ Database migration applied to Supabase
+  ☑ Both backend endpoints created
+  ☑ StreetViewRotator has <img> tag
+  ☑ All 6 tests passing before deployment
+
+================================================================================
+TEAM ASSIGNMENTS
+================================================================================
+
+Backend Developer (1-2 people, 1 hour):
+  - Create holiday_credits.py endpoint
+  - Create street_view.py endpoint
+  - Create database migration
+  - Register routers in main.py
+  - Test: curl http://localhost:8000/v1/holiday/credits
+
+Frontend Developer (1 person, 1 hour):
+  - Update StreetViewRotator component
+  - Add API method to api.ts
+  - Fix localStorage key in test
+  - Run E2E tests to verify
+
+QA/Tester (using verification checklist):
+  - Run test suite
+  - Verify all 6 tests pass
+  - Manual smoke testing
+  - Deploy confirmation
+
+================================================================================
+DOCUMENTATION LOCATION
+================================================================================
+
+All analysis documents in: /Users/Kailor_1/Desktop/Projects/Yarda_v5/
+
+INDEX (Start Here):
+  HOLIDAY_DECORATOR_ANALYSIS_INDEX.md
+
+QUICK SUMMARY:
+  HOLIDAY_DECORATOR_TEST_SUMMARY.txt
+
+DETAILED ANALYSIS:
+  HOLIDAY_DECORATOR_E2E_TEST_ANALYSIS.md
+
+IMPLEMENTATION GUIDE (Has All Code):
+  HOLIDAY_DECORATOR_FIX_GUIDE.md
+
+THIS CARD:
+  HOLIDAY_DECORATOR_QUICK_REFERENCE.txt
+
+================================================================================
+KEY FACTS TO REMEMBER
+================================================================================
+
+Feature Completion: 67%
+  - Hero component: Working
+  - Navigation: Working
+  - Credit display: BROKEN
+  - Street View: BROKEN
+
+Production Status: NOT READY
+  - Cannot ship until both issues fixed
+  - Both are solvable in ~2 hours
+  - Main app not affected
+
+Test Quality: EXCELLENT
+  - Tests are correct
+  - Tests catch real bugs
+  - Implementation needs to catch up
+
+================================================================================
+GETTING STARTED
+================================================================================
+
+Step 1: Read HOLIDAY_DECORATOR_ANALYSIS_INDEX.md (5 minutes)
+Step 2: Assign work using Fix Guide (5 minutes)
+Step 3: Backend team implements (50 minutes)
+Step 4: Frontend team implements (65 minutes)
+Step 5: Run tests (10 minutes)
+Step 6: Deploy (when tests pass)
+
+Total time from start to production: ~2 hours
+
+================================================================================
+COMMON MISTAKES TO AVOID
+================================================================================
+
+DON'T:
+  - Forget to activate backend venv
+  - Ship without GOOGLE_MAPS_API_KEY set
+  - Deploy without all 6 tests passing
+  - Modify main app code (holiday is isolated)
+  - Run tests without backend server running
+
+DO:
+  - Activate venv: source backend/venv/bin/activate
+  - Set API key: export GOOGLE_MAPS_API_KEY="..."
+  - Run tests: npm run test:e2e -- holiday-discovery.spec.ts
+  - Verify 6/6 passing before merge
+  - Keep holiday routes separate from main app
+
+================================================================================
+QUESTIONS TO ASK BEFORE STARTING
+================================================================================
+
+"Is GOOGLE_MAPS_API_KEY configured?"
+  - Required for Street View API to work
+  - Ask DevOps or check .env files
+
+"Who's on backend vs frontend?"
+  - Need at least 1 backend, 1 frontend developer
+  - Both can work in parallel
+
+"Do we have staging environment ready?"
+  - For final smoke testing before production
+
+"What's the deployment timeline?"
+  - Fixes: 2 hours
+  - Testing: 30 minutes
+  - Staging smoke test: 15 minutes
+  - Total before prod: ~3 hours
+
+================================================================================
+EMERGENCY CONTACTS
+================================================================================
+
+Need the code examples?
+  → Open HOLIDAY_DECORATOR_FIX_GUIDE.md
+
+Need to understand the failures?
+  → Open HOLIDAY_DECORATOR_E2E_TEST_ANALYSIS.md
+
+Need quick summary?
+  → Open HOLIDAY_DECORATOR_TEST_SUMMARY.txt
+
+Don't know where to start?
+  → Open HOLIDAY_DECORATOR_ANALYSIS_INDEX.md
+
+================================================================================
+SUCCESS CRITERIA
+================================================================================
+
+✅ Feature is production-ready when:
+
+1. All 6 tests pass locally
+   npm run test:e2e -- holiday-discovery.spec.ts
+
+2. Credit display shows "1" not "0"
+   Manual verification at /holiday page
+
+3. Street View image loads
+   Manual verification: enter address, see <img>
+
+4. No console errors
+   Open DevTools, verify clean console
+
+5. Can complete generation flow
+   Address → Street View → Style → Generate → Results
+
+6. Main app still works
+   Separate test or manual check of /generate page
+
+7. All staging tests pass
+   Run against staging environment
+
+================================================================================
+POST-FIX DEPLOYMENT CHECKLIST
+================================================================================
+
+Before Merge to Main:
+  ☐ All 6 tests passing
+  ☐ No TypeScript errors
+  ☐ No console errors
+  ☐ Manual verification complete
+  ☐ Code review approved
+
+Before Deploy to Production:
+  ☐ Staging tests all passing
+  ☐ Staging smoke test successful
+  ☐ Database migration applied
+  ☐ Environment variables configured
+  ☐ Rollback plan ready
+
+After Deploy to Production:
+  ☐ Monitor error logs
+  ☐ Verify feature works with real data
+  ☐ Check performance metrics
+  ☐ Be ready to rollback if needed
+
+================================================================================
+DOCUMENT SIZES
+================================================================================
+
+HOLIDAY_DECORATOR_ANALYSIS_INDEX.md     6.7 KB (navigation guide)
+HOLIDAY_DECORATOR_TEST_SUMMARY.txt      14 KB  (visual summary)
+HOLIDAY_DECORATOR_E2E_TEST_ANALYSIS.md  11 KB  (detailed analysis)
+HOLIDAY_DECORATOR_FIX_GUIDE.md          14 KB  (implementation code)
+HOLIDAY_DECORATOR_QUICK_REFERENCE.txt   (this file)
+
+Total documentation: ~50 KB of thorough analysis and implementation guides
+
+================================================================================
+VERSION INFORMATION
+================================================================================
+
+Analysis Date: November 10, 2025
+Feature: Holiday Decorator (007-holiday-decorator)
+Test File: frontend/tests/e2e/holiday-discovery.spec.ts
+Playwright Version: Latest (from package.json)
+Node Version: Latest (from package.json)
+
+================================================================================
+FINAL CHECKLIST
+================================================================================
+
+Have you:
+  ☐ Read this quick reference?
+  ☐ Read HOLIDAY_DECORATOR_ANALYSIS_INDEX.md?
+  ☐ Understood the 2 critical blockers?
+  ☐ Estimated 2-hour fix time?
+  ☐ Assigned backend + frontend developers?
+  ☐ Set up GOOGLE_MAPS_API_KEY?
+  ☐ Activated backend venv?
+
+If YES to all, you're ready to implement!
+
+================================================================================
+
+Need help? Read the analysis documents.
+Ready to fix? Follow HOLIDAY_DECORATOR_FIX_GUIDE.md step-by-step.
+Want to verify? Run the E2E test command above.
+
+================================================================================

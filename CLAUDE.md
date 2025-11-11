@@ -350,6 +350,73 @@ test('generation flow end-to-end', async ({ page }) => {
   - LocalStorage: `src/lib/localStorage-keys.ts`
   - Store: `src/store/generationStore.ts` (form + polling state)
 
+### Holiday Decorator (Feature 007 - 2025-11-10) ✅
+**CRITICAL:** Viral marketing feature with separate credit system for holiday season.
+
+**Credit System:**
+- 1 free holiday credit on signup during season
+- Earn 1 credit per social share (max 3/day)
+- Atomic credit deduction with row-level locking (`FOR UPDATE NOWAIT`)
+- Credit deduction happens BEFORE generation (prevents free generations on failure)
+- Service: `HolidayCreditService` in `backend/src/services/holiday_credit_service.py`
+
+**Endpoints:**
+- `POST /v1/holiday/generations` - Create generation (deducts credit atomically)
+- `GET /v1/holiday/generations/{id}` - Get generation status (polling)
+- `GET /v1/holiday/generations` - List user's generation history
+- `GET /v1/holiday/credits` - Get credit balance
+
+**Response Model Pattern (CRITICAL):**
+All endpoints MUST return complete `HolidayGenerationResponse` with ALL required fields:
+```python
+# ❌ WRONG - Incomplete response causes Pydantic validation errors
+return HolidayGenerationResponse(
+    id=generation_id,
+    status="pending"
+)
+
+# ✅ CORRECT - Fetch complete record and return all fields
+generation = await generation_service.get_generation(generation_id)
+user_credits = await db_pool.fetchval("SELECT holiday_credits FROM users WHERE id = $1", user_id)
+return HolidayGenerationResponse(
+    id=str(generation['id']),
+    user_id=str(generation['user_id']),
+    address=generation['address'],
+    location={"lat": float(generation['geocoded_lat']), "lng": float(generation['geocoded_lng'])},
+    street_view_heading=generation['heading'],
+    street_view_pitch=generation['pitch'],
+    style=generation['style'],
+    status=generation['status'],
+    original_image_url=generation['original_image_url'],
+    decorated_image_url=generation.get('decorated_image_url'),
+    before_after_image_url=generation.get('before_after_image_url'),
+    credits_remaining=user_credits or 0,
+    created_at=generation['created_at'],
+    estimated_completion_seconds=10,
+    error_message=generation.get('error_message')
+)
+```
+
+**Field Name Convention:**
+- LocationCoordinates model uses `lat`/`lng` (NOT `latitude`/`longitude`)
+- Always convert UUIDs to strings: `str(generation['id'])`
+- Always cast floats: `float(generation['geocoded_lat'])`
+
+**Frontend Integration:**
+- Single-page flow on `/holiday` (no navigation)
+- Credit balance syncs from localStorage (userStore)
+- Credit updates from API response `credits_remaining` field (no separate fetch)
+- Components: `HolidayHero`, `StreetViewRotator`, `StyleSelector`
+- E2E tests: `frontend/tests/e2e/holiday-discovery.spec.ts` (6 tests)
+
+**Key Files:**
+- Backend API: `backend/src/api/endpoints/holiday.py`
+- Credit Service: `backend/src/services/holiday_credit_service.py`
+- Generation Service: `backend/src/services/holiday_generation_service.py`
+- Models: `backend/src/models/holiday.py`
+- Frontend Page: `frontend/src/pages/holiday.tsx`
+- Database Migration: `supabase/migrations/012_add_holiday_decorator.sql`
+
 ## Testing Strategy
 
 ### **CRITICAL: Automated Testing First, Manual Testing LAST**
