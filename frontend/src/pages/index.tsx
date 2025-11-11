@@ -13,13 +13,19 @@
  */
 
 import React from 'react';
+import Head from 'next/head';
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-white">
+    <>
+      <Head>
+        <title>Yarda AI Landscape Studio - AI-Powered Landscape Design</title>
+        <meta name="description" content="Get professional landscape designs in minutes. Upload a photo of your yard and watch AI create stunning transformations." />
+      </Head>
+      <div className="min-h-screen bg-white">
       <Navigation transparent={true} />
 
       {/* Hero Section */}
@@ -282,6 +288,7 @@ export default function Home() {
       </section>
 
       <Footer />
-    </div>
+      </div>
+    </>
   );
 }

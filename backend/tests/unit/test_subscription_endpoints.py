@@ -28,44 +28,11 @@ from src.main import app
 from src.api.dependencies import get_current_user, require_verified_email
 from src.models.user import User
 
-
-@pytest_asyncio.fixture
-async def db_connection():
-    """Create database connection for testing."""
-    conn = await asyncpg.connect(
-        host='localhost',
-        port=5432,
-        user='postgres',
-        password='postgres',
-        database='yarda_test'
-    )
-    yield conn
-    await conn.close()
-
-
-@pytest_asyncio.fixture
-async def test_user(db_connection):
-    """Create a test user."""
-    user_id = uuid4()
-    email = f'endpoint-test-{user_id}@test.com'
-
-    await db_connection.execute("""
-        INSERT INTO users (
-            id, email, email_verified, password_hash,
-            subscription_tier, subscription_status
-        )
-        VALUES ($1, $2, true, 'hash', 'free', 'inactive')
-    """, user_id, email)
-
-    yield user_id, email
-
-    # Cleanup
-    await db_connection.execute("DELETE FROM users WHERE id = $1", user_id)
-
+# Note: db_connection, test_user, and subscriber_user fixtures are provided by conftest.py
 
 @pytest_asyncio.fixture
 async def subscribed_user(db_connection):
-    """Create a test user with active subscription."""
+    """Create a test user with active subscription for endpoint testing."""
     user_id = uuid4()
     email = f'subscribed-endpoint-{user_id}@test.com'
 
@@ -87,12 +54,10 @@ async def subscribed_user(db_connection):
     # Cleanup
     await db_connection.execute("DELETE FROM users WHERE id = $1", user_id)
 
-
 @pytest.fixture
 def client():
     """Create test client."""
     return TestClient(app)
-
 
 @pytest.fixture
 def mock_auth(test_user):
@@ -118,7 +83,6 @@ def mock_auth(test_user):
 
     app.dependency_overrides = {}
 
-
 @pytest.fixture
 def mock_subscribed_auth(subscribed_user):
     """Mock authentication for subscribed user."""
@@ -142,7 +106,6 @@ def mock_subscribed_auth(subscribed_user):
     yield mock_user
 
     app.dependency_overrides = {}
-
 
 class TestListPlansEndpoint:
     """Test GET /subscriptions/plans endpoint."""
@@ -182,7 +145,6 @@ class TestListPlansEndpoint:
         response = client.get("/subscriptions/plans")
 
         assert response.status_code == 200
-
 
 class TestSubscribeEndpoint:
     """Test POST /subscriptions/subscribe endpoint."""
@@ -289,7 +251,6 @@ class TestSubscribeEndpoint:
 
         assert response.status_code in [401, 403]
 
-
 class TestCurrentSubscriptionEndpoint:
     """Test GET /subscriptions/current endpoint."""
 
@@ -349,7 +310,6 @@ class TestCurrentSubscriptionEndpoint:
         response = client.get('/subscriptions/current')
 
         assert response.status_code in [401, 403]
-
 
 class TestCancelSubscriptionEndpoint:
     """Test POST /subscriptions/cancel endpoint."""
@@ -458,7 +418,6 @@ class TestCancelSubscriptionEndpoint:
             data = response.json()
             assert data['cancel_at_period_end'] is True
 
-
 class TestCustomerPortalEndpoint:
     """Test GET /subscriptions/portal endpoint."""
 
@@ -532,7 +491,6 @@ class TestCustomerPortalEndpoint:
         })
 
         assert response.status_code in [401, 403]
-
 
 class TestEndpointErrorHandling:
     """Test error handling across endpoints."""

@@ -305,10 +305,10 @@ class GenerationService:
                     f'Validating address via Google Maps API: {address}'
                 )
 
-                # Use first area for image retrieval (all areas share same property address)
-                first_area = areas[0]['area']
+                # Always fetch Street View for the property (needed for front_yard)
+                # Each area's process_generation will determine which image type to use
                 street_view_bytes, metadata, _, image_source = await self.maps_service.get_property_images(
-                    address, first_area
+                    address, 'front_yard'  # Always use front_yard to ensure Street View is fetched
                 )
 
                 # Log: Street View retrieved successfully

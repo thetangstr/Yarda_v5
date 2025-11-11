@@ -15,18 +15,15 @@ from src.services.maps_service import (
     MapsServiceError
 )
 
-
 @pytest.fixture
 def maps_service():
     """Create MapsService instance with mock API key"""
     return MapsService(api_key="test_api_key_12345")
 
-
 @pytest.fixture
 def mock_coordinates():
     """Sample coordinates for testing"""
     return Coordinates(lat=37.4224764, lng=-122.0842499)
-
 
 class TestGeocodeAddress:
     """T014: Unit tests for MapsService.geocode_address()"""
@@ -121,7 +118,6 @@ class TestGeocodeAddress:
                 await maps_service.geocode_address(address)
 
             assert exc_info.value.error_type == "NETWORK_ERROR"
-
 
 class TestStreetViewMetadata:
     """T015: Unit tests for MapsService.get_street_view_metadata()"""
@@ -221,7 +217,6 @@ class TestStreetViewMetadata:
             # Then: Verify radius parameter passed
             called_url = mock_get.call_args[0][0]
             assert f'radius={radius}' in called_url or 'radius' in str(mock_get.call_args)
-
 
 class TestFetchStreetViewImage:
     """T016 (partial): Unit tests for MapsService.fetch_street_view_image()"""

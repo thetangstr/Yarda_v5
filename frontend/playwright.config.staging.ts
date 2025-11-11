@@ -3,8 +3,11 @@ import { defineConfig, devices } from '@playwright/test';
 /**
  * Playwright configuration for Staging Environment Testing
  *
- * Frontend: https://yarda-v5-frontend-jxonwuxkj-thetangstrs-projects.vercel.app
- * Backend: https://yardav5-staging.up.railway.app
+ * Frontend: https://yarda-v5-frontend-git-006-magic-link-auth-thetangstrs-projects.vercel.app
+ * Backend: https://yarda-api-production.up.railway.app
+ *
+ * Authentication: Uses global setup to create authenticated session once,
+ * then reuses that session across all tests.
  */
 export default defineConfig({
   testDir: './tests/e2e',
@@ -27,10 +30,22 @@ export default defineConfig({
     ['list'],
   ],
 
+  /* Global setup - authenticate once before all tests */
+  globalSetup: './tests/global-setup-staging.ts',
+
   /* Shared settings for all the projects below */
   use: {
-    /* Base URL for staging - using shareable URL to bypass Vercel auth */
-    baseURL: 'https://yarda-v5-frontend-jxonwuxkj-thetangstrs-projects.vercel.app/?_vercel_share=o64DXz4AMnGg6wpNTJ6UIqnk3EnGeGen',
+    /* Base URL for staging - clean URL without share parameter */
+    baseURL: 'https://yarda-v5-frontend-git-006-magic-link-auth-thetangstrs-projects.vercel.app',
+
+    /* Use authenticated state from global setup */
+    storageState: '.auth/staging-user.json',
+
+    /* Vercel deployment protection bypass */
+    extraHTTPHeaders: {
+      'x-vercel-protection-bypass': 'k9jH7fG3pS5rWqXzBvC2mN6yT8dL2222',
+      'x-vercel-set-bypass-cookie': 'k9jH7fG3pS5rWqXzBvC2mN6yT8dL2222',
+    },
 
     /* Collect trace on failure */
     trace: 'on-first-retry',

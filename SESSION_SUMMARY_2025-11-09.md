@@ -35,7 +35,7 @@ User reported: "in the generate page, under the address bar Google Maps API key 
 ### Fix Applied
 ```bash
 # Added environment variable via Vercel CLI
-printf "AIzaSyAQ7nT33eA0fOAGFXTm634I7TMFcHQTJ9M\n" | \
+printf "[REDACTED_MAPS_KEY]\n" | \
   vercel env add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY preview
 ```
 

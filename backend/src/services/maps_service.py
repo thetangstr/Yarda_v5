@@ -415,8 +415,74 @@ class MapsService:
         Raises:
             MapsServiceError: If API quota exceeded or network error
         """
-        # TODO: Implement in T031
-        raise NotImplementedError("To be implemented in T031")
+        start_time = asyncio.get_event_loop().time()
+
+        try:
+            params = {
+                "center": f"{coords.lat},{coords.lng}",
+                "zoom": zoom,
+                "size": size,
+                "maptype": maptype,
+                "key": self.api_key
+            }
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(self.STATIC_MAP_URL, params=params) as response:
+                    duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
+
+                    if response.status != 200:
+                        error_text = await response.text()
+                        logger.error(
+                            "google_maps_api_call",
+                            api="satellite_image",
+                            lat=coords.lat,
+                            lng=coords.lng,
+                            zoom=zoom,
+                            size=size,
+                            status_code=response.status,
+                            error=error_text,
+                            duration_ms=duration_ms,
+                            cost="PAID ($0.002)"
+                        )
+                        raise MapsServiceError(
+                            error_type="API_ERROR",
+                            message=f"Satellite image request failed: HTTP {response.status} - {error_text}"
+                        )
+
+                    image_bytes = await response.read()
+
+                    # Log successful API call
+                    logger.info(
+                        "google_maps_api_call",
+                        api="satellite_image",
+                        lat=coords.lat,
+                        lng=coords.lng,
+                        zoom=zoom,
+                        size=size,
+                        status_code=response.status,
+                        duration_ms=duration_ms,
+                        cost="PAID ($0.002)"
+                    )
+
+                    logger.info(
+                        "satellite_image_retrieved",
+                        lat=coords.lat,
+                        lng=coords.lng,
+                        size_bytes=len(image_bytes)
+                    )
+
+                    return image_bytes
+
+        except aiohttp.ClientError as e:
+            raise MapsServiceError(
+                error_type="NETWORK_ERROR",
+                message=f"Network error fetching satellite image: {str(e)}"
+            )
+        except Exception as e:
+            raise MapsServiceError(
+                error_type="NETWORK_ERROR",
+                message=f"Unexpected error during satellite image fetch: {str(e)}"
+            )
 
     async def get_property_images(
         self,
@@ -521,18 +587,70 @@ class MapsService:
                 error=str(e)
             )
 
-        # Step 4: Fetch satellite image as fallback (PAID: TBD)
-        # For MVP (US1), we only support Street View
-        # Satellite imagery will be implemented in Phase 6
-
-        if not street_view_bytes:
-            raise MapsServiceError(
-                "no_imagery_available",
-                f"No Street View imagery available for address: {address}. "
-                "Please try a different address or upload a photo manually."
+        # Step 4: Fetch satellite image (PAID: $0.002)
+        # Always fetch satellite for backyard/walkway areas
+        try:
+            satellite_bytes = await self.fetch_satellite_image(
+                coords,
+                zoom=20,  # Close-up view for residential properties
+                size="600x400",
+                maptype="satellite"
             )
 
-        return (street_view_bytes, street_view_metadata, satellite_bytes, image_source)
+            if satellite_bytes:
+                logger.info(
+                    "satellite_image_retrieved",
+                    address=address,
+                    lat=coords.lat,
+                    lng=coords.lng,
+                    size_bytes=len(satellite_bytes)
+                )
+
+        except MapsServiceError as e:
+            logger.warning(
+                "satellite_retrieval_failed",
+                address=address,
+                error=str(e)
+            )
+
+        # Step 5: Determine which image to return based on area type
+        # Front yard: Prioritize Street View
+        # Other areas (backyard, walkway, side_yard): Prioritize Satellite
+        if area == "front_yard":
+            # Front yard uses Street View
+            if street_view_bytes:
+                image_source = "street_view"
+                return (street_view_bytes, street_view_metadata, satellite_bytes, image_source)
+            elif satellite_bytes:
+                # Fallback to satellite if Street View unavailable
+                image_source = "google_satellite"
+                logger.warning(
+                    "street_view_unavailable_fallback_to_satellite",
+                    address=address,
+                    area=area
+                )
+                return (satellite_bytes, street_view_metadata, satellite_bytes, image_source)
+        else:
+            # Backyard, walkway, side_yard use Satellite
+            if satellite_bytes:
+                image_source = "google_satellite"
+                return (satellite_bytes, street_view_metadata, satellite_bytes, image_source)
+            elif street_view_bytes:
+                # Fallback to Street View if satellite unavailable
+                image_source = "street_view"
+                logger.warning(
+                    "satellite_unavailable_fallback_to_street_view",
+                    address=address,
+                    area=area
+                )
+                return (street_view_bytes, street_view_metadata, satellite_bytes, image_source)
+
+        # If we get here, no imagery is available
+        raise MapsServiceError(
+            "no_imagery_available",
+            f"No imagery available for address: {address}. "
+            "Please try a different address or upload a photo manually."
+        )
 
     async def _retry_with_backoff(self, func, max_retries: int = 3, base_delay: int = 2):
         """

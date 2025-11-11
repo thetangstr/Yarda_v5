@@ -19,21 +19,6 @@ from uuid import uuid4
 from datetime import datetime, timezone, timedelta
 from unittest.mock import patch, Mock
 
-
-@pytest_asyncio.fixture
-async def db_connection():
-    """Create database connection for testing."""
-    conn = await asyncpg.connect(
-        host='localhost',
-        port=5432,
-        user='postgres',
-        password='postgres',
-        database='yarda_test'
-    )
-    yield conn
-    await conn.close()
-
-
 @pytest.mark.asyncio
 async def test_complete_subscription_lifecycle(db_connection):
     """
@@ -217,7 +202,6 @@ async def test_complete_subscription_lifecycle(db_connection):
 
     print(f"\n✅ Complete subscription lifecycle test passed!")
 
-
 @pytest.mark.asyncio
 async def test_subscription_with_token_purchases(db_connection):
     """
@@ -310,7 +294,6 @@ async def test_subscription_with_token_purchases(db_connection):
 
     print(f"✅ Hybrid subscription + token test passed!")
 
-
 @pytest.mark.asyncio
 async def test_subscription_payment_failure_grace_period(db_connection):
     """
@@ -375,7 +358,6 @@ async def test_subscription_payment_failure_grace_period(db_connection):
 
     print(f"✅ Payment failure grace period test passed!")
 
-
 @pytest.mark.asyncio
 async def test_multiple_subscriptions_not_allowed(db_connection):
     """
@@ -427,7 +409,6 @@ async def test_multiple_subscriptions_not_allowed(db_connection):
     await db_connection.execute("DELETE FROM users WHERE id = $1", user_id)
 
     print(f"✅ Multiple subscription prevention test passed!")
-
 
 @pytest.mark.asyncio
 async def test_resubscribe_after_cancellation(db_connection):
@@ -521,7 +502,6 @@ async def test_resubscribe_after_cancellation(db_connection):
     await db_connection.execute("DELETE FROM users WHERE id = $1", user_id)
 
     print(f"✅ Re-subscription test passed!")
-
 
 @pytest.mark.asyncio
 async def test_subscription_authorization_hierarchy(db_connection):

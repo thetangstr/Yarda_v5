@@ -54,6 +54,7 @@ export const GenerationFormEnhanced: React.FC<GenerationFormEnhancedProps> = ({
   // Use store state as single source of truth for address
   const address = storeAddress;
   const placeId = storePlaceId;
+  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   const [yardAreas, setYardAreas] = useState<YardAreaState[]>([
     { area: YardArea.FrontYard, selected: false, customPrompt: '' },
     { area: YardArea.Backyard, selected: false, customPrompt: '' },
@@ -374,11 +375,15 @@ export const GenerationFormEnhanced: React.FC<GenerationFormEnhancedProps> = ({
         </div>
         <AddressInput
           value={address}
-          onChange={(value, newPlaceId) => {
-            console.log('[GenerationFormEnhanced] Address change:', { value, newPlaceId, currentPlaceId: placeId });
+          onChange={(value, newPlaceId, lat, lng) => {
+            console.log('[GenerationFormEnhanced] Address change:', { value, newPlaceId, lat, lng, currentPlaceId: placeId });
             // Store is single source of truth
             // Use newPlaceId if provided (autocomplete), otherwise keep existing placeId
             setStoreAddress(value, newPlaceId || placeId);
+            // Store coordinates for preview thumbnails
+            if (lat !== undefined && lng !== undefined) {
+              setCoordinates({ lat, lng });
+            }
             if (errors.address) {
               setErrors((prev) => ({ ...prev, address: undefined }));
             }
@@ -415,6 +420,9 @@ export const GenerationFormEnhanced: React.FC<GenerationFormEnhancedProps> = ({
         >
           <LocationPreviewThumbnails
             address={address}
+            placeId={placeId}
+            lat={coordinates?.lat}
+            lng={coordinates?.lng}
             selectedAreas={selectedAreas.map((a) => a.area)}
           />
         </motion.div>

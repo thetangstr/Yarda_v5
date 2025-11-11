@@ -22,7 +22,7 @@ interface AddressInputProps {
   /** Current address value */
   value: string;
   /** Callback when address changes */
-  onChange: (address: string, placeId?: string) => void;
+  onChange: (address: string, placeId?: string, lat?: number, lng?: number) => void;
   /** Whether input is disabled */
   disabled?: boolean;
   /** Error message to display */
@@ -108,20 +108,20 @@ export const AddressInput: React.FC<AddressInputProps> = ({
       const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
         types: ['address'], // Only property addresses
         componentRestrictions: { country: 'us' }, // US addresses only for MVP
-        fields: ['formatted_address', 'place_id', 'address_components'], // Minimize billing
+        fields: ['formatted_address', 'place_id', 'address_components', 'geometry'], // Include geometry for coordinates
       });
-
-      autocomplete.setFields(['formatted_address', 'place_id']);
 
       // Handle place selection (v2 approach - simple and works!)
       autocomplete.addListener('place_changed', () => {
-        const place = autocomplete.getPlace();
+        const place = autocomplete.getPlace() as any;
         console.log('[AddressInput] Place selected:', place);
 
         if (place && place.formatted_address && place.place_id) {
-          console.log('[AddressInput] Updating address to:', place.formatted_address);
-          // Simply call onChange - React's controlled component will handle the rest
-          onChange(place.formatted_address, place.place_id);
+          const lat = (place as any).geometry?.location?.lat?.();
+          const lng = (place as any).geometry?.location?.lng?.();
+          console.log('[AddressInput] Updating address to:', place.formatted_address, 'with coordinates:', lat, lng);
+          // Pass address, placeId, and coordinates
+          onChange(place.formatted_address, place.place_id, lat, lng);
         } else {
           console.warn('[AddressInput] Place missing required fields:', place);
         }
@@ -179,8 +179,9 @@ export const AddressInput: React.FC<AddressInputProps> = ({
     };
   }, [isLoaded, onChange]);
 
-  // Sync Google Places input with React state (fix for autocomplete not respecting controlled component)
-  // This ensures when parent re-renders (e.g., area selection), Google Places input stays in sync
+  // Sync Google Places input with React state
+  // This ensures when parent updates the value (e.g., form reset), input stays in sync
+  // Only update if the value has actually changed to avoid interfering with user typing
   useEffect(() => {
     if (inputRef.current && inputRef.current.value !== value) {
       console.log('[AddressInput] Syncing Google Places input with React state:', value);
@@ -200,7 +201,7 @@ export const AddressInput: React.FC<AddressInputProps> = ({
           type="text"
           id="address"
           name="address"
-          value={value}
+          defaultValue={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled || !!loadError}
           required

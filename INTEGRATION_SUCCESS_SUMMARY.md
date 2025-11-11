@@ -169,7 +169,7 @@ access-control-allow-methods: DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT
 - `/.env.local` - Line 3
 - `/backend/.env` - Line 35
 
-**New Key:** `AIzaSyD05zBR-wNwpS5qn895kDz36-nClAJB2Is`
+**New Key:** `[REDACTED_GEMINI_KEY]`
 
 **Note:** This was a precautionary update. The actual issue was backend venv, not API key expiration.
 

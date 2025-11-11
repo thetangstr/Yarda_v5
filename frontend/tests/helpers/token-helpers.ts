@@ -94,7 +94,7 @@ export async function verifyBackgroundRefresh(page: Page, expectedBalance: numbe
 /**
  * Verify "No Credits Available" state
  */
-export async function verifyNoCre ditsState(page: Page) {
+export async function verifyNoCreditsState(page: Page) {
   await page.goto('http://localhost:3000/generate');
   await waitForHydration(page);
 

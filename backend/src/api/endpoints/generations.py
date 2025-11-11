@@ -383,14 +383,41 @@ async def create_multi_area_generation(
                         logger.error(f"Area {area_id} not found")
                         continue
 
-                    # Call process_generation for this area
+                    # Fetch the appropriate image for this area type
+                    # Front yard uses Street View, backyard/walkway use Satellite
+                    area_type = area_record['area_type']
+
+                    # Get area-specific image from maps service
+                    try:
+                        area_image_bytes, _, _, image_source = await generation_service.maps_service.get_property_images(
+                            address=request.address,
+                            area=area_type
+                        )
+                        logger.info(
+                            "area_image_retrieved",
+                            area_id=str(area_id),
+                            area_type=area_type,
+                            image_source=image_source,
+                            size_bytes=len(area_image_bytes) if area_image_bytes else 0
+                        )
+                    except Exception as e:
+                        logger.error(
+                            "area_image_retrieval_failed",
+                            area_id=str(area_id),
+                            area_type=area_type,
+                            error=str(e)
+                        )
+                        # Fallback to street_view_bytes if area-specific image fails
+                        area_image_bytes = street_view_bytes
+
+                    # Call process_generation for this area with area-specific image
                     success, error = await generation_service.process_generation(
                         generation_id=generation_id,
                         area_id=area_id,
                         user_id=user.id,
-                        input_image_bytes=street_view_bytes,
+                        input_image_bytes=area_image_bytes,  # Use area-specific image
                         address=request.address,
-                        area_type=area_record['area_type'],
+                        area_type=area_type,
                         style=area_record['style'],
                         custom_prompt=area_record['custom_prompt'],
                         payment_method=generation_data['payment_method'],

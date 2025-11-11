@@ -10,12 +10,10 @@ import pytest
 from unittest.mock import AsyncMock, patch
 from src.services.maps_service import MapsService, Coordinates, MapsServiceError
 
-
 @pytest.fixture
 def maps_service():
     """Create MapsService instance with test API key"""
     return MapsService(api_key="test_api_key_12345")
-
 
 class TestFullStreetViewWorkflow:
     """T016: Integration test for complete Street View retrieval workflow"""

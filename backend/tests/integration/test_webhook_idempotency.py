@@ -20,83 +20,6 @@ import asyncio
 from uuid import uuid4
 from datetime import datetime
 
-
-@pytest_asyncio.fixture
-async def db_connection():
-    """Create database connection for testing."""
-    conn = await asyncpg.connect(
-        host='localhost',
-        port=5432,
-        user='postgres',
-        password='postgres',
-        database='yarda_test'
-    )
-    yield conn
-    await conn.close()
-
-
-@pytest_asyncio.fixture
-async def test_user(db_connection):
-    """Create a test user with token account."""
-    user_id = uuid4()
-    email = f'webhook-test-{user_id}@test.com'
-
-    # Create user
-    await db_connection.execute("""
-        INSERT INTO users (id, email, email_verified, password_hash)
-        VALUES ($1, $2, true, 'hash')
-    """, user_id, email)
-
-    # Create token account with 0 tokens initially
-    await db_connection.execute("""
-        INSERT INTO users_token_accounts (user_id, balance, total_purchased, total_spent)
-        VALUES ($1, 0, 0, 0)
-    """, user_id)
-
-    yield user_id, email
-
-    # Cleanup
-    await db_connection.execute("DELETE FROM users WHERE id = $1", user_id)
-
-
-async def process_stripe_webhook(conn, user_id: uuid4, payment_intent_id: str, tokens: int, amount_cents: int):
-    """
-    Simulate webhook processing with idempotency.
-
-    This mimics the actual webhook handler that:
-    1. Checks if payment_intent_id already processed
-    2. If not, creates transaction and credits tokens
-    3. Uses UNIQUE constraint on stripe_payment_intent_id for idempotency
-    """
-    try:
-        async with conn.transaction():
-            # Try to insert transaction with payment_intent_id
-            # If duplicate, this will raise UniqueViolationError
-            await conn.execute("""
-                INSERT INTO users_token_transactions (
-                    user_id,
-                    amount,
-                    transaction_type,
-                    description,
-                    stripe_payment_intent_id,
-                    price_paid_cents
-                ) VALUES ($1, $2, 'purchase', $3, $4, $5)
-            """, user_id, tokens, f'Purchased {tokens} tokens', payment_intent_id, amount_cents)
-
-            # Credit tokens to account
-            await conn.execute("""
-                UPDATE users_token_accounts u
-                SET balance = u.balance + $2,
-                    total_purchased = u.total_purchased + $2
-                WHERE u.user_id = $1
-            """, user_id, tokens)
-
-            return {"success": True, "message": "Tokens credited"}
-    except asyncpg.UniqueViolationError:
-        # Duplicate payment_intent_id - webhook already processed
-        return {"success": False, "message": "Webhook already processed"}
-
-
 @pytest.mark.asyncio
 async def test_duplicate_webhook_prevented_by_unique_constraint(db_connection, test_user):
     """
@@ -150,7 +73,6 @@ async def test_duplicate_webhook_prevented_by_unique_constraint(db_connection, t
     """, user_id, payment_intent_id)
     assert transaction_count == 1
 
-
 @pytest.mark.asyncio
 async def test_different_payment_intent_creates_new_transaction(db_connection, test_user):
     """
@@ -194,7 +116,6 @@ async def test_different_payment_intent_creates_new_transaction(db_connection, t
         SELECT COUNT(*) FROM users_token_transactions WHERE user_id = $1
     """, user_id)
     assert transaction_count == 2
-
 
 @pytest.mark.asyncio
 async def test_webhook_processing_is_atomic(db_connection, test_user):
@@ -256,7 +177,6 @@ async def test_webhook_processing_is_atomic(db_connection, test_user):
     """, user_id, payment_intent_id)
     assert transaction_count == 0
 
-
 @pytest.mark.asyncio
 async def test_concurrent_webhooks_with_same_payment_intent(db_connection, test_user):
     """
@@ -310,7 +230,6 @@ async def test_concurrent_webhooks_with_same_payment_intent(db_connection, test_
         WHERE user_id = $1 AND stripe_payment_intent_id = $2
     """, user_id, payment_intent_id)
     assert transaction_count == 1
-
 
 @pytest.mark.asyncio
 async def test_webhook_with_multiple_users_same_payment_intent(db_connection):

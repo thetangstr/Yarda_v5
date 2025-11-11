@@ -92,14 +92,19 @@ async function globalSetupStaging(config: FullConfig) {
       });
     });
 
-    // STEP 3: Navigate to generate page to verify auth works
-    console.log('✅ Navigating to /generate page...');
-    await page.goto(`${baseURL}/generate`, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await page.waitForTimeout(2000);
+    // STEP 3: Verify E2E flags and mock auth are set
+    const setupVerification = await page.evaluate(() => ({
+      e2eFlag: localStorage.getItem('__PLAYWRIGHT_E2E__'),
+      stagingFlag: localStorage.getItem('__STAGING_E2E__'),
+      hasUserStorage: !!localStorage.getItem('user-storage'),
+    }));
+    console.log('✅ Setup verification:', setupVerification);
 
-    const currentURL = page.url();
-    console.log(`✅ Current URL: ${currentURL.substring(0, 100)}...`);
-    console.log('✅ Authentication setup successful for staging');
+    if (!setupVerification.e2eFlag || !setupVerification.hasUserStorage) {
+      throw new Error('E2E flags or user storage not set correctly!');
+    }
+
+    console.log('✅ Authentication and E2E flags configured successfully for staging');
 
     // Create .auth directory if it doesn't exist
     const authDir = path.join(__dirname, '..', '.auth');

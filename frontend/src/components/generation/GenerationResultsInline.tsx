@@ -171,6 +171,7 @@ function BeforeAfterCarousel({
 
       {/* Navigation Arrows */}
       <button
+        type="button"
         onClick={scrollPrev}
         className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 backdrop-blur-md rounded-full shadow-lg hover:bg-white transition-all flex items-center justify-center z-10"
         aria-label="Previous image"
@@ -180,6 +181,7 @@ function BeforeAfterCarousel({
         </svg>
       </button>
       <button
+        type="button"
         onClick={scrollNext}
         className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 backdrop-blur-md rounded-full shadow-lg hover:bg-white transition-all flex items-center justify-center z-10"
         aria-label="Next image"
@@ -192,6 +194,7 @@ function BeforeAfterCarousel({
       {/* Carousel Dots */}
       <div className="flex justify-center gap-2 mt-3">
         <button
+          type="button"
           onClick={() => emblaApi?.scrollTo(0)}
           className={`w-2 h-2 rounded-full transition-all ${
             selectedIndex === 0 ? 'bg-blue-600 w-6' : 'bg-gray-300'
@@ -199,6 +202,7 @@ function BeforeAfterCarousel({
           aria-label="View before image"
         />
         <button
+          type="button"
           onClick={() => emblaApi?.scrollTo(1)}
           className={`w-2 h-2 rounded-full transition-all ${
             selectedIndex === 1 ? 'bg-green-600 w-6' : 'bg-gray-300'
@@ -270,7 +274,7 @@ export default function GenerationResultsInline({
       </div>
 
       {/* Results Grid - Enhanced for Multiple Areas */}
-      <div key="results-grid" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
         <AnimatePresence mode="popLayout">
           {areas.map((area, index) => (
             <motion.div
@@ -289,7 +293,7 @@ export default function GenerationResultsInline({
               data-testid={`result-area-${area.areaId}`}
             >
               {/* Area Header */}
-              <div key={`${area.areaId}-header`} className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 border-b border-gray-200">
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <span className="text-3xl">{getAreaEmoji(area.areaId)}</span>
@@ -341,9 +345,9 @@ export default function GenerationResultsInline({
               </div>
 
               {/* Result Content */}
-              <div key={`${area.areaId}-content`} className="p-6">
+              <div key={`content-${area.areaId}`} className="p-6">
                 {area.status === 'completed' && area.imageUrl ? (
-                  <div className="space-y-4">
+                  <div key={`success-content-${area.areaId}`} className="space-y-4">
                     {/* Before/After Carousel or Single Result Image */}
                     {(() => {
                       const sourceImage = getPreferredSourceImage(area);
@@ -352,6 +356,7 @@ export default function GenerationResultsInline({
                       if (sourceImage) {
                         return (
                           <BeforeAfterCarousel
+                            key={`carousel-${area.areaId}`}
                             sourceImage={sourceImage}
                             generatedImage={area.imageUrl}
                             areaName={getAreaDisplayName(area.areaId)}
@@ -363,6 +368,7 @@ export default function GenerationResultsInline({
                       // Fallback: Just show generated result
                       return (
                         <div
+                          key={`image-${area.areaId}`}
                           className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
                           onClick={() => setSelectedImage(area.imageUrl!)}
                           data-testid={`result-image-${area.areaId}`}
@@ -386,6 +392,7 @@ export default function GenerationResultsInline({
                         💾 Download
                       </a>
                       <button
+                        type="button"
                         onClick={() => setSelectedImage(area.imageUrl!)}
                         className="flex-1 px-4 py-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all shadow-md hover:shadow-lg font-medium"
                       >
@@ -395,7 +402,7 @@ export default function GenerationResultsInline({
                   </div>
                 ) : (
                   /* Error State */
-                  <div className="text-center py-8">
+                  <div key={`error-content-${area.areaId}`} className="text-center py-8">
                     <svg
                       className="w-16 h-16 text-red-300 mx-auto mb-4"
                       fill="currentColor"
@@ -431,6 +438,7 @@ export default function GenerationResultsInline({
           className="text-center"
         >
           <button
+            type="button"
             onClick={onStartNew}
             className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl font-semibold text-lg"
           >
@@ -463,6 +471,7 @@ export default function GenerationResultsInline({
                 className="max-w-full max-h-[90vh] rounded-lg shadow-2xl"
               />
               <button
+                type="button"
                 onClick={() => setSelectedImage(null)}
                 className="absolute top-4 right-4 w-10 h-10 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors flex items-center justify-center"
               >

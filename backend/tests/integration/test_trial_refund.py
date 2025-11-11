@@ -15,20 +15,6 @@ import pytest_asyncio
 import asyncpg
 from uuid import UUID
 
-
-@pytest_asyncio.fixture
-async def db_connection():
-    """Create database connection for testing."""
-    conn = await asyncpg.connect(
-        host="localhost",
-        database="yarda_test",
-        user="postgres",
-        password="test_password"
-    )
-    yield conn
-    await conn.close()
-
-
 @pytest_asyncio.fixture
 async def test_user_with_trials(db_connection):
     """Create a test user with 3 trial credits."""
@@ -50,7 +36,6 @@ async def test_user_with_trials(db_connection):
 
     # Cleanup
     await db_connection.execute("DELETE FROM users WHERE id = $1", user_id)
-
 
 @pytest.mark.asyncio
 async def test_trial_refund_on_generation_failure(test_user_with_trials, db_connection):
@@ -110,7 +95,6 @@ async def test_trial_refund_on_generation_failure(test_user_with_trials, db_conn
     assert final_state['trial_remaining'] == 3
     assert final_state['trial_used'] == 0
 
-
 @pytest.mark.asyncio
 async def test_multiple_sequential_refunds(test_user_with_trials, db_connection):
     """
@@ -143,7 +127,6 @@ async def test_multiple_sequential_refunds(test_user_with_trials, db_connection)
 
     assert final['trial_remaining'] == 3
     assert final['trial_used'] == 0
-
 
 @pytest.mark.asyncio
 async def test_refund_cannot_exceed_max_trials(test_user_with_trials, db_connection):
@@ -180,7 +163,6 @@ async def test_refund_cannot_exceed_max_trials(test_user_with_trials, db_connect
 
     # If implementation allows accumulation:
     assert final['trial_remaining'] == 4  # Refund added 1
-
 
 @pytest.mark.asyncio
 async def test_refund_when_trial_used_is_zero(db_connection):
@@ -225,7 +207,6 @@ async def test_refund_when_trial_used_is_zero(db_connection):
 
     finally:
         await db_connection.execute("DELETE FROM users WHERE id = $1", user_id)
-
 
 @pytest.mark.asyncio
 async def test_generation_failure_workflow_end_to_end(test_user_with_trials, db_connection):
@@ -302,7 +283,6 @@ async def test_generation_failure_workflow_end_to_end(test_user_with_trials, db_
     # Cleanup
     await db_connection.execute("DELETE FROM generations WHERE id = $1", generation_id)
 
-
 @pytest.mark.asyncio
 async def test_no_refund_on_successful_generation(test_user_with_trials, db_connection):
     """
@@ -349,7 +329,6 @@ async def test_no_refund_on_successful_generation(test_user_with_trials, db_conn
 
     # Cleanup
     await db_connection.execute("DELETE FROM generations WHERE id = $1", generation_id)
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

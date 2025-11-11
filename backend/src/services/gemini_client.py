@@ -19,19 +19,29 @@ import base64
 import uuid
 from datetime import datetime
 import mimetypes
+import structlog
 
 # Import our prompt building system
 from src.services.prompt_builder import build_landscape_prompt
 from src.services.usage_monitor import get_usage_monitor
+
+logger = structlog.get_logger(__name__)
 
 
 class GeminiClient:
     """Client for Google Gemini AI image generation."""
 
     def __init__(self):
+        # Force reload of environment variables from .env file
+        from dotenv import load_dotenv
+        load_dotenv(override=True)
+
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("GEMINI_API_KEY environment variable is required")
+
+        # Log which API key we're using for debugging
+        logger.info(f"[GeminiClient] Using API key: {api_key[:15]}...{api_key[-4:]}")
 
         # Create Gemini client with google-genai SDK
         self.client = genai.Client(api_key=api_key)
@@ -113,11 +123,12 @@ class GeminiClient:
                 )
             )
 
-            # Generate with API call
+            # Generate with API call using STREAMING (required for image generation)
             image_data = None
             text_response = ""
 
-            response = self.client.models.generate_content(
+            # Use generate_content_stream (NOT generate_content) for image generation
+            for chunk in self.client.models.generate_content_stream(
                 model=self.model_name,
                 contents=[
                     types.Content(
@@ -126,17 +137,20 @@ class GeminiClient:
                     )
                 ],
                 config=generate_content_config
-            )
-
-            # Extract image and text from response
-            if response and response.candidates:
-                for part in response.candidates[0].content.parts:
-                    # Extract inline image data
-                    if hasattr(part, 'inline_data') and part.inline_data and part.inline_data.data:
-                        image_data = part.inline_data.data
-                    # Also capture any text response
-                    elif hasattr(part, 'text') and part.text:
-                        text_response += part.text
+            ):
+                # Extract image from streaming chunks
+                if (
+                    chunk.candidates is not None
+                    and chunk.candidates[0].content is not None
+                    and chunk.candidates[0].content.parts is not None
+                ):
+                    for part in chunk.candidates[0].content.parts:
+                        # Extract inline image data
+                        if part.inline_data and part.inline_data.data:
+                            image_data = part.inline_data.data
+                        # Also capture any text response
+                        elif hasattr(part, 'text') and part.text:
+                            text_response += part.text
 
             # Verify we got image data
             if not image_data:

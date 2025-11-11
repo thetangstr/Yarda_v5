@@ -224,7 +224,7 @@ export default function AuthPage() {
           </div>
 
           {/* Social Sign In */}
-          <div className="mb-6">
+          <div className="mb-6 space-y-3">
             <GoogleSignInButton />
           </div>
 

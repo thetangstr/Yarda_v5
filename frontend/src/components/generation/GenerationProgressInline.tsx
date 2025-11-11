@@ -89,7 +89,7 @@ export default function GenerationProgressInline({
       </div>
 
       {/* Progress Cards */}
-      <div key="progress-cards" className="space-y-4">
+      <div className="space-y-4">
         <AnimatePresence mode="popLayout">
           {areas.map((area, index) => (
             <motion.div
@@ -172,8 +172,9 @@ export default function GenerationProgressInline({
 
               {/* Progress Bar */}
               {area.status !== 'failed' && (
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div key={`progress-bar-${area.areaId}`} className="w-full bg-gray-200 rounded-full h-2.5">
                   <motion.div
+                    key={`progress-fill-${area.areaId}`}
                     className={`h-2.5 rounded-full ${
                       area.status === 'completed'
                         ? 'bg-green-600'
@@ -196,6 +197,7 @@ export default function GenerationProgressInline({
                 if (sourceImage) {
                   return (
                     <motion.div
+                      key={`source-image-${area.areaId}`}
                       initial={{ opacity: 0, scale: 0.98 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ duration: ANIMATION_DURATION.fast }}
@@ -298,6 +300,7 @@ export default function GenerationProgressInline({
                   // Fallback: Show generated result if no source image
                   return (
                     <motion.div
+                      key={`generated-image-${area.areaId}`}
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ duration: ANIMATION_DURATION.fast }}
@@ -341,16 +344,19 @@ export default function GenerationProgressInline({
         >
           <div className="inline-flex items-center space-x-2 text-gray-600">
             <motion.div
+              key="loading-dot-1"
               animate={{ scale: [1, 1.2, 1] }}
               transition={{ repeat: Infinity, duration: ANIMATION_DURATION.pulse }}
               className="w-2 h-2 bg-blue-500 rounded-full"
             />
             <motion.div
+              key="loading-dot-2"
               animate={{ scale: [1, 1.2, 1] }}
               transition={{ repeat: Infinity, duration: ANIMATION_DURATION.pulse, delay: ANIMATION_DELAY.medium }}
               className="w-2 h-2 bg-blue-500 rounded-full"
             />
             <motion.div
+              key="loading-dot-3"
               animate={{ scale: [1, 1.2, 1] }}
               transition={{ repeat: Infinity, duration: ANIMATION_DURATION.pulse, delay: ANIMATION_DELAY.long }}
               className="w-2 h-2 bg-blue-500 rounded-full"

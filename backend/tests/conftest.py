@@ -3,14 +3,18 @@ Pytest Configuration and Fixtures
 
 Provides test fixtures for:
 - API mocking (Gemini, Google Maps, Stripe)
-- Database connection mocking
+- Database connection to Supabase
 - Test data generation
 """
 
 import pytest
+import pytest_asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 import asyncpg
+import asyncio
+import os
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
 
 
 # ==============================================================================
@@ -113,29 +117,54 @@ def mock_stripe_failure(mocker):
 # Database Fixtures
 # ==============================================================================
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def db_connection():
     """
-    Provide a real database connection for integration tests.
+    Provide a real database connection to Supabase for integration tests.
 
-    Note: This connects to the actual test database.
-    Ensure TEST_DATABASE_URL is set in environment.
+    Loads DATABASE_URL from .env file via python-dotenv.
+    This connects to the remote Supabase database configured in backend/.env
+
+    Connection string should be in format:
+    postgresql://user.project:password@pooler.supabase.com:6543/postgres
+
+    Yields:
+        asyncpg.Connection: Active database connection for test execution
     """
-    import os
-    from dotenv import load_dotenv
-
+    # Load environment variables from .env file
     load_dotenv()
-    database_url = os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
+    database_url = os.getenv("DATABASE_URL")
 
     if not database_url:
-        pytest.skip("TEST_DATABASE_URL or DATABASE_URL not set")
+        pytest.skip(
+            "DATABASE_URL not set in environment. "
+            "Configure it in backend/.env file."
+        )
 
-    conn = await asyncpg.connect(database_url)
+    try:
+        # Set statement_cache_size=0 to avoid conflicts with Supabase pgbouncer
+        # (pgbouncer uses transaction mode which doesn't support prepared statements)
+        conn = await asyncpg.connect(
+            database_url,
+            statement_cache_size=0
+        )
+    except asyncpg.InvalidPasswordError as e:
+        pytest.fail(
+            f"Database authentication failed. "
+            f"Check DATABASE_URL in backend/.env. "
+            f"Error: {str(e)}"
+        )
+    except asyncpg.PostgresError as e:
+        pytest.fail(
+            f"Database connection error: {str(e)}. "
+            f"Verify DATABASE_URL is correct and database is accessible."
+        )
+
     yield conn
     await conn.close()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def test_user(db_connection):
     """
     Create a test user with trial credits for testing.
@@ -144,14 +173,14 @@ async def test_user(db_connection):
     """
     user_id = await db_connection.fetchval("""
         INSERT INTO users (
-            email, full_name, email_verified,
-            trial_remaining, trial_used, token_balance,
+            email, email_verified,
+            trial_remaining, trial_used,
             subscription_tier, subscription_status
         ) VALUES (
-            $1, $2, true, 3, 0, 0, NULL, 'inactive'
+            $1, true, 3, 0, 'free', 'inactive'
         )
         RETURNING id
-    """, f"test+{datetime.now().timestamp()}@yarda.ai", "Test User")
+    """, f"test+{datetime.now().timestamp()}@yarda.ai")
 
     yield user_id
 
@@ -159,23 +188,23 @@ async def test_user(db_connection):
     await db_connection.execute("DELETE FROM users WHERE id = $1", user_id)
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def token_user(db_connection):
     """
-    Create a test user with token balance (no trials).
+    Create a test user with no trials (token balance only).
 
     Automatically cleans up after test completes.
     """
     user_id = await db_connection.fetchval("""
         INSERT INTO users (
-            email, full_name, email_verified,
-            trial_remaining, trial_used, token_balance,
+            email, email_verified,
+            trial_remaining, trial_used,
             subscription_tier, subscription_status
         ) VALUES (
-            $1, $2, true, 0, 3, 50, NULL, 'inactive'
+            $1, true, 0, 3, 'free', 'inactive'
         )
         RETURNING id
-    """, f"test+tokens+{datetime.now().timestamp()}@yarda.ai", "Token User")
+    """, f"test+tokens+{datetime.now().timestamp()}@yarda.ai")
 
     yield user_id
 
@@ -183,7 +212,7 @@ async def token_user(db_connection):
     await db_connection.execute("DELETE FROM users WHERE id = $1", user_id)
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def subscriber_user(db_connection):
     """
     Create a test user with active subscription.
@@ -192,18 +221,17 @@ async def subscriber_user(db_connection):
     """
     user_id = await db_connection.fetchval("""
         INSERT INTO users (
-            email, full_name, email_verified,
-            trial_remaining, trial_used, token_balance,
+            email, email_verified,
+            trial_remaining, trial_used,
             subscription_tier, subscription_status,
             stripe_subscription_id, current_period_end
         ) VALUES (
-            $1, $2, true, 0, 3, 0, 'monthly_pro', 'active',
-            $3, $4
+            $1, true, 0, 3, 'monthly_pro', 'active',
+            $2, $3
         )
         RETURNING id
     """,
         f"test+sub+{datetime.now().timestamp()}@yarda.ai",
-        "Subscriber User",
         "sub_test_" + str(int(datetime.now().timestamp())),
         datetime.now() + timedelta(days=30)
     )

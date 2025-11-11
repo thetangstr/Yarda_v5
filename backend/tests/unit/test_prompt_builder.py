@@ -20,7 +20,6 @@ from src.services.prompt_templates import (
     get_style_metadata,
 )
 
-
 class TestPromptTemplates:
     """Test prompt template retrieval and metadata."""
 
@@ -61,7 +60,6 @@ class TestPromptTemplates:
             assert metadata is not None
             assert "name" in metadata
             assert "description" in metadata
-
 
 class TestPromptBuilder:
     """Test the PromptBuilder class functionality."""
@@ -222,7 +220,6 @@ class TestPromptBuilder:
         # Should not have any area prefix
         assert "**FOCUS AREA:" not in prompt
 
-
 class TestBuildLandscapePrompt:
     """Test the convenience function."""
 
@@ -248,7 +245,6 @@ class TestBuildLandscapePrompt:
         assert "Add rose arbor" in prompt
         assert "**FOCUS AREA: FRONT YARD**" in prompt
         assert "789 Oak Ave" in prompt
-
 
 class TestPromptStructure:
     """Test the overall structure and quality of generated prompts."""

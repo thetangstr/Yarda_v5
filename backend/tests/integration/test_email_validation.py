@@ -11,7 +11,6 @@ import pytest
 from httpx import AsyncClient
 from src.main import app
 
-
 @pytest.mark.asyncio
 async def test_registration_with_plus_addressing():
     """Test that emails with + symbol (plus addressing) are accepted."""
@@ -36,7 +35,6 @@ async def test_registration_with_plus_addressing():
             # If 400, should be duplicate email error, not validation error
             data = response.json()
             assert "already exists" in data["detail"].lower()
-
 
 @pytest.mark.asyncio
 async def test_registration_with_various_valid_emails():
@@ -66,7 +64,6 @@ async def test_registration_with_various_valid_emails():
             assert response.status_code != 500, \
                 f"Email '{email}' caused HTTP 500 error"
 
-
 @pytest.mark.asyncio
 async def test_registration_with_invalid_emails():
     """Test that invalid emails are properly rejected with 422 Validation Error."""
@@ -91,7 +88,6 @@ async def test_registration_with_invalid_emails():
             # Should be validation error (422)
             assert response.status_code == 422, \
                 f"Invalid email '{email}' should return 422, got {response.status_code}"
-
 
 @pytest.mark.asyncio
 async def test_login_with_plus_addressing():
@@ -128,7 +124,6 @@ async def test_login_with_plus_addressing():
         data = login_response.json()
         assert "access_token" in data
         assert data["user"]["email"] == test_email.lower()
-
 
 @pytest.mark.asyncio
 async def test_email_case_normalization():

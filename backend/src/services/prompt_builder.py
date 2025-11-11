@@ -86,8 +86,8 @@ class PromptBuilder:
             address_context = f"\n\n**Property Location:** {address}"
             prompt_parts.append(address_context)
 
-        # Add quality and technical modifiers
-        prompt_parts.append(self._get_quality_modifiers())
+        # Add quality and technical modifiers (area-specific)
+        prompt_parts.append(self._get_quality_modifiers(area))
 
         # Assemble final prompt
         final_prompt = "\n".join(prompt_parts)
@@ -105,10 +105,11 @@ class PromptBuilder:
             Area-specific prefix string or None
         """
         area_prefixes = {
-            "front_yard": "**FOCUS AREA: FRONT YARD**\nPrimary focus on the front yard entrance and curb appeal.",
-            "back_yard": "**FOCUS AREA: BACK YARD**\nPrimary focus on the backyard and outdoor living spaces.",
-            "side_yard": "**FOCUS AREA: SIDE YARD**\nPrimary focus on the side yard pathway and transitional spaces.",
-            "walkway": "**FOCUS AREA: WALKWAY**\nPrimary focus on the walkway, pathways, and circulation.",
+            "front_yard": "**FOCUS AREA: FRONT YARD (Street View)**\nPrimary focus on the front yard entrance and curb appeal.",
+            "back_yard": "**FOCUS AREA: BACK YARD (Satellite Reference → 45° Perspective)**\n**INPUT IMAGE:** You are viewing an OVERHEAD SATELLITE IMAGE as a reference to understand the backyard layout, boundaries, and spatial dimensions.\n**YOUR TASK:** Use this overhead reference to CREATE A NEW IMAGE from a 45-degree angle, semi-ground level perspective showing a professionally designed backyard landscape. This should look like an architectural rendering or professional landscape design visualization, NOT a modified satellite view.\nPrimary focus on the backyard and outdoor living spaces.",
+            "backyard": "**FOCUS AREA: BACK YARD (Satellite Reference → 45° Perspective)**\n**INPUT IMAGE:** You are viewing an OVERHEAD SATELLITE IMAGE as a reference to understand the backyard layout, boundaries, and spatial dimensions.\n**YOUR TASK:** Use this overhead reference to CREATE A NEW IMAGE from a 45-degree angle, semi-ground level perspective showing a professionally designed backyard landscape. This should look like an architectural rendering or professional landscape design visualization, NOT a modified satellite view.\nPrimary focus on the backyard and outdoor living spaces.",  # Support both variants
+            "side_yard": "**FOCUS AREA: SIDE YARD (Satellite Reference → 45° Perspective)**\n**INPUT IMAGE:** You are viewing an OVERHEAD SATELLITE IMAGE as a reference to understand the side yard layout.\n**YOUR TASK:** Use this overhead reference to CREATE A NEW IMAGE from a 45-degree angle, semi-ground level perspective showing a professionally designed side yard.\nPrimary focus on the side yard pathway and transitional spaces.",
+            "walkway": "**FOCUS AREA: WALKWAY (Satellite Reference → Ground Level)**\n**INPUT IMAGE:** You are viewing an OVERHEAD SATELLITE IMAGE as a reference to understand the walkway layout and surroundings.\n**YOUR TASK:** Use this overhead reference to CREATE A NEW IMAGE from a ground-level perspective showing a professionally designed walkway and pathway system. This should look like a ground-level photo of a beautifully designed pathway, NOT a modified satellite view.\nPrimary focus on the walkway, pathways, and circulation.",
         }
         return area_prefixes.get(area)
 
@@ -152,15 +153,74 @@ class PromptBuilder:
 - Bold changes to create maximum visual impact
 - Transform the entire yard aesthetic"""
 
-    def _get_quality_modifiers(self) -> str:
+    def _get_quality_modifiers(self, area: Optional[str] = None) -> str:
         """
         Get technical quality modifiers for consistent high-quality output.
+
+        Different instructions for street view vs satellite imagery.
+
+        Args:
+            area: Area identifier to determine if satellite or street view
 
         Returns:
             Quality modifier string
         """
-        return """
-**TECHNICAL REQUIREMENTS:**
+        # Check if this is a satellite view (backyard, walkway, side_yard)
+        is_satellite = area in ["back_yard", "backyard", "walkway", "side_yard"]
+
+        if is_satellite:
+            # Satellite imagery: Use as reference to generate NEW PERSPECTIVE
+            return """
+**CRITICAL PERSPECTIVE TRANSFORMATION INSTRUCTIONS:**
+
+**WHAT YOU ARE GIVEN:**
+- An overhead satellite image as a REFERENCE ONLY
+- Use it to understand: property boundaries, spatial layout, dimensions, orientation
+
+**WHAT YOU MUST CREATE:**
+- **For Backyard/Side Yard:** A NEW IMAGE from a 45-degree angle, semi-ground level perspective
+- **For Walkway:** A NEW IMAGE from ground-level perspective
+- This should look like a professional architectural rendering or design visualization
+- NOT a modified or enhanced version of the satellite image
+
+**PERSPECTIVE REQUIREMENTS:**
+
+**45-Degree Angle (Backyard/Side Yard):**
+- Camera angle: Elevated 45-degree viewing angle (architectural visualization style)
+- Viewpoint: As if standing at the back of the property, looking across the yard
+- Show depth and dimensionality - this is NOT a flat overhead view
+- Include vertical elements: fences, pergolas, plantings, outdoor structures
+- Professional architectural rendering quality
+
+**Ground-Level (Walkway):**
+- Camera angle: Eye-level, standing on the pathway looking forward
+- Viewpoint: As if walking through the designed landscape
+- Show the pathway from the user's perspective
+- Include surrounding landscape elements at natural viewing height
+- Professional photography quality
+
+**DESIGN ELEMENTS TO INCLUDE:**
+1. **Hardscaping:** Patios, decks, pergolas, fire pits, outdoor kitchens, retaining walls
+2. **Softscaping:** Lush plantings, trees, shrubs, flower beds, ground cover
+3. **Features:** Water features, lighting, outdoor furniture, decorative elements
+4. **Materials:** Stone, wood, pavers, gravel - show texture and detail from the new perspective
+5. **Depth & Dimension:** Show layers, depth, and 3D spatial relationships
+
+**QUALITY STANDARDS:**
+- High-resolution, photorealistic rendering
+- Professional landscape architecture quality
+- Natural lighting and shadows appropriate for the perspective
+- Rich colors and textures
+- Seamless integration of all design elements
+
+**REMEMBER:**
+- The satellite image is ONLY a reference for understanding the space
+- You are creating a COMPLETELY NEW IMAGE from a different viewing angle
+- This should look like a professional design rendering, NOT an enhanced satellite photo"""
+        else:
+            # Street view: Preserve house structure
+            return """
+**TECHNICAL REQUIREMENTS FOR STREET VIEW:**
 - High-resolution, photorealistic rendering
 - Professional landscape design quality
 - Accurate plant proportions and realistic growth patterns

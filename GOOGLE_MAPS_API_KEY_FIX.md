@@ -15,7 +15,7 @@ During the initial staging deployment (commit `ca99c43`), only `NEXT_PUBLIC_API_
 
 **Missing Environment Variable:**
 ```bash
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="AIzaSyAQ7nT33eA0fOAGFXTm634I7TMFcHQTJ9M"
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="[REDACTED_MAPS_KEY]"
 ```
 
 ## Impact
@@ -47,7 +47,7 @@ The component correctly detected the missing API key and displayed an appropriat
 ### 1. Added Environment Variable to Vercel Preview
 ```bash
 # Command executed (2025-11-08)
-printf "AIzaSyAQ7nT33eA0fOAGFXTm634I7TMFcHQTJ9M\n" | vercel env add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY preview
+printf "[REDACTED_MAPS_KEY]\n" | vercel env add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY preview
 ```
 
 **Result:**

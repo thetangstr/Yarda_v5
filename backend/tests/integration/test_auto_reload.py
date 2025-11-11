@@ -24,21 +24,6 @@ import asyncio
 from uuid import uuid4
 from datetime import datetime, timedelta
 
-
-@pytest_asyncio.fixture
-async def db_connection():
-    """Create database connection for testing."""
-    conn = await asyncpg.connect(
-        host='localhost',
-        port=5432,
-        user='postgres',
-        password='postgres',
-        database='yarda_test'
-    )
-    yield conn
-    await conn.close()
-
-
 @pytest_asyncio.fixture
 async def test_user_with_auto_reload(db_connection):
     """Create a test user with auto-reload enabled."""
@@ -65,7 +50,6 @@ async def test_user_with_auto_reload(db_connection):
 
     # Cleanup
     await db_connection.execute("DELETE FROM users WHERE id = $1", user_id)
-
 
 @pytest.mark.asyncio
 async def test_auto_reload_triggers_below_threshold(db_connection, test_user_with_auto_reload):
@@ -139,7 +123,6 @@ async def test_auto_reload_triggers_below_threshold(db_connection, test_user_wit
     """, user_id)
     assert last_reload is not None, "last_reload_at should be set"
 
-
 @pytest.mark.asyncio
 async def test_auto_reload_does_not_trigger_above_threshold(db_connection, test_user_with_auto_reload):
     """
@@ -182,7 +165,6 @@ async def test_auto_reload_does_not_trigger_above_threshold(db_connection, test_
 
     # Verify no trigger
     assert trigger_info is None, "Auto-reload should NOT trigger when above threshold"
-
 
 @pytest.mark.asyncio
 async def test_auto_reload_60_second_throttle(db_connection, test_user_with_auto_reload):
@@ -248,7 +230,6 @@ async def test_auto_reload_60_second_throttle(db_connection, test_user_with_auto
     trigger_info = await auto_reload_service.check_and_trigger(user_id)
     assert trigger_info is not None, "Auto-reload should trigger after 60+ seconds"
     assert trigger_info["should_trigger"] is True
-
 
 @pytest.mark.asyncio
 async def test_auto_reload_disabled_after_3_failures(db_connection, test_user_with_auto_reload):
@@ -333,7 +314,6 @@ async def test_auto_reload_disabled_after_3_failures(db_connection, test_user_wi
     trigger_info = await auto_reload_service.check_and_trigger(user_id)
     assert trigger_info is None, "Auto-reload should not trigger when disabled"
 
-
 @pytest.mark.asyncio
 async def test_auto_reload_failure_count_reset_on_success(db_connection, test_user_with_auto_reload):
     """
@@ -394,7 +374,6 @@ async def test_auto_reload_failure_count_reset_on_success(db_connection, test_us
     """, user_id)
     assert enabled is True
 
-
 @pytest.mark.asyncio
 async def test_auto_reload_does_not_trigger_when_disabled(db_connection, test_user_with_auto_reload):
     """
@@ -444,7 +423,6 @@ async def test_auto_reload_does_not_trigger_when_disabled(db_connection, test_us
 
     # Verify no trigger
     assert trigger_info is None, "Auto-reload should NOT trigger when disabled"
-
 
 @pytest.mark.asyncio
 async def test_configure_auto_reload(db_connection):

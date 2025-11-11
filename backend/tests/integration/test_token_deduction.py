@@ -17,45 +17,6 @@ import asyncpg
 import asyncio
 from uuid import uuid4
 
-
-@pytest_asyncio.fixture
-async def db_connection():
-    """Create database connection for testing."""
-    conn = await asyncpg.connect(
-        host='localhost',
-        port=5432,
-        user='postgres',
-        password='postgres',
-        database='yarda_test'
-    )
-    yield conn
-    await conn.close()
-
-
-@pytest_asyncio.fixture
-async def test_user(db_connection):
-    """Create a test user with token account."""
-    user_id = uuid4()
-    email = f'token-test-{user_id}@test.com'
-
-    # Create user
-    await db_connection.execute("""
-        INSERT INTO users (id, email, email_verified, password_hash)
-        VALUES ($1, $2, true, 'hash')
-    """, user_id, email)
-
-    # Create token account with 50 tokens
-    await db_connection.execute("""
-        INSERT INTO users_token_accounts (user_id, balance, total_purchased, total_spent)
-        VALUES ($1, 50, 50, 0)
-    """, user_id)
-
-    yield user_id
-
-    # Cleanup
-    await db_connection.execute("DELETE FROM users WHERE id = $1", user_id)
-
-
 @pytest.mark.asyncio
 async def test_concurrent_token_deduction_race_condition(db_connection, test_user):
     """
@@ -136,7 +97,6 @@ async def test_concurrent_token_deduction_race_condition(db_connection, test_use
     """, user_id)
     assert total_spent == 50, f"Expected total_spent 50, got {total_spent}"
 
-
 @pytest.mark.asyncio
 async def test_check_constraint_prevents_negative_balance(db_connection, test_user):
     """
@@ -176,7 +136,6 @@ async def test_check_constraint_prevents_negative_balance(db_connection, test_us
     """, user_id)
     assert balance == 50
 
-
 @pytest.mark.asyncio
 async def test_token_deduction_with_insufficient_balance(db_connection, test_user):
     """
@@ -208,7 +167,6 @@ async def test_token_deduction_with_insufficient_balance(db_connection, test_use
         SELECT balance FROM users_token_accounts WHERE user_id = $1
     """, user_id)
     assert balance == 50
-
 
 @pytest.mark.asyncio
 async def test_token_refund_after_failure(db_connection, test_user):
@@ -295,7 +253,6 @@ async def test_token_refund_after_failure(db_connection, test_user):
     assert transactions[0]['amount'] == -1
     assert transactions[1]['transaction_type'] == 'refund'
     assert transactions[1]['amount'] == 1
-
 
 @pytest.mark.asyncio
 async def test_multiple_sequential_token_deductions(db_connection, test_user):

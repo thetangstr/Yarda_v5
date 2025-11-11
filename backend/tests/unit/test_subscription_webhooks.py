@@ -22,21 +22,6 @@ from unittest.mock import Mock, patch, AsyncMock
 
 from src.services.webhook_service import WebhookService
 
-
-@pytest_asyncio.fixture
-async def db_connection():
-    """Create database connection for testing."""
-    conn = await asyncpg.connect(
-        host='localhost',
-        port=5432,
-        user='postgres',
-        password='postgres',
-        database='yarda_test'
-    )
-    yield conn
-    await conn.close()
-
-
 @pytest_asyncio.fixture
 async def db_pool(db_connection):
     """Create mock database pool."""
@@ -45,28 +30,6 @@ async def db_pool(db_connection):
     pool.acquire.return_value.__aenter__ = AsyncMock(return_value=db_connection)
     pool.acquire.return_value.__aexit__ = AsyncMock(return_value=None)
     return pool
-
-
-@pytest_asyncio.fixture
-async def test_user(db_connection):
-    """Create a test user."""
-    user_id = uuid4()
-    email = f'webhook-test-{user_id}@test.com'
-
-    await db_connection.execute("""
-        INSERT INTO users (
-            id, email, email_verified, password_hash,
-            subscription_tier, subscription_status,
-            stripe_customer_id
-        )
-        VALUES ($1, $2, true, 'hash', 'free', 'inactive', 'cus_test123')
-    """, user_id, email)
-
-    yield user_id, email
-
-    # Cleanup
-    await db_connection.execute("DELETE FROM users WHERE id = $1", user_id)
-
 
 @pytest_asyncio.fixture
 async def subscribed_user(db_connection):
@@ -91,7 +54,6 @@ async def subscribed_user(db_connection):
 
     # Cleanup
     await db_connection.execute("DELETE FROM users WHERE id = $1", user_id)
-
 
 class TestSubscriptionCreatedWebhook:
     """Test customer.subscription.created webhook."""
@@ -224,7 +186,6 @@ class TestSubscriptionCreatedWebhook:
         assert result['success'] is False
         assert 'not found' in result['message'].lower()
 
-
 class TestSubscriptionUpdatedWebhook:
     """Test customer.subscription.updated webhook."""
 
@@ -336,7 +297,6 @@ class TestSubscriptionUpdatedWebhook:
 
         assert result['success'] is False
 
-
 class TestSubscriptionDeletedWebhook:
     """Test customer.subscription.deleted webhook."""
 
@@ -382,7 +342,6 @@ class TestSubscriptionDeletedWebhook:
         assert user['subscription_tier'] == 'free'
         assert user['subscription_status'] == 'cancelled'
         assert user['stripe_subscription_id'] is None
-
 
 class TestInvoiceWebhooks:
     """Test invoice payment webhooks."""
@@ -492,7 +451,6 @@ class TestInvoiceWebhooks:
         """, user_id)
 
         assert status == 'past_due'
-
 
 class TestWebhookEventProcessing:
     """Test main webhook event processing."""

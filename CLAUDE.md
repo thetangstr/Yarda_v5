@@ -309,6 +309,31 @@ test('generation flow end-to-end', async ({ page }) => {
 - Images uploaded to Vercel Blob with signed URLs
 - Metadata stored in database for audit trail
 
+### Perspective-Based Generation (2025-11-10)
+**CRITICAL CONCEPT:** Satellite imagery is used as **REFERENCE ONLY**, not transformed directly.
+
+**How It Works:**
+- **Front Yard**: Street View → AI transforms landscape while preserving house structure
+- **Backyard**: Satellite (overhead) → AI generates **NEW** 45-degree architectural rendering
+- **Walkway**: Satellite (overhead) → AI generates **NEW** ground-level photo perspective
+
+**Prompt Engineering Strategy:**
+- Prompts explicitly instruct: "CREATE A NEW IMAGE from different viewing angle"
+- Multiple reinforcement: "NOT a modified satellite view"
+- Area-specific perspective requirements in `backend/src/services/prompt_builder.py`
+
+**Why This Matters:**
+- Gemini AI needs crystal-clear instructions to change perspective vs. transform image
+- Wrong approach: "Transform this overhead view" → Returns unchanged satellite image
+- Correct approach: "Use this as reference, create 45-degree rendering" → Professional design visualization
+
+**Documentation:** See [PERSPECTIVE_GENERATION_APPROACH.md](PERSPECTIVE_GENERATION_APPROACH.md) for detailed explanation
+
+**Key Files:**
+- Prompt builder: `backend/src/services/prompt_builder.py` (lines 97-231)
+- Maps service: `backend/src/services/maps_service.py` (image selection logic)
+- Area prefixes: Different prompts for each area type + perspective
+
 ### Single-Page Generation Flow (Feature 005)
 - **Pattern**: Form + Progress + Results all inline on `/generate` page
 - **No Navigation**: Everything happens on one page without routing

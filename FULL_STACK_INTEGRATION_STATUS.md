@@ -621,8 +621,8 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=<api-key>  # ⚠️ Not required (backend handle
 **Verified:**
 ```bash
 DATABASE_URL=postgresql://postgres.gxlmnjnjvlslijiowamn:***@...  # ✅ Connected
-GEMINI_API_KEY=AIzaSyBs3wIs35qdd_g9DZGQFAELo3B5cJNYsbk  # ✅ Configured
-GOOGLE_MAPS_API_KEY=AIzaSyAQ7nT33eA0fOAGFXTm634I7TMFcHQTJ9M  # ✅ Configured
+GEMINI_API_KEY=[REDACTED_GEMINI_KEY]  # ✅ Configured
+GOOGLE_MAPS_API_KEY=[REDACTED_MAPS_KEY]  # ✅ Configured
 BLOB_READ_WRITE_TOKEN=vercel_blob_rw_***  # ✅ Configured
 STRIPE_SECRET_KEY=sk_test_***  # ✅ Configured
 STRIPE_WEBHOOK_SECRET=whsec_***  # ✅ Configured

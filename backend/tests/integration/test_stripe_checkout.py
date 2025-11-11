@@ -18,7 +18,6 @@ import asyncpg
 from uuid import uuid4
 from decimal import Decimal
 
-
 # Token packages configuration (matches FR-021 to FR-024)
 TOKEN_PACKAGES = [
     {
@@ -56,38 +55,6 @@ TOKEN_PACKAGES = [
     },
 ]
 
-
-@pytest_asyncio.fixture
-async def db_connection():
-    """Create database connection for testing."""
-    conn = await asyncpg.connect(
-        host='localhost',
-        port=5432,
-        user='postgres',
-        password='postgres',
-        database='yarda_test'
-    )
-    yield conn
-    await conn.close()
-
-
-@pytest_asyncio.fixture
-async def test_user(db_connection):
-    """Create a test user."""
-    user_id = uuid4()
-    email = f'stripe-test-{user_id}@test.com'
-
-    await db_connection.execute("""
-        INSERT INTO users (id, email, email_verified, password_hash)
-        VALUES ($1, $2, true, 'hash')
-    """, user_id, email)
-
-    yield user_id, email
-
-    # Cleanup
-    await db_connection.execute("DELETE FROM users WHERE id = $1", user_id)
-
-
 def create_checkout_session(package_id: str, customer_email: str, success_url: str, cancel_url: str):
     """
     Mock Stripe checkout session creation.
@@ -122,7 +89,6 @@ def create_checkout_session(package_id: str, customer_email: str, success_url: s
 
     return session
 
-
 @pytest.mark.asyncio
 async def test_create_checkout_session_for_token_package(test_user):
     """
@@ -155,7 +121,6 @@ async def test_create_checkout_session_for_token_package(test_user):
     assert session["metadata"]["tokens"] == 50
     assert session["mode"] == "payment"
     assert "checkout.stripe.com" in session["url"]
-
 
 @pytest.mark.asyncio
 async def test_all_four_packages_have_correct_pricing(test_user):
@@ -190,7 +155,6 @@ async def test_all_four_packages_have_correct_pricing(test_user):
     assert session4["amount_total"] == 40000
     assert session4["metadata"]["tokens"] == 500
 
-
 @pytest.mark.asyncio
 async def test_checkout_session_includes_customer_email(test_user):
     """
@@ -206,7 +170,6 @@ async def test_checkout_session_includes_customer_email(test_user):
 
     assert session["customer_email"] == email
     assert "@" in session["customer_email"]
-
 
 @pytest.mark.asyncio
 async def test_checkout_session_redirect_urls(test_user):
@@ -227,7 +190,6 @@ async def test_checkout_session_redirect_urls(test_user):
     assert session["success_url"] == success_url
     assert session["cancel_url"] == cancel_url
 
-
 @pytest.mark.asyncio
 async def test_invalid_package_selection_returns_error(test_user):
     """
@@ -244,7 +206,6 @@ async def test_invalid_package_selection_returns_error(test_user):
 
     with pytest.raises(ValueError, match="Invalid package_id"):
         create_checkout_session("invalid_package", email, "success", "cancel")
-
 
 @pytest.mark.asyncio
 async def test_checkout_session_metadata_structure(test_user):
@@ -267,7 +228,6 @@ async def test_checkout_session_metadata_structure(test_user):
     # Verify metadata values
     assert session["metadata"]["package_id"] == "package_100"
     assert session["metadata"]["tokens"] == 100
-
 
 @pytest.mark.asyncio
 async def test_package_pricing_calculations():

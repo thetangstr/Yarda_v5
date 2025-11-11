@@ -18,44 +18,6 @@ import asyncpg
 from typing import List
 from uuid import UUID
 
-
-@pytest_asyncio.fixture
-async def db_connection():
-    """Create database connection for testing."""
-    conn = await asyncpg.connect(
-        host="localhost",
-        database="yarda_test",
-        user="postgres",
-        password="test_password"
-    )
-    yield conn
-    await conn.close()
-
-
-@pytest_asyncio.fixture
-async def test_user(db_connection):
-    """Create a test user with 3 trial credits."""
-    # Insert test user
-    user_id = await db_connection.fetchval("""
-        INSERT INTO users (
-            email,
-            firebase_uid,
-            trial_remaining,
-            trial_used
-        ) VALUES (
-            'race-test@example.com',
-            'test-firebase-uid-race',
-            3,
-            0
-        ) RETURNING id
-    """)
-
-    yield user_id
-
-    # Cleanup
-    await db_connection.execute("DELETE FROM users WHERE id = $1", user_id)
-
-
 @pytest.mark.asyncio
 async def test_concurrent_trial_deduction_prevents_negative_balance(test_user):
     """
@@ -116,7 +78,6 @@ async def test_concurrent_trial_deduction_prevents_negative_balance(test_user):
         assert trial_used == 3, f"Expected trial_used=3, got {trial_used}"
     finally:
         await conn.close()
-
 
 @pytest.mark.asyncio
 async def test_concurrent_token_deduction_prevents_negative_balance(db_connection):
@@ -199,7 +160,6 @@ async def test_concurrent_token_deduction_prevents_negative_balance(db_connectio
     # Cleanup
     await db_connection.execute("DELETE FROM users WHERE id = $1", user_id)
 
-
 @pytest.mark.asyncio
 async def test_check_constraint_prevents_negative_trial():
     """
@@ -245,7 +205,6 @@ async def test_check_constraint_prevents_negative_trial():
 
     finally:
         await conn.close()
-
 
 @pytest.mark.asyncio
 async def test_check_constraint_prevents_negative_token_balance():
@@ -301,7 +260,6 @@ async def test_check_constraint_prevents_negative_token_balance():
     finally:
         await conn.close()
 
-
 @pytest.mark.asyncio
 async def test_trigger_prevents_negative_trial():
     """
@@ -333,7 +291,6 @@ async def test_trigger_prevents_negative_trial():
 
     finally:
         await conn.close()
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

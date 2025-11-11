@@ -33,21 +33,6 @@ from src.models.subscription import (
     MONTHLY_PRO_PLAN,
 )
 
-
-@pytest_asyncio.fixture
-async def db_connection():
-    """Create database connection for testing."""
-    conn = await asyncpg.connect(
-        host='localhost',
-        port=5432,
-        user='postgres',
-        password='postgres',
-        database='yarda_test'
-    )
-    yield conn
-    await conn.close()
-
-
 @pytest_asyncio.fixture
 async def db_pool(db_connection):
     """Create mock database pool."""
@@ -56,27 +41,6 @@ async def db_pool(db_connection):
     pool.acquire.return_value.__aenter__ = AsyncMock(return_value=db_connection)
     pool.acquire.return_value.__aexit__ = AsyncMock(return_value=None)
     return pool
-
-
-@pytest_asyncio.fixture
-async def test_user(db_connection):
-    """Create a test user."""
-    user_id = uuid4()
-    email = f'subscription-test-{user_id}@test.com'
-
-    await db_connection.execute("""
-        INSERT INTO users (
-            id, email, email_verified, password_hash,
-            subscription_tier, subscription_status
-        )
-        VALUES ($1, $2, true, 'hash', 'free', 'inactive')
-    """, user_id, email)
-
-    yield user_id, email
-
-    # Cleanup
-    await db_connection.execute("DELETE FROM users WHERE id = $1", user_id)
-
 
 @pytest_asyncio.fixture
 async def subscribed_user(db_connection):
@@ -101,7 +65,6 @@ async def subscribed_user(db_connection):
 
     # Cleanup
     await db_connection.execute("DELETE FROM users WHERE id = $1", user_id)
-
 
 class TestSubscriptionServiceCheckout:
     """Test checkout session creation."""
@@ -213,7 +176,6 @@ class TestSubscriptionServiceCheckout:
             call_kwargs = mock_create.call_args.kwargs
             assert call_kwargs['customer'] == 'cus_existing123'
 
-
 class TestSubscriptionServiceStatus:
     """Test subscription status retrieval."""
 
@@ -311,7 +273,6 @@ class TestSubscriptionServiceStatus:
 
         with pytest.raises(ValueError, match="User not found"):
             await service.get_subscription_status(fake_user_id)
-
 
 class TestSubscriptionServiceCancellation:
     """Test subscription cancellation."""
@@ -433,7 +394,6 @@ class TestSubscriptionServiceCancellation:
         with pytest.raises(ValueError, match="Subscription is not active"):
             await service.cancel_subscription(user_id=user_id)
 
-
 class TestSubscriptionServiceCustomerPortal:
     """Test customer portal URL generation."""
 
@@ -487,7 +447,6 @@ class TestSubscriptionServiceCustomerPortal:
                 user_id=user_id,
                 return_url='https://yarda.app/account'
             )
-
 
 class TestSubscriptionServiceWebhookHelpers:
     """Test webhook helper methods."""
@@ -630,7 +589,6 @@ class TestSubscriptionServiceWebhookHelpers:
         found_user_id = await service.get_user_id_by_customer_id('cus_test123')
 
         assert found_user_id == user_id
-
 
 class TestSubscriptionModels:
     """Test subscription models and helper functions."""

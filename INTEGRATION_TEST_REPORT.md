@@ -36,13 +36,13 @@ NEXT_PUBLIC_SUPABASE_URL=https://gxlmnjnjvlslijiowamn.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_51SFRz...
 NEXT_PUBLIC_API_URL=https://yarda-api-production.up.railway.app
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="AIzaSyAQ7nT33eA0fOAGFXTm634I7TMFcHQTJ9M" ✅
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="[REDACTED_MAPS_KEY]" ✅
 ```
 
 ### Backend API Keys (Provided)
 ```bash
-GEMINI_API_KEY="AIzaSyBs3wIs35qdd_g9DZGQFAELo3B5cJNYsbk"
-GOOGLE_MAPS_API_KEY="AIzaSyAQ7nT33eA0fOAGFXTm634I7TMFcHQTJ9M"
+GEMINI_API_KEY="[REDACTED_GEMINI_KEY]"
+GOOGLE_MAPS_API_KEY="[REDACTED_MAPS_KEY]"
 ```
 
 ---
@@ -461,7 +461,7 @@ apiClient.interceptors.request.use((config) => {
 
 **Frontend:** ✅ Key configured in `.env.local`
 ```bash
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="AIzaSyAQ7nT33eA0fOAGFXTm634I7TMFcHQTJ9M"
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="[REDACTED_MAPS_KEY]"
 ```
 
 **Backend:** ❓ Unknown (needs verification)
@@ -473,7 +473,7 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="AIzaSyAQ7nT33eA0fOAGFXTm634I7TMFcHQTJ9M"
 
 ### Gemini API ❓ UNKNOWN STATUS
 
-**Provided Key:** `AIzaSyBs3wIs35qdd_g9DZGQFAELo3B5cJNYsbk`
+**Provided Key:** `[REDACTED_GEMINI_KEY]`
 
 **Backend:** ❓ Unknown (needs verification)
 **Status:** Cannot test until generation API issues are resolved

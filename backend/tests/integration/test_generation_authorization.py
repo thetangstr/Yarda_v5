@@ -19,55 +19,6 @@ import pytest_asyncio
 import asyncpg
 from uuid import UUID
 
-
-@pytest_asyncio.fixture
-async def db_connection():
-    """Create database connection for testing."""
-    conn = await asyncpg.connect(
-        host="localhost",
-        database="yarda_test",
-        user="postgres",
-        password="test_password"
-    )
-    yield conn
-    await conn.close()
-
-
-async def create_test_user(
-    db_connection,
-    email: str,
-    firebase_uid: str,
-    trial_remaining: int = 0,
-    subscription_status: str = 'inactive',
-    subscription_tier: str = 'free',
-    token_balance: int = 0
-) -> UUID:
-    """Helper to create test user with specific authorization state."""
-    # Create user
-    user_id = await db_connection.fetchval("""
-        INSERT INTO users (
-            email,
-            firebase_uid,
-            trial_remaining,
-            subscription_status,
-            subscription_tier
-        ) VALUES (
-            $1, $2, $3, $4, $5
-        ) RETURNING id
-    """, email, firebase_uid, trial_remaining, subscription_status, subscription_tier)
-
-    # Create token account if token_balance > 0
-    if token_balance > 0:
-        await db_connection.execute("""
-            INSERT INTO users_token_accounts (
-                user_id,
-                balance
-            ) VALUES ($1, $2)
-        """, user_id, token_balance)
-
-    return user_id
-
-
 @pytest.mark.asyncio
 async def test_auth_hierarchy_subscription_overrides_all(db_connection):
     """
@@ -119,7 +70,6 @@ async def test_auth_hierarchy_subscription_overrides_all(db_connection):
     finally:
         await db_connection.execute("DELETE FROM users WHERE id = $1", user_id)
 
-
 @pytest.mark.asyncio
 async def test_auth_hierarchy_trial_checked_second(db_connection):
     """
@@ -164,7 +114,6 @@ async def test_auth_hierarchy_trial_checked_second(db_connection):
 
     finally:
         await db_connection.execute("DELETE FROM users WHERE id = $1", user_id)
-
 
 @pytest.mark.asyncio
 async def test_auth_hierarchy_tokens_checked_third(db_connection):
@@ -219,7 +168,6 @@ async def test_auth_hierarchy_tokens_checked_third(db_connection):
     finally:
         await db_connection.execute("DELETE FROM users WHERE id = $1", user_id)
 
-
 @pytest.mark.asyncio
 async def test_auth_hierarchy_all_zero_blocks_generation(db_connection):
     """
@@ -271,7 +219,6 @@ async def test_auth_hierarchy_all_zero_blocks_generation(db_connection):
 
     finally:
         await db_connection.execute("DELETE FROM users WHERE id = $1", user_id)
-
 
 @pytest.mark.asyncio
 async def test_auth_hierarchy_subscription_preserves_tokens(db_connection):
@@ -336,7 +283,6 @@ async def test_auth_hierarchy_subscription_preserves_tokens(db_connection):
     finally:
         await db_connection.execute("DELETE FROM users WHERE id = $1", user_id)
 
-
 @pytest.mark.asyncio
 async def test_auth_hierarchy_past_due_subscription_falls_back_to_tokens(db_connection):
     """
@@ -388,7 +334,6 @@ async def test_auth_hierarchy_past_due_subscription_falls_back_to_tokens(db_conn
 
     finally:
         await db_connection.execute("DELETE FROM users WHERE id = $1", user_id)
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

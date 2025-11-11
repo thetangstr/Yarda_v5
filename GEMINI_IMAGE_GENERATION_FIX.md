@@ -1,8 +1,9 @@
 # Gemini Image Generation Fix
 
 **Date:** 2025-11-06
-**Status:** ✅ FIXED
-**Branch:** 004-generation-flow
+**Last Updated:** 2025-11-10
+**Status:** ✅ FIXED (Updated with actual working solutions)
+**Branch:** 004-generation-flow / 006-magic-link-auth
 
 ---
 
@@ -221,19 +222,110 @@ for chunk in client.models.generate_content_stream(
 
 ---
 
-## Files Modified
+## Additional Issues Fixed (2025-11-10)
 
-- `backend/src/services/gemini_client.py` - Updated to use gemini-2.5-flash-image model
-- Backend restarted with new SDK
+### 1. Environment Variable Loading Issue
+
+**Problem:** Even with the correct API key in `.env`, the backend was still using an expired/cached API key, resulting in:
+```
+API key expired. Please renew the API key (status 400 INVALID_ARGUMENT)
+```
+
+**Root Cause:** The GeminiClient was caching environment variables at module import time. Even after updating the `.env` file and restarting the server, it would still use the old cached value.
+
+**Solution:** Force reload of environment variables in GeminiClient.__init__:
+
+```python
+# backend/src/services/gemini_client.py
+def __init__(self):
+    # Force reload of environment variables from .env file
+    from dotenv import load_dotenv
+    load_dotenv(override=True)  # ← Critical: override=True forces reload
+
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY environment variable is required")
+
+    # Log which API key we're using for debugging
+    logger.info(f"[GeminiClient] Using API key: {api_key[:15]}...{api_key[-4:]}")
+
+    # Create Gemini client with google-genai SDK
+    self.client = genai.Client(api_key=api_key)
+```
+
+### 2. React Key Warnings
+
+**Problem:** Console warnings appearing:
+```
+Warning: Each child in a list should have a unique 'key' prop
+```
+
+**Root Cause:** Keys were incorrectly placed on parent divs that weren't direct children of map() functions. React only needs keys on elements that are direct children of arrays/map operations.
+
+**Solution:** Remove unnecessary keys from non-mapped elements:
+
+```typescript
+// frontend/src/components/generation/GenerationProgressInline.tsx
+// WRONG - This div is NOT a direct child of map():
+<div key="progress-cards" className="space-y-4">
+
+// CORRECT - No key needed:
+<div className="space-y-4">
+```
+
+```typescript
+// frontend/src/components/generation/GenerationResultsInline.tsx
+// WRONG - This div is NOT a direct child of map():
+<div key="results-grid" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+
+// CORRECT - No key needed:
+<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+```
+
+**Rule:** Only add keys to elements that are:
+1. Direct children of map() operations
+2. Conditionally rendered siblings (when using AnimatePresence)
+3. Elements in arrays that React needs to track
 
 ---
+
+## Files Modified
+
+- `backend/src/services/gemini_client.py` - Updated to use gemini-2.5-flash-image model + force env reload
+- `frontend/src/components/generation/GenerationProgressInline.tsx` - Removed unnecessary key from line 92
+- `frontend/src/components/generation/GenerationResultsInline.tsx` - Removed unnecessary key from line 277
+- Backend restarted with new SDK and environment loading fix
+
+---
+
+## Debugging Tips
+
+If you encounter similar issues:
+
+1. **API Key Errors**:
+   - Check which key is actually being used: Add logging in GeminiClient
+   - Verify `.env` file has correct key
+   - Force reload with `load_dotenv(override=True)`
+   - Check for environment variable caching issues
+
+2. **React Key Warnings**:
+   - Keys are only needed for direct children of map() operations
+   - Don't add keys to wrapper divs around mapped elements
+   - Use React DevTools to inspect component tree
+
+3. **Test with Simple Scripts**:
+   - Create standalone test scripts to isolate issues
+   - Test API keys directly with curl/requests
+   - Verify environment loading separately from main app
 
 ## Next Steps
 
 1. ✅ Backend restarted with updated code
-2. ⏳ Test image generation with real Gemini API
-3. ⏳ Update UI to match v2 design
-4. ⏳ Fix webhook signature verification (separate issue)
+2. ✅ Fixed environment variable loading issue
+3. ✅ Fixed React key warnings
+4. ✅ Documented actual working solutions
+5. ⏳ Test image generation with real user flow
+6. ⏳ Monitor for any remaining issues
 
 ---
 

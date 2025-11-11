@@ -53,6 +53,22 @@ export default function AuthCallback() {
                 .eq('id', session.user.id)
                 .single();
 
+              // MAINTENANCE MODE: Block new users from logging in
+              if (userError && userError.code === 'PGRST116') {
+                // User not found in database - this is a new user
+                console.log('[Auth Callback] New user detected - registration blocked during maintenance');
+
+                // Sign out the new user
+                await supabase.auth.signOut();
+
+                // Show maintenance message
+                setError('New user registration is temporarily disabled while we perform final testing. Please check back soon!');
+                setTimeout(() => {
+                  router.push('/login');
+                }, 5000);
+                return;
+              }
+
               // Extract Google profile data
               const googleMetadata = session.user.user_metadata;
               const avatarUrl = googleMetadata?.avatar_url || googleMetadata?.picture;
@@ -133,6 +149,17 @@ export default function AuthCallback() {
             .select('*')
             .eq('id', session.user.id)
             .single();
+
+          // MAINTENANCE MODE: Block new users from logging in
+          if (userError && userError.code === 'PGRST116') {
+            console.log('[Auth Callback] New user detected in existing session - registration blocked during maintenance');
+            await supabase.auth.signOut();
+            setError('New user registration is temporarily disabled while we perform final testing. Please check back soon!');
+            setTimeout(() => {
+              router.push('/login');
+            }, 5000);
+            return;
+          }
 
           if (userError) {
             console.error('[Auth Callback] Error fetching user for existing session:', userError);

@@ -9,7 +9,6 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { DesignStyle, type LandscapeStyle, YardArea } from '@/types/generation';
-import { SuggestedPrompts } from './SuggestedPrompts';
 
 interface StyleSelectorEnhancedProps {
   value: LandscapeStyle;
@@ -35,7 +34,7 @@ const StyleSelectorEnhanced: React.FC<StyleSelectorEnhancedProps> = ({
   onStylesChange,
   disabled = false,
   error,
-  selectedArea
+  selectedArea: _selectedArea // Reserved for v2 enhancement with suggested prompts
 }) => {
   const getStyleIcon = (styleId: DesignStyle): string => {
     const iconMap: Record<DesignStyle, string> = {
@@ -170,6 +169,7 @@ const StyleSelectorEnhanced: React.FC<StyleSelectorEnhancedProps> = ({
             >
               <div className="relative">
                 <button
+                  type="button"
                   onClick={() => handleStyleToggle(styleId)}
                   disabled={disabled || (mode === 'multi' && !selected && selectedStyles.length >= 3)}
                   className={`
@@ -300,26 +300,6 @@ const StyleSelectorEnhanced: React.FC<StyleSelectorEnhancedProps> = ({
               </span>
             </div>
           </div>
-
-          {/* Suggested prompts (v2 enhancement) */}
-          {selectedArea && (
-            <SuggestedPrompts
-              area={selectedArea}
-              style={value}
-              onSelect={(prompt) => {
-                // Append to existing prompt with proper formatting
-                const currentPrompt = customPrompt.trim();
-                const newPrompt = currentPrompt
-                  ? `${currentPrompt}, ${prompt.toLowerCase()}`
-                  : prompt;
-
-                // Only add if it won't exceed character limit
-                if (newPrompt.length <= 500 && !disabled) {
-                  onCustomPromptChange(newPrompt);
-                }
-              }}
-            />
-          )}
         </div>
       )}
     </div>

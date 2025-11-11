@@ -52,8 +52,8 @@ The environment setup has been **90% completed**. All infrastructure is in place
 - Webhook Secret: `whsec_11x5Hn4GLjDk...` (configured)
 
 **✅ Google Services (Complete):**
-- Gemini API Key: `AIzaSyBs3wIs35qdd_g9DZG...` (configured)
-- Google Maps API Key: `AIzaSyAQ7nT33eA0fOAGFXTm...` (configured)
+- Gemini API Key: `[REDACTED_GEMINI_KEY]` (configured)
+- Google Maps API Key: `[REDACTED_MAPS_KEY]` (configured)
 
 **✅ Vercel (Complete):**
 - Blob Storage Token: `vercel_blob_rw_gwWnUXKylGUCJwmz...` (configured)

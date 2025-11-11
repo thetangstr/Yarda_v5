@@ -11,7 +11,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { useEffect } from 'react';
+import { useEffect, forwardRef } from 'react';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -50,7 +50,7 @@ const TOAST_CONFIG: Record<ToastType, { icon: string; borderColor: string; bgCol
   },
 };
 
-function ToastItem({ toast, onDismiss }: ToastProps) {
+const ToastItem = forwardRef<HTMLDivElement, ToastProps>(({ toast, onDismiss }, ref) => {
   const config = TOAST_CONFIG[toast.type];
   const duration = toast.duration || 4000;
 
@@ -64,6 +64,7 @@ function ToastItem({ toast, onDismiss }: ToastProps) {
 
   return (
     <motion.div
+      ref={ref}
       initial={{ opacity: 0, y: -50, scale: 0.9 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -20, scale: 0.95 }}
@@ -92,7 +93,9 @@ function ToastItem({ toast, onDismiss }: ToastProps) {
       </div>
     </motion.div>
   );
-}
+});
+
+ToastItem.displayName = 'ToastItem';
 
 interface ToastContainerProps {
   toasts: Toast[];

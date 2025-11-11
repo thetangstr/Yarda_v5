@@ -274,7 +274,7 @@ Per user's explicit request: *"for feature tests, can you continue after vercel 
 
 ### Google Maps API Key
 **Status:** ✅ CONFIGURED
-**Key:** `AIzaSyAQ7nT33eA0fOAGFXTm634I7TMFcHQTJ9M`
+**Key:** `[REDACTED_MAPS_KEY]`
 **Location:** [backend/.env:38](backend/.env:38)
 
 ---

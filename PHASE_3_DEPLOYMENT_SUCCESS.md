@@ -72,8 +72,8 @@ Phase 3 multi-area generation backend has been **successfully deployed to Railwa
 ### Environment Variables (Railway Production)
 
 ```bash
-✅ GEMINI_API_KEY=AIzaSyBs3wIs35qdd_g9DZGQFAELo3B5cJNYsbk
-✅ GOOGLE_MAPS_API_KEY=AIzaSyAQ7nT33eA0fOAGFXTm634I7TMFcHQTJ9M
+✅ GEMINI_API_KEY=[REDACTED_GEMINI_KEY]
+✅ GOOGLE_MAPS_API_KEY=[REDACTED_MAPS_KEY]
 ✅ DATABASE_URL=postgresql://postgres.gxlmnjnjvlslijiowamn:***@aws-1-us-east-2.pooler.supabase.com:6543/postgres
 ✅ BLOB_READ_WRITE_TOKEN=vercel_blob_rw_***
 ✅ STRIPE_SECRET_KEY=sk_test_***
