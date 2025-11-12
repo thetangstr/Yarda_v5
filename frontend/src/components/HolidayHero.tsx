@@ -12,6 +12,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import BeforeAfterSlider from '@/components/BeforeAfterSlider';
 
 export default function HolidayHero() {
   const [isVisible, setIsVisible] = useState(false);
@@ -153,7 +154,7 @@ export default function HolidayHero() {
 
           {/* Right column: Before/After visual */}
           <div className="relative">
-            {/* Animated before/after showcase */}
+            {/* Interactive before/after slider */}
             <div
               data-testid="hero-animation"
               className="
@@ -162,33 +163,13 @@ export default function HolidayHero() {
                 border-4 border-white/20
               "
             >
-              {/* Placeholder for video/animation */}
-              <div className="relative aspect-[4/3] bg-gradient-to-br from-slate-800 to-slate-900">
-                {/* Mock before/after labels */}
-                <div className="absolute inset-0 flex">
-                  {/* Before side */}
-                  <div className="flex-1 relative flex items-center justify-center border-r-2 border-white/30">
-                    <div className="absolute top-4 left-4 px-3 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white text-xs font-bold">
-                      BEFORE
-                    </div>
-                    <div className="text-6xl opacity-50">🏠</div>
-                  </div>
-
-                  {/* After side */}
-                  <div className="flex-1 relative flex items-center justify-center">
-                    <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white text-xs font-bold">
-                      AFTER
-                    </div>
-                    <div className="text-6xl">🎄✨</div>
-                  </div>
-                </div>
-
-                {/* Animated divider */}
-                <div className="absolute inset-y-0 left-1/2 w-1 bg-white/50 animate-pulse" />
-              </div>
+              <BeforeAfterSlider
+                beforeImage="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&h=600&fit=crop"
+                afterImage="https://images.unsplash.com/photo-1512156260244-6ac8b4c5e8b2?w=800&h=600&fit=crop"
+              />
 
               {/* Floating badge */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold text-sm shadow-lg animate-bounce">
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold text-sm shadow-lg animate-bounce z-10">
                 ⚡ Generated in 10 seconds
               </div>
             </div>
