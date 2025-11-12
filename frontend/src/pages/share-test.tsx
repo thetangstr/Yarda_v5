@@ -94,15 +94,13 @@ export default function ShareTestPage() {
 
     // Reset results
     setTestResults({
-      x: { platform: 'x', success: false, loading: true, copied: false },
       facebook: { platform: 'facebook', success: false, loading: true, copied: false },
       instagram: { platform: 'instagram', success: false, loading: true, copied: false },
-      pinterest: { platform: 'pinterest', success: false, loading: true, copied: false },
       tiktok: { platform: 'tiktok', success: false, loading: true, copied: false },
     });
 
     // Test each platform
-    const platforms: SharePlatform[] = ['x', 'facebook', 'instagram', 'pinterest', 'tiktok'];
+    const platforms: SharePlatform[] = ['facebook', 'instagram', 'tiktok'];
 
     for (const platform of platforms) {
       try {
