@@ -72,7 +72,7 @@ export default function ShareTestPage() {
       const response = await holidayAPI.listGenerations(50, 0);
 
       // Filter to only completed generations with before/after images
-      const completed = response.data.generations.filter(
+      const completed = response.generations.filter(
         (gen: any) => gen.status === 'completed' && gen.before_after_image_url
       );
 
