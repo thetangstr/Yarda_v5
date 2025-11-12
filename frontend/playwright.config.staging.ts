@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 /**
  * Playwright configuration for Staging Environment Testing
  *
- * Frontend: https://yarda-v5-frontend-git-006-magic-link-auth-thetangstrs-projects.vercel.app
+ * Frontend: https://yarda-v5-frontend-git-007-holiday-decorator-thetangstrs-projects.vercel.app
  * Backend: https://yarda-api-production.up.railway.app
  *
  * Authentication: Uses global setup to create authenticated session once,
@@ -36,7 +36,7 @@ export default defineConfig({
   /* Shared settings for all the projects below */
   use: {
     /* Base URL for staging - clean URL without share parameter */
-    baseURL: 'https://yarda-v5-frontend-git-006-magic-link-auth-thetangstrs-projects.vercel.app',
+    baseURL: 'https://yarda-v5-frontend-git-007-holiday-decorator-thetangstrs-projects.vercel.app',
 
     /* Use authenticated state from global setup */
     storageState: '.auth/staging-user.json',
