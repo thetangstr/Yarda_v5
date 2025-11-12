@@ -114,8 +114,8 @@ export default function ShareTestPage() {
           [platform]: {
             platform,
             success: true,
-            shareUrl: response.data.share_url,
-            trackingLink: response.data.tracking_link,
+            shareUrl: response.share_url,
+            trackingLink: response.tracking_link,
             loading: false,
             copied: false,
           },
