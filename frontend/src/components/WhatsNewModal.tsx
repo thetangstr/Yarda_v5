@@ -117,10 +117,10 @@ export default function WhatsNewModal({ onDismiss, isOpen }: WhatsNewModalProps)
                       <span className="text-2xl">🎁</span>
                       <div>
                         <p className="font-semibold text-green-900 mb-1">
-                          1 Free Credit Included
+                          Earn Free Credits
                         </p>
                         <p className="text-sm text-green-700">
-                          Generate your first holiday design on us! Share on social media to earn more credits.
+                          Share your decorated home on social media to earn credits. Each share gives you 1 credit (max 3/day)!
                         </p>
                       </div>
                     </div>

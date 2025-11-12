@@ -26,6 +26,7 @@ from uuid import UUID, uuid4
 
 from ..db.connection_pool import DatabasePool
 from ..services.holiday_credit_service import HolidayCreditService
+from ..services.token_service import TokenService
 from ..services.maps_service import MapsService
 from ..services.gemini_client import GeminiClient
 from ..services.storage_service import BlobStorageService
@@ -38,14 +39,20 @@ class HolidayGenerationService:
     """
     Service for holiday decoration generation workflow.
 
-    Uses holiday credits exclusively (no trial/token/subscription hierarchy).
-    Simpler payment model focused on viral sharing economy.
+    Credit hierarchy:
+    1. Holiday credits (from signup bonus or social sharing)
+    2. Token credits (fallback if holiday credits insufficient)
+    3. Fail with insufficient credits error
+
+    This allows users to use their purchased tokens for holiday generations
+    if they run out of holiday-specific credits.
     """
 
     def __init__(
         self,
         db_pool: DatabasePool,
         credit_service: HolidayCreditService,
+        token_service: TokenService,
         maps_service: MapsService,
         gemini_client: GeminiClient,
         storage_service: BlobStorageService,
@@ -56,12 +63,14 @@ class HolidayGenerationService:
         Args:
             db_pool: Database connection pool
             credit_service: Holiday credit service for atomic deductions
+            token_service: Token service for fallback credit deductions
             maps_service: Google Maps service for geocoding/Street View
             gemini_client: Gemini AI client for image generation
             storage_service: Vercel Blob storage service
         """
         self.db = db_pool
         self.credit_service = credit_service
+        self.token_service = token_service
         self.maps_service = maps_service
         self.gemini = gemini_client
         self.storage = storage_service
@@ -103,28 +112,58 @@ class HolidayGenerationService:
         try:
             # Step 1: Deduct credit atomically BEFORE generation
             # CRITICAL: Deduct first to prevent free generations on failure
+            # Credit hierarchy: Holiday credits -> Token credits -> Fail
+
+            credit_type_used = None  # Track which credit type was used for refunds
+
+            # Try holiday credits first
             deduction_result = await self.credit_service.deduct_credit(user_id)
 
-            if not deduction_result.success:
-                raise ValueError(
-                    f"Insufficient holiday credits. "
-                    f"Current balance: {deduction_result.credits_remaining}"
+            if deduction_result.success:
+                credit_type_used = "holiday"
+                logger.info(
+                    f"Holiday credit deducted for generation {generation_id}. "
+                    f"Remaining: {deduction_result.credits_remaining}"
                 )
+            else:
+                # Holiday credits insufficient, try token credits as fallback
+                logger.info(f"Holiday credits insufficient for user {user_id}, trying token credits")
 
-            logger.info(
-                f"Credit deducted for generation {generation_id}. "
-                f"Remaining: {deduction_result.credits_remaining}"
-            )
+                token_result = await self.token_service.deduct_token_atomic(user_id)
+                success, token_balance, _ = token_result
+
+                if success:
+                    credit_type_used = "token"
+                    logger.info(
+                        f"Token credit deducted for holiday generation {generation_id}. "
+                        f"Token balance: {token_balance}"
+                    )
+                else:
+                    # Both credit types insufficient
+                    raise ValueError(
+                        f"Insufficient credits. "
+                        f"Holiday credits: {deduction_result.credits_remaining}, "
+                        f"Token balance: {token_balance}"
+                    )
 
             # Step 2: Geocode address with accuracy validation
             geocode_result = await self.maps_service.geocode_address(address)
             if not geocode_result:
-                # Refund credit on geocoding failure
-                await self.credit_service.grant_credit(
-                    user_id,
-                    amount=1,
-                    reason="geocoding_failure_refund"
-                )
+                # Refund the credit type that was used
+                if credit_type_used == "holiday":
+                    await self.credit_service.grant_credit(
+                        user_id,
+                        amount=1,
+                        reason="geocoding_failure_refund"
+                    )
+                elif credit_type_used == "token":
+                    # Refund token credit
+                    await self.token_service.add_tokens(
+                        user_id,
+                        amount=1,
+                        transaction_type="refund",
+                        description="Holiday generation geocoding failure refund"
+                    )
                 raise RuntimeError(f"Failed to geocode address: {address}")
 
             coords = geocode_result.coordinates
@@ -147,12 +186,21 @@ class HolidayGenerationService:
             )
 
             if not street_view_bytes:
-                # Refund credit on Street View failure
-                await self.credit_service.grant_credit(
-                    user_id,
-                    amount=1,
-                    reason="street_view_failure_refund"
-                )
+                # Refund the credit type that was used
+                if credit_type_used == "holiday":
+                    await self.credit_service.grant_credit(
+                        user_id,
+                        amount=1,
+                        reason="street_view_failure_refund"
+                    )
+                elif credit_type_used == "token":
+                    # Refund token credit
+                    await self.token_service.add_tokens(
+                        user_id,
+                        amount=1,
+                        transaction_type="refund",
+                        description="Holiday generation Street View failure refund"
+                    )
                 raise RuntimeError(
                     f"Street View not available for address: {address}. "
                     f"Try a different address or adjust the heading."
@@ -186,6 +234,7 @@ class HolidayGenerationService:
                     street_view_bytes=street_view_bytes,
                     style=style,
                     original_image_url=original_image_url,
+                    credit_type_used=credit_type_used,
                 )
             )
 
@@ -207,6 +256,7 @@ class HolidayGenerationService:
         street_view_bytes: bytes,
         style: str,
         original_image_url: str,
+        credit_type_used: str,
     ):
         """
         Generate decorated image via Gemini AI.
@@ -220,6 +270,7 @@ class HolidayGenerationService:
             street_view_bytes: Original Street View image bytes
             style: Decoration style
             original_image_url: URL of original image
+            credit_type_used: Type of credit used ('holiday' or 'token') for refunds
         """
         try:
             # Update status to processing
@@ -293,12 +344,21 @@ class HolidayGenerationService:
                 str(e)
             )
 
-            # Refund credit on generation failure
-            await self.credit_service.grant_credit(
-                user_id,
-                amount=1,
-                reason="generation_failure_refund"
-            )
+            # Refund the credit type that was used
+            if credit_type_used == "holiday":
+                await self.credit_service.grant_credit(
+                    user_id,
+                    amount=1,
+                    reason="generation_failure_refund"
+                )
+            elif credit_type_used == "token":
+                # Refund token credit
+                await self.token_service.add_tokens(
+                    user_id,
+                    amount=1,
+                    transaction_type="refund",
+                    description="Holiday generation failure refund"
+                )
 
             logger.info(f"Refunded 1 credit to user {user_id} due to generation failure")
 

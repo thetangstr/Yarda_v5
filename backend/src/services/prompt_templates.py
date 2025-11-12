@@ -104,6 +104,33 @@ STYLE_PROMPTS: Dict[str, str] = {
 - Sustainable irrigation (drip systems, rainwater harvesting)
 
 **Important:** Preserve the house structure exactly as shown.""",
+
+    "holiday_decorator": """Transform this residential property into a festive holiday wonderland:
+
+**Design Philosophy:**
+- Add festive holiday decorations to the existing house and landscape
+- Create a magical winter atmosphere with lights and ornaments
+- Preserve the house structure while adding seasonal decorations
+
+**Key Elements to Add:**
+- String lights along rooflines, eaves, gutters, and architectural features
+- Wreaths on doors and windows
+- Holiday inflatables or lawn decorations
+- Illuminated pathway markers or candy canes
+- Light-up trees, bushes, and garden features
+- Projected patterns or effects on walls
+- Garland on railings, columns, and fences
+- Holiday-themed yard ornaments
+
+**Important Instructions:**
+- KEEP the original house structure, walls, roof, and architecture intact
+- ONLY ADD decorations on top of existing elements
+- Make decorations HIGHLY VISIBLE and PROMINENT in the image
+- Ensure the transformation is DRAMATIC and FESTIVE
+- Create a warm, inviting holiday atmosphere
+- Decorations should be bright, colorful, and eye-catching
+
+**CRITICAL:** The decorated version must look significantly more festive than the original while maintaining the same house structure.""",
 }
 
 

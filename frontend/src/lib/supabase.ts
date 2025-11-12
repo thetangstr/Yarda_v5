@@ -42,10 +42,23 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
  * @param redirectTo - Optional redirect URL after successful authentication
  */
 export async function signInWithGoogle(redirectTo?: string) {
+  // Always redirect to /auth/callback for OAuth handling
+  // Pass the intended final destination as a query parameter
+  let callbackUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/auth/callback`
+    : '/auth/callback';
+
+  // Add the redirect parameter if provided
+  if (redirectTo) {
+    const url = new URL(callbackUrl, window.location.origin);
+    url.searchParams.set('redirect', redirectTo);
+    callbackUrl = url.toString();
+  }
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: redirectTo || (typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : '/auth/callback'),
+      redirectTo: callbackUrl,
       queryParams: {
         access_type: 'offline',
         prompt: 'consent',

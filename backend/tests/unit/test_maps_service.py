@@ -29,12 +29,12 @@ class TestGeocodeAddress:
     """T014: Unit tests for MapsService.geocode_address()"""
 
     @pytest.mark.asyncio
-    async def test_geocode_valid_address_returns_coordinates(self, maps_service):
-        """Test that valid address returns Coordinates object"""
+    async def test_geocode_valid_address_returns_geocode_result(self, maps_service):
+        """Test that valid address returns GeocodeResult with ROOFTOP accuracy"""
         # Given: A valid residential address
         address = "1600 Amphitheatre Parkway, Mountain View, CA 94043"
 
-        # Mock aiohttp response
+        # Mock aiohttp response with ROOFTOP accuracy
         mock_response = {
             "status": "OK",
             "results": [{
@@ -42,8 +42,16 @@ class TestGeocodeAddress:
                     "location": {
                         "lat": 37.4224764,
                         "lng": -122.0842499
-                    }
-                }
+                    },
+                    "location_type": "ROOFTOP"
+                },
+                "formatted_address": "1600 Amphitheatre Pkwy, Mountain View, CA 94043, USA",
+                "address_components": [
+                    {"types": ["street_number"], "long_name": "1600"},
+                    {"types": ["route"], "long_name": "Amphitheatre Parkway"},
+                    {"types": ["locality"], "long_name": "Mountain View"}
+                ],
+                "place_id": "ChIJ2eUgeAK6j4ARbn5u_wAGqWA"
             }]
         }
 
@@ -54,11 +62,15 @@ class TestGeocodeAddress:
             # When: Geocoding the address
             result = await maps_service.geocode_address(address)
 
-            # Then: Should return Coordinates
+            # Then: Should return GeocodeResult with accuracy metadata
             assert result is not None
-            assert isinstance(result, Coordinates)
-            assert result.lat == 37.4224764
-            assert result.lng == -122.0842499
+            from src.services.maps_service import GeocodeResult
+            assert isinstance(result, GeocodeResult)
+            assert result.coordinates.lat == 37.4224764
+            assert result.coordinates.lng == -122.0842499
+            assert result.location_type == "ROOFTOP"
+            assert result.has_street_number is True
+            assert "1600" in result.formatted_address
 
     @pytest.mark.asyncio
     async def test_geocode_invalid_address_returns_none(self, maps_service):

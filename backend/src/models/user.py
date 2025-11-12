@@ -168,6 +168,7 @@ class User(BaseModel):
 
     # Holiday Decorator Credits (Feature 007)
     holiday_credits: Optional[int] = Field(default=0, ge=0, description="Holiday decorator credits")
+    holiday_credits_earned: Optional[int] = Field(default=0, ge=0, description="Total holiday credits earned (lifetime)")
 
     # Subscription
     subscription_tier: Optional[str] = Field(default=None)

@@ -389,6 +389,8 @@ async def login(request: LoginRequest):
                 trial_used,
                 subscription_tier,
                 subscription_status,
+                holiday_credits,
+                holiday_credits_earned,
                 created_at
             FROM users
             WHERE id = $1
@@ -416,6 +418,8 @@ async def login(request: LoginRequest):
                 trial_used=user["trial_used"],
                 subscription_tier=user["subscription_tier"],
                 subscription_status=user["subscription_status"],
+                holiday_credits=user["holiday_credits"],
+                holiday_credits_earned=user["holiday_credits_earned"],
                 created_at=user["created_at"]
             )
         )

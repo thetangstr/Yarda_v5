@@ -207,6 +207,10 @@ class MultiAreaGenerationResponse(BaseModel):
     address: Optional[str] = Field(None, description="Property address")
     total_cost: int = Field(ge=1, description="Total cost in credits/tokens")
     payment_method: PaymentType = Field(description="Payment method used (trial/token/subscription)")
+    credits_remaining: Optional[Dict[str, int]] = Field(
+        None,
+        description="Remaining credits after deduction: {'trial': N, 'token': N, 'holiday': N}"
+    )
     areas: List[AreaStatusResponse] = Field(description="Status for each requested area")
     source_images: Optional[List[Dict[str, Any]]] = Field(None, description="Source images (Street View/Satellite)")
     created_at: datetime = Field(description="Request creation timestamp")

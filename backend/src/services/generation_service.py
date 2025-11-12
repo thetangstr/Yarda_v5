@@ -248,8 +248,9 @@ class GenerationService:
                     total_cost,
                     payment_method,
                     tokens_deducted,
+                    image_source,
                     created_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
                 RETURNING id
             """,
                 user_id,
@@ -259,7 +260,8 @@ class GenerationService:
                 payment_method.value,
                 num_areas,
                 payment_method.value,
-                num_areas if payment_method == PaymentType.TOKEN else 0
+                num_areas if payment_method == PaymentType.TOKEN else 0,
+                'google_street_view'  # Default to Google Street View as image source
             )
 
             # Step 3: Create generation_areas records for each area

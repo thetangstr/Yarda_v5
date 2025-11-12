@@ -23,6 +23,17 @@ class Coordinates:
 
 
 @dataclass
+class GeocodeResult:
+    """Geocoding result with accuracy metadata"""
+    coordinates: Coordinates
+    location_type: str  # ROOFTOP, RANGE_INTERPOLATED, GEOMETRIC_CENTER, APPROXIMATE
+    formatted_address: str
+    address_components: list
+    place_id: str
+    has_street_number: bool = False
+
+
+@dataclass
 class StreetViewMetadata:
     """Metadata from Street View availability check"""
     status: str  # OK, ZERO_RESULTS, NOT_FOUND, ERROR
@@ -69,6 +80,41 @@ def calculate_heading(from_coords: Coordinates, to_coords: Coordinates) -> int:
     return int(heading)
 
 
+def validate_address_components(address_components: list) -> dict:
+    """
+    Validate that geocoding result includes key address components.
+
+    Args:
+        address_components: List of address component dicts from Geocoding API
+
+    Returns:
+        dict with:
+            - has_street_number: bool - Whether street number component exists
+            - street_number: Optional[str] - The street number if present
+            - route: Optional[str] - The street/route name if present
+            - locality: Optional[str] - The city/locality if present
+    """
+    component_map = {}
+
+    for component in address_components:
+        types = component.get("types", [])
+        long_name = component.get("long_name")
+
+        if "street_number" in types:
+            component_map["street_number"] = long_name
+        elif "route" in types:
+            component_map["route"] = long_name
+        elif "locality" in types:
+            component_map["locality"] = long_name
+
+    return {
+        "has_street_number": "street_number" in component_map,
+        "street_number": component_map.get("street_number"),
+        "route": component_map.get("route"),
+        "locality": component_map.get("locality")
+    }
+
+
 class MapsService:
     """
     Google Maps Platform integration service for property image retrieval.
@@ -93,15 +139,18 @@ class MapsService:
         if not self.api_key:
             raise ValueError("GOOGLE_MAPS_API_KEY environment variable not set")
 
-    async def geocode_address(self, address: str) -> Optional[Coordinates]:
+    async def geocode_address(self, address: str) -> Optional[GeocodeResult]:
         """
-        Convert address to coordinates using Geocoding API.
+        Convert address to coordinates using Geocoding API with accuracy validation.
+
+        Prefers ROOFTOP results (building-level precision) over APPROXIMATE results.
+        Returns GeocodeResult with location_type for accuracy tracking.
 
         Args:
             address: Full street address
 
         Returns:
-            Coordinates object with lat/lng, or None if address invalid
+            GeocodeResult with coordinates and accuracy metadata, or None if address invalid
 
         Raises:
             MapsServiceError: If API quota exceeded or network error
@@ -133,10 +182,70 @@ class MapsService:
                     # Handle different status codes
                     if status == "OK":
                         results = data.get("results", [])
-                        if results:
-                            location = results[0]["geometry"]["location"]
-                            return Coordinates(lat=location["lat"], lng=location["lng"])
-                        return None
+                        if not results:
+                            return None
+
+                        # CRITICAL FIX: Prefer ROOFTOP results for building-level precision
+                        # Try to find ROOFTOP result first (most accurate)
+                        rooftop_result = None
+                        for result in results:
+                            location_type = result.get("geometry", {}).get("location_type")
+                            if location_type == "ROOFTOP":
+                                rooftop_result = result
+                                break
+
+                        # Use ROOFTOP if available, otherwise fall back to first result
+                        best_result = rooftop_result if rooftop_result else results[0]
+
+                        # Extract location and metadata
+                        location = best_result["geometry"]["location"]
+                        location_type = best_result["geometry"].get("location_type", "UNKNOWN")
+                        formatted_address = best_result.get("formatted_address", "")
+                        address_components = best_result.get("address_components", [])
+                        place_id = best_result.get("place_id", "")
+
+                        # Validate address components
+                        validation = validate_address_components(address_components)
+
+                        # Log accuracy level for monitoring
+                        logger.info(
+                            "geocoding_accuracy",
+                            address=address,
+                            location_type=location_type,
+                            has_street_number=validation["has_street_number"],
+                            formatted_address=formatted_address,
+                            result_count=len(results),
+                            rooftop_available=rooftop_result is not None
+                        )
+
+                        # Warn if accuracy is poor
+                        if location_type in ["APPROXIMATE", "GEOMETRIC_CENTER"]:
+                            logger.warning(
+                                "geocoding_low_accuracy",
+                                address=address,
+                                location_type=location_type,
+                                has_street_number=validation["has_street_number"],
+                                message="Low geocoding accuracy - Street View may show wrong house"
+                            )
+
+                        # Warn if street number is missing
+                        if not validation["has_street_number"]:
+                            logger.warning(
+                                "missing_street_number",
+                                address=address,
+                                location_type=location_type,
+                                formatted_address=formatted_address,
+                                message="Street number not found in geocoding result"
+                            )
+
+                        return GeocodeResult(
+                            coordinates=Coordinates(lat=location["lat"], lng=location["lng"]),
+                            location_type=location_type,
+                            formatted_address=formatted_address,
+                            address_components=address_components,
+                            place_id=place_id,
+                            has_street_number=validation["has_street_number"]
+                        )
 
                     elif status == "ZERO_RESULTS":
                         return None
@@ -525,15 +634,34 @@ class MapsService:
         """
         logger.info("get_property_images_start", address=address, area=area)
 
-        # Step 1: Geocode address
-        coords = await self.geocode_address(address)
-        if not coords:
+        # Step 1: Geocode address with accuracy validation
+        geocode_result = await self.geocode_address(address)
+        if not geocode_result:
             raise MapsServiceError(
                 "invalid_address",
                 f"Unable to geocode address: {address}"
             )
 
-        logger.info("address_geocoded", lat=coords.lat, lng=coords.lng)
+        coords = geocode_result.coordinates
+
+        logger.info(
+            "address_geocoded",
+            lat=coords.lat,
+            lng=coords.lng,
+            location_type=geocode_result.location_type,
+            has_street_number=geocode_result.has_street_number,
+            formatted_address=geocode_result.formatted_address
+        )
+
+        # Log accuracy warning if geocoding is not precise
+        if geocode_result.location_type != "ROOFTOP":
+            logger.warning(
+                "street_view_accuracy_warning",
+                address=address,
+                location_type=geocode_result.location_type,
+                has_street_number=geocode_result.has_street_number,
+                message=f"Geocoding accuracy is {geocode_result.location_type} (not ROOFTOP) - Street View may show wrong house"
+            )
 
         street_view_bytes = None
         street_view_metadata = None

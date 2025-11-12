@@ -28,6 +28,7 @@ from src.services.generation_service import GenerationService
 from src.services.gemini_client import GeminiClient
 from src.services.storage_service import BlobStorageService
 from src.services.maps_service import MapsService, MapsServiceError
+from src.services.credit_service import CreditService
 from src.models.generation import (
     ImageSource,
     CreateGenerationRequest,
@@ -283,6 +284,7 @@ async def create_multi_area_generation(
         print(f"✅ STEP 1: Initializing services...")
         token_service = TokenService(db_pool)
         subscription_service = SubscriptionService(db_pool)
+        credit_service = CreditService(db_pool)
         gemini_client = GeminiClient()
         storage_service = BlobStorageService()
 
@@ -491,12 +493,25 @@ async def create_multi_area_generation(
                     completed_at=area_record['completed_at']
                 ))
 
-        # Step 5: Return MultiAreaGenerationResponse
+        # Step 5: Fetch remaining credits after payment deduction
+        # This allows frontend to update credit display immediately without separate API call
+        try:
+            credits_remaining = await credit_service.get_all_balances(user.id)
+        except Exception as e:
+            logger.warning(
+                "failed_to_fetch_credits_remaining",
+                user_id=str(user.id),
+                error=str(e)
+            )
+            credits_remaining = None
+
+        # Step 6: Return MultiAreaGenerationResponse
         return MultiAreaGenerationResponse(
             id=generation_id,
             status=GenerationStatus.PENDING,
             total_cost=generation_data['total_cost'],
             payment_method=generation_data['payment_method'],
+            credits_remaining=credits_remaining,
             areas=areas_response,
             created_at=generation_data['created_at'],
             start_processing_at=None,
@@ -617,12 +632,12 @@ async def create_generation(
                 # Initialize MapsService
                 maps_service = MapsService()
 
-                # Step 3a: Geocode address to get coordinates
+                # Step 3a: Geocode address to get coordinates with accuracy validation
                 print(f"✅ STEP 3a: Geocoding address...")
                 print(f"   Address: {address}")
-                coords = await maps_service.geocode_address(address)
+                geocode_result = await maps_service.geocode_address(address)
 
-                if coords is None:
+                if geocode_result is None:
                     print(f"❌ STEP 3a FAILED: Address could not be geocoded")
                     # Address could not be geocoded - no payment deducted yet, so no refund needed
                     logger.error(
@@ -633,6 +648,20 @@ async def create_generation(
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=f"Could not find address: {address}. Please verify the address or upload an image manually."
+                    )
+
+                coords = geocode_result.coordinates
+
+                # Log geocoding accuracy
+                print(f"   Location type: {geocode_result.location_type}")
+                print(f"   Has street number: {geocode_result.has_street_number}")
+                if geocode_result.location_type != "ROOFTOP":
+                    logger.warning(
+                        "generation_geocoding_accuracy",
+                        address=address,
+                        location_type=geocode_result.location_type,
+                        has_street_number=geocode_result.has_street_number,
+                        message="Non-ROOFTOP geocoding may affect image accuracy"
                     )
 
                 # Step 3b: Check Street View metadata (FREE request)
@@ -850,6 +879,7 @@ async def get_generation(
     **Requirements**:
     - FR-010: Progress persists across page refresh
     - FR-014: Background processing continues during page refresh
+    - Credit Systems Consolidation: Returns credits_remaining for frontend sync
 
     Args:
         generation_id: Generation UUID
@@ -862,6 +892,8 @@ async def get_generation(
         HTTPException 404: Generation not found
         HTTPException 403: Not authorized to view generation
     """
+    # Initialize credit service for fetching remaining balances
+    credit_service = CreditService(db_pool)
     # Fetch generation
     generation = await db_pool.fetchrow("""
         SELECT
@@ -965,6 +997,18 @@ async def get_generation(
         for img in source_images:
             print(f"     - {img['image_type']}: {img['image_url'][:50]}...")
 
+    # Fetch remaining credits for frontend sync (optional, non-blocking)
+    try:
+        credits_remaining = await credit_service.get_all_balances(user.id)
+    except Exception as e:
+        logger.warning(
+            "failed_to_fetch_credits_remaining_on_polling",
+            user_id=str(user.id),
+            generation_id=str(generation_id),
+            error=str(e)
+        )
+        credits_remaining = None
+
     # Return MultiAreaGenerationResponse with source_images
     response = MultiAreaGenerationResponse(
         id=generation['id'],
@@ -973,6 +1017,7 @@ async def get_generation(
         address=generation.get('address'),
         total_cost=generation['total_cost'] if generation['total_cost'] else len(areas_response),
         payment_method=generation['payment_method'],
+        credits_remaining=credits_remaining,
         areas=areas_response,
         source_images=source_images if source_images else None,
         created_at=generation['created_at'],

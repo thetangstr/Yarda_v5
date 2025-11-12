@@ -19,7 +19,7 @@ from decimal import Decimal
 
 HolidayStyle = Literal['classic', 'modern', 'over_the_top']
 GenerationStatus = Literal['pending', 'processing', 'completed', 'failed']
-SharePlatform = Literal['instagram', 'facebook', 'tiktok']
+SharePlatform = Literal['x', 'facebook', 'instagram', 'pinterest', 'tiktok']
 TransactionType = Literal['signup_bonus', 'social_share', 'generation', 'admin_grant', 'refund']
 
 

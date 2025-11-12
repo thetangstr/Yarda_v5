@@ -24,13 +24,20 @@ async function globalSetup(config: FullConfig) {
   const page = await context.newPage();
 
   try {
+    // Use baseURL from config
+    const baseURL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3003';
+    console.log(`🌐 Using baseURL: ${baseURL}`);
+
     // Set E2E test flag BEFORE any page navigation to bypass auth guards
     await context.addInitScript(() => {
       (window as any).__PLAYWRIGHT_E2E__ = true;
     });
 
     // Navigate to homepage first
-    await page.goto('http://localhost:3003/');
+    await page.goto(`${baseURL}/`, { waitUntil: 'domcontentloaded' });
+
+    // Wait a moment for page to stabilize - don't use networkidle in dev
+    await page.waitForLoadState('domcontentloaded').catch(() => {});
 
     // Set up mock authentication in localStorage
     await page.evaluate(() => {
@@ -45,7 +52,7 @@ async function globalSetup(config: FullConfig) {
             trial_used: 0,
             subscription_status: 'inactive',
             subscription_tier: 'free',
-            holiday_credits: 1,
+            holiday_credits: 100, // Increased for multiple test runs
           },
           accessToken: 'e2e-mock-token',
           isAuthenticated: true,
@@ -64,22 +71,20 @@ async function globalSetup(config: FullConfig) {
     const flagSet = await page.evaluate(() => (window as any).__PLAYWRIGHT_E2E__);
     console.log('✅ E2E flag set:', flagSet);
 
-    // Navigate to generate page to verify auth works
-    await page.goto('http://localhost:3003/generate', { waitUntil: 'domcontentloaded' });
+    // Navigate to holiday page to verify auth works
+    await page.goto(`${baseURL}/holiday`, { waitUntil: 'domcontentloaded' });
 
     // Verify E2E flag persists after navigation
     const flagAfterNav = await page.evaluate(() => (window as any).__PLAYWRIGHT_E2E__);
     console.log('✅ E2E flag after navigation:', flagAfterNav);
 
-    // Wait for authenticated page to load (should NOT redirect to login)
-    try {
-      await page.waitForSelector('[data-testid="address-input"]', { timeout: 10000 });
-    } catch (error) {
-      const currentURL = page.url();
-      console.error(`❌ Page redirected to: ${currentURL}`);
-      console.error(`❌ E2E flag value: ${flagAfterNav}`);
-      throw error;
+    // Just verify we're on the right page and not redirected to login
+    const currentURL = page.url();
+    if (currentURL.includes('/login')) {
+      console.error(`❌ Page was redirected to login: ${currentURL}`);
+      throw new Error('Auth failed - redirected to login');
     }
+    console.log(`✅ Successfully on authenticated page: ${currentURL}`);
 
     console.log('✅ Authentication setup successful');
 

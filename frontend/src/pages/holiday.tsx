@@ -36,7 +36,8 @@ import { useCredits } from '@/lib/creditSync';
 import HolidayHero from '@/components/HolidayHero';
 import StreetViewRotator from '@/components/StreetViewRotator';
 import StyleSelector, { HolidayStyle } from '@/components/StyleSelector';
-import GoogleSignInButton from '@/components/GoogleSignInButton';
+import { AuthOptions } from '@/components/auth/AuthOptions';
+import SocialShareModal from '@/components/holiday/SocialShareModal';
 
 export default function HolidayDecoratorPage() {
   const { user, isAuthenticated, _hasHydrated } = useUserStore();
@@ -55,9 +56,12 @@ export default function HolidayDecoratorPage() {
 
   // Generation state
   const [isGenerating, setIsGenerating] = useState(false);
-  const [_generationId, setGenerationId] = useState<string | null>(null);
+  const [generationId, setGenerationId] = useState<string | null>(null);
   const [generationStatus, setGenerationStatus] = useState<string | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
+
+  // Share modal state
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   // Results state
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -187,13 +191,11 @@ export default function HolidayDecoratorPage() {
 
           {/* Sign-in prompt */}
           <div className="max-w-md mx-auto mt-12 p-8 bg-white rounded-xl shadow-lg">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4 text-center">
-              Sign in to Get Started
-            </h2>
-            <p className="text-gray-600 mb-6 text-center">
-              Transform your home into a winter wonderland! New users get 1 free credit. 🎄
-            </p>
-            <GoogleSignInButton redirectTo="/holiday" />
+            <AuthOptions
+              redirectTo="/holiday"
+              title="Sign in to Get Started"
+              subtitle="Transform your home into a winter wonderland! New users get 1 free credit. 🎄"
+            />
           </div>
         </div>
       </>
@@ -379,6 +381,12 @@ export default function HolidayDecoratorPage() {
                   📥 Download Image
                 </a>
                 <button
+                  onClick={() => setIsShareModalOpen(true)}
+                  className="px-6 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition"
+                >
+                  📲 Share & Earn Credit
+                </button>
+                <button
                   onClick={resetForm}
                   className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition"
                 >
@@ -396,6 +404,21 @@ export default function HolidayDecoratorPage() {
           )}
         </div>
       </div>
+
+      {/* Social Share Modal */}
+      {generationId && beforeAfterImageUrl && (
+        <SocialShareModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          generationId={generationId}
+          imageUrl={beforeAfterImageUrl}
+          onShareComplete={() => {
+            // Refresh credits after successful share
+            refreshCredits();
+            setIsShareModalOpen(false);
+          }}
+        />
+      )}
     </>
   );
 }

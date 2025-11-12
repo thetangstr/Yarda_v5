@@ -15,24 +15,31 @@ Requirements:
 """
 
 from uuid import UUID
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from src.models.user import User
 from src.models.holiday import (
     HolidayGenerationRequest,
     HolidayGenerationResponse,
     HolidayGenerationListResponse,
-    HolidayCreditsResponse
+    HolidayCreditsResponse,
+    SharePlatform,
+    ShareRequest,
+    ShareResponse,
+    ShareListResponse
 )
 from src.api.dependencies import get_current_user, require_verified_email
 from src.services.holiday_credit_service import HolidayCreditService
 from src.services.holiday_generation_service import HolidayGenerationService
+from src.services.token_service import TokenService
 from src.services.maps_service import MapsService
 from src.services.gemini_client import GeminiClient
 from src.services.storage_service import BlobStorageService
+from src.services.share_service import ShareService
 from src.db.connection_pool import db_pool
 import structlog
 
@@ -50,9 +57,15 @@ def get_credit_service() -> HolidayCreditService:
     return HolidayCreditService(db_pool)
 
 
+def get_maps_service() -> MapsService:
+    """Get maps service instance."""
+    return MapsService()
+
+
 def get_generation_service() -> HolidayGenerationService:
     """Get holiday generation service instance with all dependencies."""
     credit_service = HolidayCreditService(db_pool)
+    token_service = TokenService(db_pool)
     maps_service = MapsService()
     gemini_client = GeminiClient()
     storage_service = BlobStorageService()
@@ -60,9 +73,20 @@ def get_generation_service() -> HolidayGenerationService:
     return HolidayGenerationService(
         db_pool=db_pool,
         credit_service=credit_service,
+        token_service=token_service,
         maps_service=maps_service,
         gemini_client=gemini_client,
         storage_service=storage_service
+    )
+
+
+def get_share_service() -> ShareService:
+    """Get share service instance."""
+    credit_service = HolidayCreditService(db_pool)
+    return ShareService(
+        db_pool=db_pool,
+        credit_service=credit_service,
+        base_url="https://yarda.pro"
     )
 
 
@@ -373,3 +397,197 @@ async def get_holiday_credits(
         Credit balance response
     """
     return await credit_service.get_balance(current_user.id)
+
+
+# ============================================================================
+# Preview Endpoint
+# ============================================================================
+
+class PreviewRequest(BaseModel):
+    """Street View preview request."""
+    address: str
+    heading: int = 180
+    pitch: int = 0
+
+
+@router.post("/preview")
+async def get_street_view_preview(
+    request: PreviewRequest,
+    maps_service: MapsService = Depends(get_maps_service),
+):
+    """
+    Get Street View preview URL with geocoded coordinates.
+
+    Returns the EXACT same Street View image that will be used for generation,
+    so frontend preview matches what Gemini will receive.
+
+    Args:
+        request: Preview request with address, heading, pitch
+        maps_service: Maps service (injected)
+
+    Returns:
+        JSON with geocoded lat/lng and Street View URL
+    """
+    address = request.address
+    heading = request.heading
+    pitch = request.pitch
+    try:
+        # Geocode address (same as generation does)
+        geocode_result = await maps_service.geocode_address(address)
+        if not geocode_result:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unable to geocode address: {address}"
+            )
+
+        coords = geocode_result.coordinates
+
+        # Build Street View URL with geocoded coordinates (same as generation)
+        import os
+        api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+
+        street_view_url = (
+            f"https://maps.googleapis.com/maps/api/streetview?"
+            f"size=800x450&"
+            f"location={coords.lat},{coords.lng}&"
+            f"heading={heading}&"
+            f"pitch={pitch}&"
+            f"fov=90&"
+            f"key={api_key}"
+        )
+
+        return {
+            "street_view_url": street_view_url,
+            "lat": coords.lat,
+            "lng": coords.lng,
+            "formatted_address": geocode_result.formatted_address
+        }
+
+    except Exception as e:
+        logger.error(f"Preview fetch failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch Street View preview"
+        )
+
+
+# ============================================================================
+# Social Sharing Endpoints
+# ============================================================================
+
+@router.post("/shares", response_model=ShareResponse)
+async def create_share(
+    request: ShareRequest,
+    current_user: User = Depends(require_verified_email),
+    share_service: ShareService = Depends(get_share_service)
+):
+    """
+    Create a trackable social media share link.
+
+    Generates a unique tracking link for sharing decorated images on social media.
+    When someone clicks the shared link, user can earn 1 credit (max 3/day).
+
+    Args:
+        request: Share request with generation_id and platform
+        current_user: Authenticated user
+        share_service: Share service instance
+
+    Returns:
+        Share response with tracking link and platform share URL
+
+    Raises:
+        HTTPException 404: Generation not found
+        HTTPException 403: User doesn't own this generation
+    """
+    try:
+        # Verify generation exists and user owns it
+        generation = await db_pool.fetchrow("""
+            SELECT id, user_id, before_after_image_url
+            FROM holiday_generations
+            WHERE id = $1
+        """, request.generation_id)
+
+        if not generation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"error": "not_found", "message": "Generation not found"}
+            )
+
+        if generation['user_id'] != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={"error": "forbidden", "message": "Access denied"}
+            )
+
+        if not generation['before_after_image_url']:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"error": "not_ready", "message": "Generation not complete yet"}
+            )
+
+        # Create share
+        share_data = await share_service.create_share(
+            user_id=current_user.id,
+            generation_id=request.generation_id,
+            platform=request.platform,
+            before_after_image_url=generation['before_after_image_url']
+        )
+
+        return ShareResponse(**share_data)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            "share_creation_failed",
+            user_id=str(current_user.id),
+            error=str(e)
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": "internal_error", "message": "Failed to create share"}
+        )
+
+
+@router.get("/shares", response_model=ShareListResponse)
+async def list_shares(
+    limit: int = 20,
+    offset: int = 0,
+    current_user: User = Depends(require_verified_email),
+    share_service: ShareService = Depends(get_share_service)
+):
+    """
+    List user's social media shares.
+
+    Returns paginated list of all shares created by the user,
+    including click status and credit earned information.
+
+    Args:
+        limit: Max results per page (default: 20, max: 100)
+        offset: Pagination offset (default: 0)
+        current_user: Authenticated user
+        share_service: Share service instance
+
+    Returns:
+        List of share responses
+    """
+    # Validate pagination params
+    if limit < 1 or limit > 100:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "invalid_limit", "message": "Limit must be between 1 and 100"}
+        )
+
+    if offset < 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "invalid_offset", "message": "Offset must be >= 0"}
+        )
+
+    shares_data = await share_service.get_user_shares(
+        user_id=current_user.id,
+        limit=limit,
+        offset=offset
+    )
+
+    return ShareListResponse(**shares_data)
