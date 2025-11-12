@@ -69,7 +69,7 @@ export default function ShareTestPage() {
   const loadGenerations = async () => {
     try {
       setLoadingGenerations(true);
-      const response = await holidayAPI.listGenerations({ limit: 50, offset: 0 });
+      const response = await holidayAPI.listGenerations(50, 0);
 
       // Filter to only completed generations with before/after images
       const completed = response.data.generations.filter(
