@@ -55,6 +55,13 @@ export async function signInWithGoogle(redirectTo?: string) {
     callbackUrl = url.toString();
   }
 
+  // Log for debugging OAuth issues in production
+  if (typeof window !== 'undefined') {
+    console.log('[signInWithGoogle] Window origin:', window.location.origin);
+    console.log('[signInWithGoogle] Callback URL:', callbackUrl);
+    console.log('[signInWithGoogle] Redirect to:', redirectTo);
+  }
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -67,9 +74,11 @@ export async function signInWithGoogle(redirectTo?: string) {
   });
 
   if (error) {
+    console.error('[signInWithGoogle] OAuth error:', error);
     throw error;
   }
 
+  console.log('[signInWithGoogle] OAuth initiated successfully');
   return data;
 }
 
