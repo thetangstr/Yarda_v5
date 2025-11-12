@@ -39,6 +39,7 @@ import StreetViewRotator from '@/components/StreetViewRotator';
 import StyleSelector, { HolidayStyle } from '@/components/StyleSelector';
 import { AuthOptions } from '@/components/auth/AuthOptions';
 import SocialShareModal from '@/components/holiday/SocialShareModal';
+import BeforeAfterSlider from '@/components/BeforeAfterSlider';
 
 export default function HolidayDecoratorPage() {
   const { user, isAuthenticated, _hasHydrated } = useUserStore();
@@ -238,6 +239,28 @@ export default function HolidayDecoratorPage() {
             </div>
           </div>
 
+          {/* Demo: Before & After Showcase */}
+          {!generationStatus && !address && (
+            <div className="mb-12 bg-white rounded-xl p-8 shadow-lg border-2 border-green-200">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+                ✨ See What's Possible
+              </h2>
+              <p className="text-center text-gray-600 mb-6 max-w-2xl mx-auto">
+                Watch how our AI transforms ordinary homes into festive holiday wonderlands.
+                Start by entering your address below to create your own magical transformation!
+              </p>
+
+              {/* Demo slider - you can customize these image URLs */}
+              <BeforeAfterSlider
+                beforeImage="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&h=600&fit=crop"
+                afterImage="https://images.unsplash.com/photo-1512156260244-6ac8b4c5e8b2?w=800&h=600&fit=crop"
+                beforeAlt="Example home before decoration"
+                afterAlt="Example home after AI holiday decoration"
+                className="max-w-2xl mx-auto"
+              />
+            </div>
+          )}
+
           {/* Main content */}
           {!generationStatus && (
             <div className="space-y-8">
@@ -358,53 +381,39 @@ export default function HolidayDecoratorPage() {
                 ✨ Your Holiday Decorated Home! ✨
               </h2>
 
-              {/* Show before/after comparison if available, else enlarged generated image */}
-              {beforeAfterImageUrl ? (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-3 text-center">
-                    Before & After Comparison
-                  </h3>
+              {/* Show before/after comparison with interactive slider */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3 text-center">
+                  ✨ Before & After Comparison
+                </h3>
+
+                {beforeAfterImageUrl ? (
+                  /* Use composite before/after image with static display */
                   <img
                     data-testid="before-after-image"
                     src={beforeAfterImageUrl}
                     alt="Before and After Comparison"
                     className="w-full rounded-lg shadow-lg"
                   />
-                </div>
-              ) : (
-                /* Fallback: Show enlarged decorated image with before thumbnail */
-                <div className="mb-6">
-                  {/* Main: Enlarged decorated image */}
+                ) : originalImageUrl && decoratedImageUrl ? (
+                  /* Use interactive slider when separate images available */
+                  <BeforeAfterSlider
+                    beforeImage={originalImageUrl}
+                    afterImage={decoratedImageUrl}
+                    beforeAlt="Original before decoration"
+                    afterAlt="Your decorated home"
+                    className="mb-4"
+                  />
+                ) : (
+                  /* Fallback: Show enlarged decorated image only */
                   <img
                     data-testid="decorated-image"
                     src={decoratedImageUrl}
                     alt="Your Decorated Home"
-                    className="w-full rounded-lg shadow-lg mb-4"
+                    className="w-full rounded-lg shadow-lg"
                   />
-
-                  {/* Secondary: Before thumbnail if available */}
-                  {originalImageUrl && (
-                    <div className="mt-4 flex items-center gap-4">
-                      <div className="flex-1">
-                        <p className="text-xs text-gray-500 mb-2">Original</p>
-                        <img
-                          src={originalImageUrl}
-                          alt="Original before decoration"
-                          className="w-32 h-auto rounded-lg shadow-md border-2 border-gray-200 cursor-pointer hover:border-green-500 transition"
-                          title="Click to view full original image"
-                        />
-                      </div>
-                      <div className="flex-1 text-center">
-                        <p className="text-sm font-semibold text-gray-600">✨</p>
-                      </div>
-                      <div className="flex-1 text-right">
-                        <p className="text-xs text-gray-500 mb-2">Decorated</p>
-                        <p className="text-xs text-green-600 font-semibold">👆 Main Image</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                )}
+              </div>
 
               {/* Action buttons */}
               <div className="flex gap-4 justify-center items-center">
