@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS social_shares (
     generation_id UUID NOT NULL REFERENCES holiday_generations(id) ON DELETE CASCADE,
 
     -- Share Details
-    platform VARCHAR(50) NOT NULL CHECK (platform IN ('instagram', 'facebook', 'tiktok')),
+    platform VARCHAR(50) NOT NULL CHECK (platform IN ('x', 'facebook', 'instagram', 'pinterest', 'tiktok')),
     tracking_link TEXT NOT NULL,  -- Unique tracking URL for this share
     tracking_code VARCHAR(50) UNIQUE NOT NULL,  -- Short code for tracking URL
     clicked BOOLEAN DEFAULT FALSE,  -- Track if link was clicked
