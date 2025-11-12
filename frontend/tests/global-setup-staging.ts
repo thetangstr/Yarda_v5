@@ -16,7 +16,7 @@ const __dirname = path.dirname(__filename);
 async function globalSetupStaging(config: FullConfig) {
   console.log('🔧 Setting up authentication for STAGING environment...');
 
-  const baseURL = config.use?.baseURL || 'https://yarda-v5-frontend-git-007-holiday-decorator-thetangstrs-projects.vercel.app';
+  const baseURL = config.use?.baseURL || 'https://yarda-v5-frontend-git-006-magic-link-auth-thetangstrs-projects.vercel.app';
 
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
