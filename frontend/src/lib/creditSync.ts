@@ -77,13 +77,13 @@ export class CreditSyncManager {
     }
 
     // Initial sync (don't await - errors are handled in refreshNow)
-    this.refreshNow().catch((error) => {
+    this.refreshNow().catch(() => {
       // Error already logged in refreshNow, just silently continue
     });
 
     // Set up periodic refresh
     this.refreshIntervalId = setInterval(() => {
-      this.refreshNow().catch((error) => {
+      this.refreshNow().catch(() => {
         // Error already logged in refreshNow, just silently continue
       });
     }, this.options.refreshInterval);
