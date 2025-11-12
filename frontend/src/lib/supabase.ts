@@ -146,10 +146,22 @@ export async function getUser() {
  * // Clicking link authenticates and redirects to /auth/callback
  */
 export async function sendMagicLink(email: string, redirectTo?: string) {
+  // Build callback URL with redirect parameter (similar to Google OAuth flow)
+  let emailRedirectTo = typeof window !== 'undefined'
+    ? `${window.location.origin}/auth/callback`
+    : '/auth/callback';
+
+  // Add the redirect parameter if provided
+  if (redirectTo && typeof window !== 'undefined') {
+    const url = new URL(emailRedirectTo, window.location.origin);
+    url.searchParams.set('redirect', redirectTo);
+    emailRedirectTo = url.toString();
+  }
+
   const { data, error } = await supabase.auth.signInWithOtp({
     email: email,
     options: {
-      emailRedirectTo: redirectTo || (typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : '/auth/callback'),
+      emailRedirectTo: emailRedirectTo,
     },
   });
 

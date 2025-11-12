@@ -108,7 +108,7 @@ export function AuthOptions({
       </div>
 
       {/* Magic Link Form */}
-      <MagicLinkForm />
+      <MagicLinkForm redirectTo={redirectTo} />
 
       {/* Divider */}
       <div className="relative my-6">

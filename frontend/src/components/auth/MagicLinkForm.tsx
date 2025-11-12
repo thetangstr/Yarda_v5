@@ -18,7 +18,11 @@ import { sendMagicLink } from '@/lib/supabase';
 import { validateEmail, getEmailError } from '@/lib/validators';
 import { useToast } from '@/hooks/useToast';
 
-export function MagicLinkForm() {
+interface MagicLinkFormProps {
+  redirectTo?: string;
+}
+
+export function MagicLinkForm({ redirectTo }: MagicLinkFormProps) {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -37,7 +41,7 @@ export function MagicLinkForm() {
     setLoading(true);
 
     try {
-      await sendMagicLink(email);
+      await sendMagicLink(email, redirectTo);
 
       // Success - show success message
       setSent(true);
