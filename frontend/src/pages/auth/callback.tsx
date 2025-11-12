@@ -75,20 +75,11 @@ export default function AuthCallback() {
                 .eq('id', session.user.id)
                 .single();
 
-              // MAINTENANCE MODE: Block new users from logging in
+              // User not found in database - this is expected for new users
+              // The database trigger will sync them within 1-2 seconds
               if (userError && userError.code === 'PGRST116') {
-                // User not found in database - this is a new user
-                console.log('[Auth Callback] New user detected - registration blocked during maintenance');
-
-                // Sign out the new user
-                await supabase.auth.signOut();
-
-                // Show maintenance message
-                setError('New user registration is temporarily disabled while we perform final testing. Please check back soon!');
-                setTimeout(() => {
-                  router.push('/login');
-                }, 5000);
-                return;
+                console.log('[Auth Callback] User not yet in database (PGRST116) - will use default values and proceed');
+                // Continue with default values below - don't block
               }
 
               // Extract Google profile data
@@ -176,14 +167,29 @@ export default function AuthCallback() {
             .eq('id', session.user.id)
             .single();
 
-          // MAINTENANCE MODE: Block new users from logging in
+          // User not found in database - expected for new users
+          // The database trigger will sync them within 1-2 seconds
           if (userError && userError.code === 'PGRST116') {
-            console.log('[Auth Callback] New user detected in existing session - registration blocked during maintenance');
-            await supabase.auth.signOut();
-            setError('New user registration is temporarily disabled while we perform final testing. Please check back soon!');
-            setTimeout(() => {
-              router.push('/login');
-            }, 5000);
+            console.log('[Auth Callback] User not yet in database for existing session - will create with default values');
+            // Continue below with default values - don't block
+            // Create user with default values while database trigger syncs
+            const googleMetadata = session.user.user_metadata;
+            setUser({
+              id: session.user.id,
+              email: session.user.email!,
+              email_verified: session.user.email_confirmed_at !== null,
+              trial_remaining: 3,
+              trial_used: 0,
+              subscription_tier: 'free',
+              subscription_status: 'inactive',
+              created_at: session.user.created_at,
+              avatar_url: googleMetadata?.avatar_url || googleMetadata?.picture,
+              full_name: googleMetadata?.full_name || googleMetadata?.name,
+            } as any);
+            await syncAllCredits();
+            const redirectTo = router.query.redirect as string || '/generate';
+            console.log('[Auth Callback] Redirecting to:', redirectTo);
+            router.push(redirectTo);
             return;
           }
 
