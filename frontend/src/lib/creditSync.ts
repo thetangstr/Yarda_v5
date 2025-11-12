@@ -111,8 +111,8 @@ export class CreditSyncManager {
    */
   public async refreshNow(): Promise<UnifiedBalanceResponse | null> {
     // Skip refresh if user is not authenticated
-    const { user } = useUserStore.getState();
-    if (!user || !user.isAuthenticated) {
+    const { user, isAuthenticated } = useUserStore.getState();
+    if (!user || !isAuthenticated) {
       return null;
     }
 
