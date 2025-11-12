@@ -228,6 +228,12 @@ class PromptBuilder:
 - Natural color balance and saturation
 - Seamless integration with existing architecture
 
+**OBJECTS TO REMOVE:**
+- Remove any visible cars from the driveway, street, or property
+- Remove any trash bins, garbage cans, or dumpsters from view
+- Remove any construction equipment, tools, or work materials
+- Hide these objects naturally behind landscaping or remove them entirely
+
 **CRITICAL:** The house structure, windows, doors, and roofline must remain exactly as shown in the original image. Only modify the landscape, hardscaping, and outdoor elements."""
 
 

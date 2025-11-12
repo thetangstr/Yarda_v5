@@ -98,10 +98,10 @@ class ShareService:
                     created_at
                 ) VALUES ($1, $2, $3, $4, $5, NOW())
                 RETURNING id
-            """, user_id, generation_id, platform.value, tracking_link, tracking_code)
+            """, user_id, generation_id, platform, tracking_link, tracking_code)
 
             logger.info(
-                f"Created share {share_id} for user {user_id} on {platform.value}. "
+                f"Created share {share_id} for user {user_id} on {platform}. "
                 f"Can earn credit: {can_earn_credit}"
             )
 
@@ -109,7 +109,7 @@ class ShareService:
                 "id": str(share_id),
                 "user_id": str(user_id),
                 "generation_id": str(generation_id),
-                "platform": platform.value,
+                "platform": platform,
                 "tracking_link": tracking_link,
                 "share_url": share_url,
                 "before_after_image_url": before_after_image_url,
@@ -307,21 +307,21 @@ class ShareService:
         encoded_text = urllib.parse.quote(share_text)
         encoded_url = urllib.parse.quote(tracking_link)
 
-        if platform == SharePlatform.FACEBOOK or platform == "facebook":
+        if platform == "facebook":
             return f"https://www.facebook.com/sharer/sharer.php?u={encoded_url}&quote={encoded_text}"
 
-        elif platform == SharePlatform.X or platform == "x":  # Twitter/X
+        elif platform == "x":  # Twitter/X
             return f"https://twitter.com/intent/tweet?text={encoded_text}&url={encoded_url}"
 
-        elif platform == SharePlatform.PINTEREST or platform == "pinterest":
+        elif platform == "pinterest":
             encoded_image = urllib.parse.quote(image_url)
             return f"https://pinterest.com/pin/create/button/?url={encoded_url}&media={encoded_image}&description={encoded_text}"
 
-        elif platform == SharePlatform.INSTAGRAM or platform == "instagram":
+        elif platform == "instagram":
             # Instagram doesn't have a direct share URL, return instructions
             return f"instagram://library?AssetPath={encoded_url}"
 
-        elif platform == SharePlatform.TIKTOK or platform == "tiktok":
+        elif platform == "tiktok":
             # TikTok sharing is app-based, return deep link
             return f"tiktok://share?url={encoded_url}"
 

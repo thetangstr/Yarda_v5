@@ -29,6 +29,7 @@
 
 import React, { useState } from 'react';
 import Head from 'next/head';
+import { Share2 } from 'lucide-react';
 
 import { useUserStore } from '@/store/userStore';
 import { holidayAPI } from '@/lib/api';
@@ -64,8 +65,7 @@ export default function HolidayDecoratorPage() {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   // Results state
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_originalImageUrl, setOriginalImageUrl] = useState<string | null>(null);
+  const [originalImageUrl, setOriginalImageUrl] = useState<string | null>(null);
   const [decoratedImageUrl, setDecoratedImageUrl] = useState<string | null>(null);
   const [beforeAfterImageUrl, setBeforeAfterImageUrl] = useState<string | null>(null);
 
@@ -315,26 +315,40 @@ export default function HolidayDecoratorPage() {
             </div>
           )}
 
-          {/* Progress tracking (inline) */}
-          {generationStatus && generationStatus !== 'completed' && generationStatus !== 'failed' && (
+          {/* Progress tracking (inline) - Show before image while generating */}
+          {generationStatus && generationStatus !== 'completed' && generationStatus !== 'failed' && originalImageUrl && (
             <div
               data-testid="generation-progress"
-              className="bg-white rounded-xl p-8 shadow-lg text-center"
+              className="bg-white rounded-xl p-8 shadow-lg"
             >
-              <div className="animate-spin w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-4" />
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                Creating Your Holiday Magic... 🎄
-              </h3>
-              <p className="text-gray-600">
-                Status: <span className="font-semibold capitalize">{generationStatus}</span>
-              </p>
-              <p className="text-sm text-gray-500 mt-2">
-                This usually takes 10-15 seconds
-              </p>
+              <div className="space-y-6">
+                {/* Original image displayed while waiting */}
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-800 mb-4 text-center">
+                    ✨ Decorating Your Home... 🎄
+                  </h3>
+                  <img
+                    src={originalImageUrl}
+                    alt="Original before decoration"
+                    className="w-full rounded-lg shadow-lg mb-4"
+                  />
+                </div>
+
+                {/* Loading indicator */}
+                <div className="text-center border-t pt-6">
+                  <div className="animate-spin w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-3" />
+                  <p className="text-gray-600 font-medium">
+                    Status: <span className="capitalize">{generationStatus}</span>
+                  </p>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Creating your decorated version... (this usually takes 10-15 seconds)
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Results display (inline) */}
+          {/* Results display (inline) - Enlarged generated image with before thumbnail */}
           {generationStatus === 'completed' && decoratedImageUrl && (
             <div
               data-testid="generation-results"
@@ -344,7 +358,7 @@ export default function HolidayDecoratorPage() {
                 ✨ Your Holiday Decorated Home! ✨
               </h2>
 
-              {/* Before/After comparison */}
+              {/* Show before/after comparison if available, else enlarged generated image */}
               {beforeAfterImageUrl ? (
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-gray-800 mb-3 text-center">
@@ -358,39 +372,69 @@ export default function HolidayDecoratorPage() {
                   />
                 </div>
               ) : (
-                /* Fallback: Show decorated image only if no composite */
-                decoratedImageUrl && (
-                  <div className="mb-6">
-                    <img
-                      data-testid="decorated-image"
-                      src={decoratedImageUrl}
-                      alt="Your Decorated Home"
-                      className="w-full rounded-lg shadow-lg"
-                    />
-                  </div>
-                )
+                /* Fallback: Show enlarged decorated image with before thumbnail */
+                <div className="mb-6">
+                  {/* Main: Enlarged decorated image */}
+                  <img
+                    data-testid="decorated-image"
+                    src={decoratedImageUrl}
+                    alt="Your Decorated Home"
+                    className="w-full rounded-lg shadow-lg mb-4"
+                  />
+
+                  {/* Secondary: Before thumbnail if available */}
+                  {originalImageUrl && (
+                    <div className="mt-4 flex items-center gap-4">
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-500 mb-2">Original</p>
+                        <img
+                          src={originalImageUrl}
+                          alt="Original before decoration"
+                          className="w-32 h-auto rounded-lg shadow-md border-2 border-gray-200 cursor-pointer hover:border-green-500 transition"
+                          title="Click to view full original image"
+                        />
+                      </div>
+                      <div className="flex-1 text-center">
+                        <p className="text-sm font-semibold text-gray-600">✨</p>
+                      </div>
+                      <div className="flex-1 text-right">
+                        <p className="text-xs text-gray-500 mb-2">Decorated</p>
+                        <p className="text-xs text-green-600 font-semibold">👆 Main Image</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* Action buttons */}
-              <div className="flex gap-4 justify-center">
+              <div className="flex gap-4 justify-center items-center">
                 <a
                   href={decoratedImageUrl}
                   download
-                  className="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition"
+                  className="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition flex items-center gap-2"
+                  title="Download your decorated home image"
                 >
-                  📥 Download Image
+                  <span>📥</span> Download
                 </a>
+
+                {/* Share icon button */}
                 <button
                   onClick={() => setIsShareModalOpen(true)}
-                  className="px-6 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition"
+                  className="p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition transform hover:scale-110 flex items-center justify-center group relative"
+                  title="Share & earn credit"
+                  aria-label="Share on social media"
                 >
-                  📲 Share & Earn Credit
+                  <Share2 className="w-6 h-6" />
+                  <span className="absolute bottom-full mb-2 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                    Share & Earn
+                  </span>
                 </button>
+
                 <button
                   onClick={resetForm}
-                  className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition"
+                  className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition flex items-center gap-2"
                 >
-                  🎄 Create New Design
+                  <span>🎄</span> New Design
                 </button>
               </div>
 
