@@ -13,6 +13,7 @@
  */
 
 import React from 'react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { SubscriptionManager, SubscriptionStatus } from './index';
@@ -20,22 +21,20 @@ import { useSubscriptionStore } from '@/store/subscriptionStore';
 import { subscriptionAPI } from '@/lib/api';
 
 // Mock the subscription store
-jest.mock('@/store/subscriptionStore');
-const mockUseSubscriptionStore = useSubscriptionStore as jest.MockedFunction<
-  typeof useSubscriptionStore
->;
+vi.mock('@/store/subscriptionStore');
+const mockUseSubscriptionStore = useSubscriptionStore as ReturnType<typeof vi.fn>;
 
 // Mock the API
-jest.mock('@/lib/api', () => ({
+vi.mock('@/lib/api', () => ({
   subscriptionAPI: {
-    getCustomerPortal: jest.fn(),
+    getCustomerPortal: vi.fn(),
   },
-  getErrorMessage: jest.fn((err: any) => err.message || 'An error occurred'),
+  getErrorMessage: vi.fn((err: any) => err.message || 'An error occurred'),
 }));
 
 describe('SubscriptionManager', () => {
-  const mockFetchSubscription = jest.fn();
-  const mockCancelSubscription = jest.fn();
+  const mockFetchSubscription = vi.fn();
+  const mockCancelSubscription = vi.fn();
 
   const mockActiveSubscription: SubscriptionStatus = {
     subscription_id: 'sub_123',
@@ -49,7 +48,7 @@ describe('SubscriptionManager', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Loading State', () => {
@@ -60,8 +59,8 @@ describe('SubscriptionManager', () => {
         error: null,
         fetchSubscription: mockFetchSubscription,
         cancelSubscription: mockCancelSubscription,
-        subscribe: jest.fn(),
-        openCustomerPortal: jest.fn(),
+        subscribe: vi.fn(),
+        openCustomerPortal: vi.fn(),
       });
 
       render(<SubscriptionManager />);
@@ -80,8 +79,8 @@ describe('SubscriptionManager', () => {
         error: errorMessage,
         fetchSubscription: mockFetchSubscription,
         cancelSubscription: mockCancelSubscription,
-        subscribe: jest.fn(),
-        openCustomerPortal: jest.fn(),
+        subscribe: vi.fn(),
+        openCustomerPortal: vi.fn(),
       });
 
       render(<SubscriptionManager />);
@@ -97,8 +96,8 @@ describe('SubscriptionManager', () => {
         error: 'Network error',
         fetchSubscription: mockFetchSubscription,
         cancelSubscription: mockCancelSubscription,
-        subscribe: jest.fn(),
-        openCustomerPortal: jest.fn(),
+        subscribe: vi.fn(),
+        openCustomerPortal: vi.fn(),
       });
 
       render(<SubscriptionManager />);
@@ -118,8 +117,8 @@ describe('SubscriptionManager', () => {
         error: null,
         fetchSubscription: mockFetchSubscription,
         cancelSubscription: mockCancelSubscription,
-        subscribe: jest.fn(),
-        openCustomerPortal: jest.fn(),
+        subscribe: vi.fn(),
+        openCustomerPortal: vi.fn(),
       });
 
       render(<SubscriptionManager />);
@@ -135,8 +134,8 @@ describe('SubscriptionManager', () => {
         error: null,
         fetchSubscription: mockFetchSubscription,
         cancelSubscription: mockCancelSubscription,
-        subscribe: jest.fn(),
-        openCustomerPortal: jest.fn(),
+        subscribe: vi.fn(),
+        openCustomerPortal: vi.fn(),
       });
 
       render(<SubscriptionManager />);
@@ -154,8 +153,8 @@ describe('SubscriptionManager', () => {
         error: null,
         fetchSubscription: mockFetchSubscription,
         cancelSubscription: mockCancelSubscription,
-        subscribe: jest.fn(),
-        openCustomerPortal: jest.fn(),
+        subscribe: vi.fn(),
+        openCustomerPortal: vi.fn(),
       });
 
       render(<SubscriptionManager />);
@@ -173,8 +172,8 @@ describe('SubscriptionManager', () => {
         error: null,
         fetchSubscription: mockFetchSubscription,
         cancelSubscription: mockCancelSubscription,
-        subscribe: jest.fn(),
-        openCustomerPortal: jest.fn(),
+        subscribe: vi.fn(),
+        openCustomerPortal: vi.fn(),
       });
 
       render(<SubscriptionManager />);
@@ -192,8 +191,8 @@ describe('SubscriptionManager', () => {
         error: null,
         fetchSubscription: mockFetchSubscription,
         cancelSubscription: mockCancelSubscription,
-        subscribe: jest.fn(),
-        openCustomerPortal: jest.fn(),
+        subscribe: vi.fn(),
+        openCustomerPortal: vi.fn(),
       });
 
       render(<SubscriptionManager />);
@@ -208,8 +207,8 @@ describe('SubscriptionManager', () => {
         error: null,
         fetchSubscription: mockFetchSubscription,
         cancelSubscription: mockCancelSubscription,
-        subscribe: jest.fn(),
-        openCustomerPortal: jest.fn(),
+        subscribe: vi.fn(),
+        openCustomerPortal: vi.fn(),
       });
 
       render(<SubscriptionManager />);
@@ -226,8 +225,8 @@ describe('SubscriptionManager', () => {
         error: null,
         fetchSubscription: mockFetchSubscription,
         cancelSubscription: mockCancelSubscription,
-        subscribe: jest.fn(),
-        openCustomerPortal: jest.fn(),
+        subscribe: vi.fn(),
+        openCustomerPortal: vi.fn(),
       });
 
       render(<SubscriptionManager />);
@@ -249,8 +248,8 @@ describe('SubscriptionManager', () => {
         error: null,
         fetchSubscription: mockFetchSubscription,
         cancelSubscription: mockCancelSubscription,
-        subscribe: jest.fn(),
-        openCustomerPortal: jest.fn(),
+        subscribe: vi.fn(),
+        openCustomerPortal: vi.fn(),
       });
 
       render(<SubscriptionManager />);
@@ -272,8 +271,8 @@ describe('SubscriptionManager', () => {
         error: null,
         fetchSubscription: mockFetchSubscription,
         cancelSubscription: mockCancelSubscription,
-        subscribe: jest.fn(),
-        openCustomerPortal: jest.fn(),
+        subscribe: vi.fn(),
+        openCustomerPortal: vi.fn(),
       });
 
       render(<SubscriptionManager />);
@@ -297,8 +296,8 @@ describe('SubscriptionManager', () => {
         error: null,
         fetchSubscription: mockFetchSubscription,
         cancelSubscription: mockCancelSubscription,
-        subscribe: jest.fn(),
-        openCustomerPortal: jest.fn(),
+        subscribe: vi.fn(),
+        openCustomerPortal: vi.fn(),
       });
 
       render(<SubscriptionManager />);
@@ -320,8 +319,8 @@ describe('SubscriptionManager', () => {
         error: null,
         fetchSubscription: mockFetchSubscription,
         cancelSubscription: mockCancelSubscription,
-        subscribe: jest.fn(),
-        openCustomerPortal: jest.fn(),
+        subscribe: vi.fn(),
+        openCustomerPortal: vi.fn(),
       });
 
       render(<SubscriptionManager />);
@@ -338,8 +337,8 @@ describe('SubscriptionManager', () => {
         error: null,
         fetchSubscription: mockFetchSubscription,
         cancelSubscription: mockCancelSubscription,
-        subscribe: jest.fn(),
-        openCustomerPortal: jest.fn(),
+        subscribe: vi.fn(),
+        openCustomerPortal: vi.fn(),
       });
 
       render(<SubscriptionManager />);
@@ -360,8 +359,8 @@ describe('SubscriptionManager', () => {
         error: null,
         fetchSubscription: mockFetchSubscription,
         cancelSubscription: mockCancelSubscription,
-        subscribe: jest.fn(),
-        openCustomerPortal: jest.fn(),
+        subscribe: vi.fn(),
+        openCustomerPortal: vi.fn(),
       });
 
       render(<SubscriptionManager />);
@@ -389,8 +388,8 @@ describe('SubscriptionManager', () => {
         error: null,
         fetchSubscription: mockFetchSubscription,
         cancelSubscription: mockCancelSubscription,
-        subscribe: jest.fn(),
-        openCustomerPortal: jest.fn(),
+        subscribe: vi.fn(),
+        openCustomerPortal: vi.fn(),
       });
 
       render(<SubscriptionManager />);
@@ -418,8 +417,8 @@ describe('SubscriptionManager', () => {
         error: null,
         fetchSubscription: mockFetchSubscription,
         cancelSubscription: mockCancelSubscription,
-        subscribe: jest.fn(),
-        openCustomerPortal: jest.fn(),
+        subscribe: vi.fn(),
+        openCustomerPortal: vi.fn(),
       });
 
       render(<SubscriptionManager />);
@@ -459,8 +458,8 @@ describe('SubscriptionManager', () => {
         error: null,
         fetchSubscription: mockFetchSubscription,
         cancelSubscription: mockCancelSubscription,
-        subscribe: jest.fn(),
-        openCustomerPortal: jest.fn(),
+        subscribe: vi.fn(),
+        openCustomerPortal: vi.fn(),
       });
 
       render(<SubscriptionManager />);
@@ -482,8 +481,8 @@ describe('SubscriptionManager', () => {
         error: null,
         fetchSubscription: mockFetchSubscription,
         cancelSubscription: mockCancelSubscription,
-        subscribe: jest.fn(),
-        openCustomerPortal: jest.fn(),
+        subscribe: vi.fn(),
+        openCustomerPortal: vi.fn(),
       });
 
       render(<SubscriptionManager />);
@@ -492,7 +491,7 @@ describe('SubscriptionManager', () => {
     });
 
     it('should call onStatusChange callback after successful cancellation', async () => {
-      const onStatusChange = jest.fn();
+      const onStatusChange = vi.fn();
       mockCancelSubscription.mockResolvedValue(undefined);
       mockUseSubscriptionStore.mockReturnValue({
         subscription: mockActiveSubscription,
@@ -500,8 +499,8 @@ describe('SubscriptionManager', () => {
         error: null,
         fetchSubscription: mockFetchSubscription,
         cancelSubscription: mockCancelSubscription,
-        subscribe: jest.fn(),
-        openCustomerPortal: jest.fn(),
+        subscribe: vi.fn(),
+        openCustomerPortal: vi.fn(),
       });
 
       render(<SubscriptionManager onStatusChange={onStatusChange} />);

@@ -512,7 +512,7 @@ describe('AutoReloadConfig Component', () => {
       fireEvent.change(screen.getByTestId('auto-reload-threshold'), { target: { value: '50' } });
       fireEvent.change(screen.getByTestId('auto-reload-amount'), { target: { value: '200' } });
 
-      const thresholdInput = screen.getByTestId('auto-reload-threshold') as HTMLInputElement;
+      let thresholdInput = screen.getByTestId('auto-reload-threshold') as HTMLInputElement;
       expect(thresholdInput.value).toBe('50');
 
       // Click reset
@@ -522,6 +522,9 @@ describe('AutoReloadConfig Component', () => {
       await waitFor(() => {
         expect(api.tokenAPI.getAutoReloadConfig).toHaveBeenCalledTimes(2); // Initial + reset
       });
+
+      // Re-query the input element after reset (component may have re-rendered during loading)
+      thresholdInput = screen.getByTestId('auto-reload-threshold') as HTMLInputElement;
 
       // Values should be reset
       await waitFor(() => {
