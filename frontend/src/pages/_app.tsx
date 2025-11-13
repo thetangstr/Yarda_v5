@@ -1,9 +1,7 @@
-'use client';
-
 import type { AppProps } from 'next/app';
 import { useState, useEffect } from 'react';
-import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from '@vercel/speed-insights/react';
+import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import '@/styles/globals.css';
 import ToastContainer from '@/components/Toast';
 import { useToastStore } from '@/hooks/useToast';
