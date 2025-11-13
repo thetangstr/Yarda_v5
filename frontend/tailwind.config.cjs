@@ -28,6 +28,20 @@ module.exports = {
           sage: '#E8EDE5',         // Secondary backgrounds
           'light-sage': '#F0F4ED', // Lighter variant
         },
+        // V2 Design System (sage/earth palette)
+        sage: {
+          50: '#F9FAF8',
+          100: '#EEF1ED',
+          200: '#D4DBCE',
+          500: '#6B8E6B',
+          600: '#4A7C59',
+          700: '#2D5A4F',
+          800: '#1B3A35',
+        },
+        earth: {
+          50: '#FEFAF5',
+          200: '#E8D4C0',
+        },
         // Neutral palette
         neutral: {
           50: '#F9FAFB',
@@ -118,5 +132,13 @@ module.exports = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    function ({ addUtilities }) {
+      addUtilities({
+        '.gradient-text': {
+          '@apply bg-clip-text text-transparent bg-gradient-to-r from-sage-600 to-sage-700': {},
+        },
+      });
+    },
+  ],
 }
