@@ -14,9 +14,11 @@
 import React from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { t } = useLanguage();
 
   // MAINTENANCE MODE: Block all new registrations
   return (
@@ -49,20 +51,19 @@ export default function RegisterPage() {
           </div>
 
           <h1 className="text-3xl font-bold text-gray-900 mb-3">
-            Registration Temporarily Disabled
+            {t('auth.registrationDisabled')}
           </h1>
 
           <p className="text-gray-700 mb-4 leading-relaxed">
-            We're performing final testing before our official launch.
-            New user registration is temporarily disabled.
+            {t('auth.registrationMessage')}
           </p>
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <p className="text-sm text-blue-800 font-medium mb-2">
-              Existing users can still sign in
+              {t('auth.existingUsers')}
             </p>
             <p className="text-xs text-blue-700">
-              If you already have an account, you can continue using Yarda normally.
+              {t('auth.existingUsersDetail')}
             </p>
           </div>
 
@@ -71,19 +72,19 @@ export default function RegisterPage() {
               onClick={() => router.push('/login')}
               className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition shadow-md"
             >
-              Go to Login
+              {t('auth.goToLogin')}
             </button>
 
             <button
               onClick={() => router.push('/')}
               className="w-full py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition"
             >
-              Back to Home
+              {t('auth.backToHome')}
             </button>
           </div>
 
           <p className="text-xs text-gray-500 mt-6">
-            We'll be back soon! Thank you for your patience.
+            {t('auth.comingBack')}
           </p>
         </div>
       </div>
