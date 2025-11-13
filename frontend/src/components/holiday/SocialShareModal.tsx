@@ -16,8 +16,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Share2, Check, AlertCircle, Zap } from 'lucide-react';
+import { X, Share2, Check, AlertCircle, Zap, Copy, Download } from 'lucide-react';
 import { holidayAPI } from '@/lib/api';
+import { addWatermarkToImage, copyImageToClipboard, downloadImage } from '@/lib/watermark';
 import type { ShareRequest, ShareResponse, SharePlatform } from '@/types/holiday';
 
 interface SocialShareModalProps {
@@ -112,6 +113,39 @@ export default function SocialShareModal({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [watermarkedImageUrl, setWatermarkedImageUrl] = useState<string | null>(null);
+  const [isGeneratingWatermark, setIsGeneratingWatermark] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
+
+  // Generate watermarked image when modal opens
+  useEffect(() => {
+    if (isOpen && imageUrl && !watermarkedImageUrl) {
+      setIsGeneratingWatermark(true);
+      addWatermarkToImage(imageUrl)
+        .then((url) => {
+          setWatermarkedImageUrl(url);
+        })
+        .catch((err) => {
+          console.error('Failed to generate watermark:', err);
+          // Fallback to original image if watermark fails
+          setWatermarkedImageUrl(imageUrl);
+        })
+        .finally(() => {
+          setIsGeneratingWatermark(false);
+        });
+    }
+  }, [isOpen, imageUrl, watermarkedImageUrl]);
+
+  // Reset states when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setWatermarkedImageUrl(null);
+      setSelectedPlatform(null);
+      setShareResponse(null);
+      setError(null);
+      setCopySuccess(false);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (showSuccess) {
@@ -123,6 +157,14 @@ export default function SocialShareModal({
       return () => clearTimeout(timer);
     }
   }, [showSuccess]);
+
+  // Reset copy success state after 2 seconds
+  useEffect(() => {
+    if (copySuccess) {
+      const timer = setTimeout(() => setCopySuccess(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [copySuccess]);
 
   const handlePlatformSelect = async (platform: PlatformConfig) => {
     setSelectedPlatform(platform);
@@ -155,6 +197,24 @@ export default function SocialShareModal({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleCopyImage = async () => {
+    if (!watermarkedImageUrl) return;
+
+    try {
+      await copyImageToClipboard(watermarkedImageUrl);
+      setCopySuccess(true);
+    } catch (err) {
+      console.error('Failed to copy image:', err);
+      setError('Failed to copy image to clipboard. Try downloading instead.');
+    }
+  };
+
+  const handleDownloadImage = () => {
+    if (!watermarkedImageUrl) return;
+
+    downloadImage(watermarkedImageUrl, 'yarda-decorated-holiday.jpg');
   };
 
   return (
@@ -262,19 +322,50 @@ export default function SocialShareModal({
                   )}
                 </AnimatePresence>
 
-                {/* Preview Image with Caption */}
+                {/* Preview Image with Watermark + Download/Copy Buttons */}
                 <div className="mb-8">
-                  <div className="relative rounded-2xl overflow-hidden shadow-lg">
-                    <img
-                      src={imageUrl}
-                      alt="Holiday decoration preview"
-                      className="w-full h-64 object-cover"
-                    />
+                  <div className="relative rounded-2xl overflow-hidden shadow-lg bg-gray-100">
+                    {isGeneratingWatermark ? (
+                      <div className="w-full h-64 flex items-center justify-center bg-gray-200 animate-pulse">
+                        <p className="text-slate-600">Adding watermark...</p>
+                      </div>
+                    ) : (
+                      <img
+                        src={watermarkedImageUrl || imageUrl}
+                        alt="Holiday decoration with watermark"
+                        className="w-full h-64 object-cover"
+                      />
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent opacity-0 hover:opacity-20 transition-opacity" />
                   </div>
-                  <p className="mt-3 text-sm text-slate-500 text-center">
-                    Your beautiful holiday transformation
+                  <p className="mt-2 text-sm text-slate-600 text-center font-medium">
+                    ✨ Watermarked image ready for sharing
                   </p>
+
+                  {/* Image Action Buttons */}
+                  <div className="mt-4 flex gap-3">
+                    <button
+                      onClick={handleCopyImage}
+                      disabled={isGeneratingWatermark || !watermarkedImageUrl}
+                      className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                        copySuccess
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed'
+                      }`}
+                    >
+                      <Copy className="w-4 h-4" />
+                      {copySuccess ? 'Copied!' : 'Copy Image'}
+                    </button>
+
+                    <button
+                      onClick={handleDownloadImage}
+                      disabled={isGeneratingWatermark || !watermarkedImageUrl}
+                      className="flex-1 py-3 px-4 rounded-xl font-semibold transition-all bg-slate-100 hover:bg-slate-200 text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download
+                    </button>
+                  </div>
                 </div>
 
                 {/* Platform Selection Header */}
@@ -359,13 +450,25 @@ export default function SocialShareModal({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.3 }}
-                  className="p-4 bg-slate-50 rounded-2xl border border-slate-200"
+                  className="space-y-4"
                 >
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    <strong className="text-slate-900">💡 Pro tip:</strong> Your post will automatically include{' '}
-                    <em>"Transform Your Yard with AI, and decorate it this holiday season. Check out
-                    www.yarda.pro"</em>
-                  </p>
+                  <div className="p-4 bg-blue-50 rounded-2xl border border-blue-200">
+                    <p className="text-xs text-blue-900 leading-relaxed">
+                      <strong className="text-blue-900">📸 How to share:</strong>
+                      <ol className="list-decimal list-inside mt-2 space-y-1">
+                        <li>Copy or download the watermarked image above</li>
+                        <li>Click a platform below to open the share window</li>
+                        <li>Paste/upload the image in your post</li>
+                        <li>Add your own caption and post!</li>
+                      </ol>
+                    </p>
+                  </div>
+
+                  <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200">
+                    <p className="text-xs text-emerald-900 leading-relaxed">
+                      <strong className="text-emerald-900">✨ What happens next:</strong> When someone clicks your share link and generates their own decoration, you'll earn 1 free credit! Max 3 credits per day.
+                    </p>
+                  </div>
                 </motion.div>
 
                 {/* Footer Info */}
