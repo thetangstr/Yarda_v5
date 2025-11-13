@@ -62,11 +62,34 @@ export async function addWatermarkToImage(imageUrl: string): Promise<string> {
 /**
  * Convert data URL to blob for clipboard/download
  * @param dataUrl - Data URL of image
- * @returns Promise<Blob> - Image blob
+ * @param mimeType - MIME type for the blob (defaults to image/jpeg)
+ * @returns Promise<Blob> - Image blob with correct MIME type
  */
-export async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
-  const response = await fetch(dataUrl);
-  return response.blob();
+export async function dataUrlToBlob(dataUrl: string, mimeType: string = 'image/jpeg'): Promise<Blob> {
+  try {
+    // Try fetching the data URL
+    const response = await fetch(dataUrl);
+    let blob = await response.blob();
+
+    // If blob type is empty or incorrect, create a new blob with correct type
+    if (!blob.type || blob.type === 'application/octet-stream') {
+      blob = new Blob([blob], { type: mimeType });
+    }
+
+    return blob;
+  } catch (error) {
+    // Fallback: manually parse data URL and create blob
+    const parts = dataUrl.split(',');
+    const byteString = atob(parts[1]);
+    const ab = new ArrayBuffer(byteString.length);
+    const view = new Uint8Array(ab);
+
+    for (let i = 0; i < byteString.length; i++) {
+      view[i] = byteString.charCodeAt(i);
+    }
+
+    return new Blob([ab], { type: mimeType });
+  }
 }
 
 /**
@@ -76,15 +99,19 @@ export async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
  */
 export async function copyImageToClipboard(imageUrl: string): Promise<void> {
   try {
-    const blob = await dataUrlToBlob(imageUrl);
+    // Watermarked images are always JPEG
+    const mimeType = 'image/jpeg';
+    const blob = await dataUrlToBlob(imageUrl, mimeType);
 
-    // Determine the correct MIME type based on the blob
-    // Watermarked images are JPEG, so use image/jpeg
-    const mimeType = blob.type || 'image/jpeg';
+    // Ensure blob has correct MIME type for clipboard write
+    let finalBlob = blob;
+    if (finalBlob.type !== mimeType) {
+      finalBlob = new Blob([blob], { type: mimeType });
+    }
 
     await navigator.clipboard.write([
       new ClipboardItem({
-        [mimeType]: blob,
+        [mimeType]: finalBlob,
       }),
     ]);
   } catch (error) {
@@ -126,10 +153,10 @@ export async function shareImageViaWebShare(
   }
 
   try {
-    // Convert data URL to Blob
-    const blob = await dataUrlToBlob(imageUrl);
+    // Convert data URL to Blob with explicit MIME type
+    const blob = await dataUrlToBlob(imageUrl, 'image/jpeg');
 
-    // Create File object for sharing
+    // Create File object for sharing with correct MIME type
     const file = new File([blob], 'yarda-decorated-holiday.jpg', { type: 'image/jpeg' });
 
     // Check if device can share files
