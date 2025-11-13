@@ -172,6 +172,16 @@ export default function SocialShareModal({
     setIsLoading(true);
 
     try {
+      // Auto-copy watermarked image to clipboard
+      if (watermarkedImageUrl) {
+        try {
+          await copyImageToClipboard(watermarkedImageUrl);
+          setCopySuccess(true);
+        } catch (clipboardErr) {
+          console.warn('Could not copy to clipboard, continuing anyway:', clipboardErr);
+        }
+      }
+
       // Create share tracking link
       const shareRequest: ShareRequest = {
         generation_id: generationId,
@@ -454,12 +464,11 @@ export default function SocialShareModal({
                 >
                   <div className="p-4 bg-blue-50 rounded-2xl border border-blue-200">
                     <p className="text-xs text-blue-900 leading-relaxed">
-                      <strong className="text-blue-900">📸 How to share:</strong>
+                      <strong className="text-blue-900">📸 How to share (3 simple steps!):</strong>
                       <ol className="list-decimal list-inside mt-2 space-y-1">
-                        <li>Copy or download the watermarked image above</li>
-                        <li>Click a platform below to open the share window</li>
-                        <li>Paste/upload the image in your post</li>
-                        <li>Add your own caption and post!</li>
+                        <li>Click a platform below (image auto-copied to clipboard!)</li>
+                        <li>Paste the image in your post</li>
+                        <li>Add your caption and post!</li>
                       </ol>
                     </p>
                   </div>
