@@ -334,21 +334,23 @@ export default function Home() {
   const hasResults = generationPhase === 'results';
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-white via-brand-cream to-white">
       <Head>
-        <title>Yarda AI Landscape Studio</title>
+        <title>Yarda AI Landscape Studio - Transform Your Yard with AI</title>
         <meta
           name="description"
-          content="Create AI-powered landscape designs in minutes"
+          content="Create professional AI-powered landscape designs in minutes. Get unlimited designs with subscription or pay per generation."
         />
+        <meta property="og:title" content="Yarda AI Landscape Studio" />
+        <meta property="og:description" content="Transform your landscape with AI-powered design in minutes" />
       </Head>
 
       {/* Navigation with user profile icon */}
-      <Navigation />
+      <Navigation transparent={!isGenerating && !hasResults} />
 
       {/* Credits/Balance Bar - Only show to authenticated users */}
       {isAuthenticated && (
-        <div className="bg-white border-b border-gray-200 px-6 py-3 mt-16">
+        <div className="bg-white/80 backdrop-blur border-b border-gray-200 px-6 py-3 mt-16 sticky top-16 z-40">
           <div className="max-w-7xl mx-auto flex items-center justify-end gap-4">
             <TokenBalance variant="compact" autoRefresh={true} />
             <div data-testid="trial-counter">
@@ -359,25 +361,60 @@ export default function Home() {
       )}
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-12 space-y-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-12">
+        {/* HERO SECTION - Only show to non-authenticated users or when not generating */}
+        {!isGenerating && !hasResults && !isAuthenticated && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="mb-16 pt-8"
+          >
+            <div className="text-center mb-12">
+              <h1 className="text-5xl sm:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+                Transform Your Landscape with <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-green to-emerald-600">AI</span>
+              </h1>
+              <p className="text-xl sm:text-2xl text-gray-600 max-w-3xl mx-auto mb-8 leading-relaxed">
+                Professional landscape designs in minutes, not days. Perfect your outdoor space with AI-powered creativity.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <a
+                  href="/register"
+                  className="px-8 py-4 bg-brand-green hover:bg-brand-dark-green text-white font-semibold rounded-lg transition-all transform hover:scale-105"
+                >
+                  Get Started Free →
+                </a>
+                <a
+                  href="/pricing"
+                  className="px-8 py-4 bg-white hover:bg-gray-50 text-brand-green font-semibold rounded-lg border-2 border-brand-green transition"
+                >
+                  View Pricing
+                </a>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* SHOWCASE SECTION - Before/After Slider */}
         {!isGenerating && !hasResults && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="mb-12"
+            transition={{ duration: 0.3, delay: 0.1 }}
+            className="mb-16"
           >
-            <div className="mb-8 text-center">
-              <h2 className="text-4xl font-bold text-gray-900 mb-3">
-                Transform Your Landscape
-              </h2>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                See how AI can redesign your outdoor space in minutes. Explore before and after transformations.
-              </p>
-            </div>
+            {isAuthenticated ? (
+              <div className="mb-8 text-center">
+                <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
+                  See the Transformation
+                </h2>
+                <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                  Explore what AI can do with your landscape
+                </p>
+              </div>
+            ) : null}
 
-            <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
+            <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200 max-w-4xl mx-auto">
               <div className="aspect-video w-full">
                 <BeforeAfterSlider
                   beforeImage="/images/yarda_main_before.jpeg"
@@ -388,20 +425,34 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-6 border border-green-100">
-                <div className="text-3xl font-bold text-green-600 mb-2">AI-Powered</div>
-                <p className="text-gray-700">Advanced AI technology generates professional landscape designs</p>
+            {!isAuthenticated && (
+              <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <motion.div
+                  whileHover={{ y: -5 }}
+                  className="bg-white rounded-xl p-8 border border-gray-200 shadow-lg hover:shadow-xl transition"
+                >
+                  <div className="text-4xl font-bold text-brand-green mb-3">⚡</div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">AI-Powered</h3>
+                  <p className="text-gray-600">Advanced AI generates professional landscape designs instantly</p>
+                </motion.div>
+                <motion.div
+                  whileHover={{ y: -5 }}
+                  className="bg-white rounded-xl p-8 border border-gray-200 shadow-lg hover:shadow-xl transition"
+                >
+                  <div className="text-4xl font-bold text-brand-green mb-3">⏱️</div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Minutes, Not Days</h3>
+                  <p className="text-gray-600">Get stunning designs in minutes, not waiting weeks for contractors</p>
+                </motion.div>
+                <motion.div
+                  whileHover={{ y: -5 }}
+                  className="bg-white rounded-xl p-8 border border-gray-200 shadow-lg hover:shadow-xl transition"
+                >
+                  <div className="text-4xl font-bold text-brand-green mb-3">💰</div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Affordable</h3>
+                  <p className="text-gray-600">Professional quality at a fraction of traditional design costs</p>
+                </motion.div>
               </div>
-              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-6 border border-blue-100">
-                <div className="text-3xl font-bold text-blue-600 mb-2">Minutes, Not Days</div>
-                <p className="text-gray-700">Get stunning designs instantly instead of waiting for contractors</p>
-              </div>
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-6 border border-purple-100">
-                <div className="text-3xl font-bold text-purple-600 mb-2">Affordable</div>
-                <p className="text-gray-700">Professional quality designs at a fraction of traditional costs</p>
-              </div>
-            </div>
+            )}
           </motion.div>
         )}
 
@@ -435,34 +486,35 @@ export default function Home() {
           </motion.div>
         )}
 
-        {/* Sign In Prompt - Show to unauthenticated users */}
+        {/* Sign In Prompt - Show to unauthenticated users after showcase */}
         {!isAuthenticated && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="text-center py-12"
+            transition={{ duration: 0.3, delay: 0.2 }}
+            className="bg-gradient-to-r from-brand-green to-emerald-600 rounded-2xl p-12 sm:p-16 text-center text-white shadow-2xl my-16"
           >
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Ready to Transform Your Landscape?
+            <h2 className="text-4xl sm:text-5xl font-bold mb-4 leading-tight">
+              Start Designing Your Dream Landscape Today
             </h2>
-            <p className="text-gray-600 mb-8 text-lg">
-              Sign in to get started with your AI-powered landscape design. New users get 3 free trial credits!
+            <p className="text-lg sm:text-xl mb-8 opacity-90 max-w-2xl mx-auto">
+              Get 3 free trial credits and start transforming your outdoor space with AI in minutes.
             </p>
-            <div className="flex gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <a
+                href="/register"
+                className="px-8 py-4 bg-white hover:bg-gray-100 text-brand-green font-bold rounded-lg transition-all transform hover:scale-105 inline-block"
+              >
+                Get Started Free
+              </a>
               <a
                 href="/login"
-                className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition"
+                className="px-8 py-4 bg-white/20 hover:bg-white/30 text-white font-bold rounded-lg border-2 border-white transition backdrop-blur"
               >
                 Sign In
               </a>
-              <a
-                href="/login"
-                className="px-8 py-3 bg-white hover:bg-gray-50 text-blue-600 font-semibold rounded-lg border border-blue-300 transition"
-              >
-                Create Account
-              </a>
             </div>
+            <p className="text-sm opacity-75 mt-6">No credit card required • 3 free generations included</p>
           </motion.div>
         )}
 
