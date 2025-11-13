@@ -63,43 +63,60 @@ export default function BeforeAfterSlider({
           </div>
         </div>
       ) : (
-        <ReactCompareSlider
-          itemOne={
-            <ReactCompareSliderImage
-              src={beforeImage}
-              alt={beforeAlt}
-              onLoad={() => setIsLoading(false)}
-              onError={() => { setHasError(true); setIsLoading(false); }}
-            />
-          }
-          itemTwo={
-            <ReactCompareSliderImage
-              src={afterImage}
-              alt={afterAlt}
-            />
-          }
-          position={50}
-          className="aspect-[4/3]"
-          handle={
-            <div className="flex items-center justify-center w-10 h-10 bg-white rounded-full shadow-lg border-4 border-green-500">
-              <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
-              </svg>
-            </div>
-          }
-        />
-      )}
+        <>
+          <ReactCompareSlider
+            itemOne={
+              <ReactCompareSliderImage
+                src={beforeImage}
+                alt={beforeAlt}
+                onLoad={() => setIsLoading(false)}
+                onError={() => { setHasError(true); setIsLoading(false); }}
+              />
+            }
+            itemTwo={
+              <ReactCompareSliderImage
+                src={afterImage}
+                alt={afterAlt}
+              />
+            }
+            position={50}
+            className="aspect-[4/3] [&_.rcs-divider]:bg-white [&_.rcs-divider]:w-1 [&_.rcs-handle]:h-12 [&_.rcs-handle]:w-12"
+            handle={
+              <div className="flex items-center justify-center w-12 h-12 bg-white rounded-full shadow-xl border-4 border-green-500 hover:scale-110 transition-transform">
+                <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                <svg className="w-6 h-6 text-green-500 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            }
+          />
 
-      {/* Instructional Text Overlay */}
-      {!hasError && !isLoading && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg">
-          <p className="text-xs text-gray-700 font-medium flex items-center gap-2">
-            <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-            </svg>
-            Drag the slider to compare before and after
-          </p>
-        </div>
+          {/* Before/After Labels */}
+          {!isLoading && (
+            <>
+              <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full">
+                <p className="text-sm font-bold text-white">BEFORE</p>
+              </div>
+              <div className="absolute top-4 right-4 bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full">
+                <p className="text-sm font-bold text-white">AFTER</p>
+              </div>
+            </>
+          )}
+
+          {/* Instructional Text Overlay */}
+          {!isLoading && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg">
+              <p className="text-xs text-gray-700 font-medium flex items-center gap-2">
+                <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                </svg>
+                Drag the slider to compare
+              </p>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
