@@ -48,6 +48,18 @@ export default function AuthCallback() {
         console.log('[Auth Callback] Search params:', window.location.search);
         console.log('[Auth Callback] Hash:', window.location.hash);
 
+        // CRITICAL: Force Supabase to process the OAuth redirect if it contains the session
+        // This handles the case where the hash is present but onAuthStateChange doesn't fire immediately
+        if (window.location.hash) {
+          console.log('[Auth Callback] OAuth redirect detected (hash present), processing session from URL...');
+          const { data: { session: urlSession }, error: urlError } = await supabase.auth.getSession();
+          if (urlSession) {
+            console.log('[Auth Callback] Successfully extracted session from URL');
+          } else if (urlError) {
+            console.warn('[Auth Callback] Error extracting session from URL:', urlError);
+          }
+        }
+
         // Listen for auth state changes - this is the proper way to handle OAuth callbacks
         const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
           console.log('[Auth Callback] Auth state change:', event);
@@ -222,14 +234,15 @@ export default function AuthCallback() {
           console.log('[Auth Callback] Redirecting to:', redirectTo);
           router.push(redirectTo);
         } else if (!window.location.hash && !window.location.search.includes('code=') && !window.location.search.includes('error=')) {
-          // No session and no OAuth callback parameters - redirect to login after waiting
-          console.log('[Auth Callback] No session or OAuth params found, will redirect to login in 3 seconds');
+          // No session and no OAuth callback parameters - wait longer for Supabase to detect session from URL
+          // detectSessionInUrl: true in Supabase config should handle this, but give it more time
+          console.log('[Auth Callback] No session or OAuth params found, waiting for session detection...');
           setTimeout(() => {
             if (!processed) {
-              console.log('[Auth Callback] No auth event received, redirecting to login');
+              console.log('[Auth Callback] No auth event received after 5 seconds, redirecting to login');
               router.push('/login');
             }
-          }, 3000);
+          }, 5000);
         } else if (window.location.search.includes('error=')) {
           const urlParams = new URLSearchParams(window.location.search);
           const error = urlParams.get('error');
@@ -262,7 +275,7 @@ export default function AuthCallback() {
         authSubscription.unsubscribe();
       }
     };
-  }, [router, setUser, setAccessToken]);
+  }, [router, setUser, setAccessToken, setBalances]);
 
   if (error) {
     return (
