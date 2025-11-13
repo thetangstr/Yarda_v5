@@ -31,6 +31,7 @@ import TokenBalance from '@/components/TokenBalance';
 import TrialCounter from '@/components/TrialCounter';
 import DebugPanel from '@/components/DebugPanel';
 import ErrorRecovery from '@/components/ErrorRecovery';
+import BeforeAfterSlider from '@/components/BeforeAfterSlider';
 import {
   pollGenerationStatus,
   type PollingCallbacks,
@@ -379,6 +380,51 @@ export default function Home() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-12 space-y-12">
+        {/* SHOWCASE SECTION - Before/After Slider */}
+        {!isGenerating && !hasResults && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="mb-12"
+          >
+            <div className="mb-8 text-center">
+              <h2 className="text-4xl font-bold text-gray-900 mb-3">
+                Transform Your Landscape
+              </h2>
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                See how AI can redesign your outdoor space in minutes. Explore before and after transformations.
+              </p>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
+              <div className="aspect-video w-full">
+                <BeforeAfterSlider
+                  beforeImage="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200&h=675&fit=crop"
+                  afterImage="https://images.unsplash.com/photo-1585330114519-ac47f91e0e01?w=1200&h=675&fit=crop"
+                  beforeLabel="Before"
+                  afterLabel="After"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-6 border border-green-100">
+                <div className="text-3xl font-bold text-green-600 mb-2">AI-Powered</div>
+                <p className="text-gray-700">Advanced AI technology generates professional landscape designs</p>
+              </div>
+              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-6 border border-blue-100">
+                <div className="text-3xl font-bold text-blue-600 mb-2">Minutes, Not Days</div>
+                <p className="text-gray-700">Get stunning designs instantly instead of waiting for contractors</p>
+              </div>
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-6 border border-purple-100">
+                <div className="text-3xl font-bold text-purple-600 mb-2">Affordable</div>
+                <p className="text-gray-700">Professional quality designs at a fraction of traditional costs</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* FORM SECTION - Always visible, disabled during generation */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
