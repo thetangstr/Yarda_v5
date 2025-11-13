@@ -12,7 +12,6 @@ pydantic==2.11.7  # Upgraded for Supabase SDK compatibility
 pydantic-settings==2.5.2
 
 # Authentication
-firebase-admin==6.5.0  # DEPRECATED - being removed
 supabase==2.23.2  # Supabase Auth SDK
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4

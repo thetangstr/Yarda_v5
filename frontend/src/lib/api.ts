@@ -18,6 +18,9 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 // Debug: Log API URL being used
 console.log('[API Client] Using API_URL:', API_URL);
 
+// Flag to prevent multiple simultaneous 401 redirects (race condition fix)
+let is401HandlingInProgress = false;
+
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_URL,
@@ -54,8 +57,10 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
-      // Unauthorized - redirect to login
-      if (typeof window !== 'undefined') {
+      // Unauthorized - redirect to login (with debounce to prevent race condition)
+      if (typeof window !== 'undefined' && !is401HandlingInProgress) {
+        is401HandlingInProgress = true;
+        console.log('[API Client] 401 Unauthorized - clearing session and redirecting to login');
         localStorage.removeItem('user-storage');
         window.location.href = '/login';
       }

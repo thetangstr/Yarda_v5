@@ -61,20 +61,24 @@ async def get_current_user(
     Raises:
         HTTPException 401: Invalid or expired token
     """
+    from src.config import settings
+
     token = credentials.credentials
     user_id = None
 
-    # E2E Test Bypass: Check for Playwright test token
+    # E2E Test Bypass: ONLY in test/development environment
     if token == "e2e-mock-token":
+        if settings.environment not in ["test", "development"]:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication token"
+            )
+
         print("[E2E Test] Using mock authentication")
         user_id = UUID("00000000-0000-0000-0000-000000000001")  # Fixed UUID for E2E tests
 
         # Ensure E2E test user exists in database
         try:
-            existing_user = await db_pool.fetchrow("""
-                SELECT id FROM users WHERE id = $1
-            """, user_id)
-
             # Always upsert to reset E2E test user state (credits, trials) before each test run
             print("[E2E Test] Ensuring E2E test user exists with correct state")
             await db_pool.execute("""
