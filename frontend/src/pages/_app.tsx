@@ -1,5 +1,9 @@
+'use client';
+
 import type { AppProps } from 'next/app';
 import { useState, useEffect } from 'react';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import '@/styles/globals.css';
 import ToastContainer from '@/components/Toast';
 import { useToastStore } from '@/hooks/useToast';
@@ -49,6 +53,12 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <>
+      {/* Vercel Web Analytics - Tracks pageviews and user interactions */}
+      <Analytics />
+
+      {/* Vercel Speed Insights - Monitors Core Web Vitals (LCP, FID, CLS) */}
+      <SpeedInsights />
+
       {/* Global Toast Notifications */}
       <ToastContainer toasts={toasts} onDismiss={removeToast} />
 
