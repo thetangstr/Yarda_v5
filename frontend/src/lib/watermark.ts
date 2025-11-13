@@ -71,15 +71,20 @@ export async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
 
 /**
  * Copy image to clipboard
- * @param imageUrl - URL of image to copy
+ * @param imageUrl - URL of image to copy (data URL)
  * @returns Promise<void>
  */
 export async function copyImageToClipboard(imageUrl: string): Promise<void> {
   try {
     const blob = await dataUrlToBlob(imageUrl);
+
+    // Determine the correct MIME type based on the blob
+    // Watermarked images are JPEG, so use image/jpeg
+    const mimeType = blob.type || 'image/jpeg';
+
     await navigator.clipboard.write([
       new ClipboardItem({
-        'image/png': blob,
+        [mimeType]: blob,
       }),
     ]);
   } catch (error) {
@@ -154,11 +159,29 @@ export async function shareImageViaWebShare(
 }
 
 /**
- * Detect if Web Share API is available and supports files
- * @returns boolean - True if Web Share API can share files
+ * Detect if device is actually mobile (not just a resized desktop browser)
+ * Checks for actual mobile user agent, not viewport size
+ * @returns boolean - True if device is actually mobile
+ */
+export function isMobileDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+
+  const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+
+  // Mobile device detection based on user agent
+  // This checks for actual mobile OS, not just viewport size
+  const mobileRegex = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile|tablet/i;
+  return mobileRegex.test(userAgent.toLowerCase());
+}
+
+/**
+ * Detect if Web Share API is available and device is actually mobile
+ * @returns boolean - True if Web Share API can share files on actual mobile device
  */
 export function isWebShareAvailable(): boolean {
-  return typeof navigator !== 'undefined' &&
+  // Must be on actual mobile device AND have Web Share API
+  return isMobileDevice() &&
+         typeof navigator !== 'undefined' &&
          typeof navigator.share === 'function' &&
          typeof navigator.canShare === 'function';
 }
