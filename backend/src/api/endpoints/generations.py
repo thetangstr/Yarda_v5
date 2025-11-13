@@ -828,24 +828,61 @@ async def create_generation(
 @router.get("/")
 async def list_generations(
     limit: int = 20,
-    offset: int = 0,
+    page: int = 1,
+    status: Optional[str] = None,
+    sort: Optional[str] = None,
     user: User = Depends(get_current_user)
 ):
     """
-    List user's generation history.
+    List user's generation history with pagination.
 
     Requirements:
     - FR-041: View generation history
+    - Feature 008: Proper history implementation with pagination
 
     Args:
-        limit: Maximum number of generations to return (default: 20)
-        offset: Pagination offset (default: 0)
+        limit: Maximum number of generations to return (default: 20, max: 50)
+        page: Page number for pagination (1-indexed, default: 1)
+        status: Optional status filter (pending, processing, completed, failed)
+        sort: Optional sort field (default: created_at DESC)
         user: Current authenticated user
 
     Returns:
-        List of generations with metadata
+        Paginated list of generations with metadata
     """
-    generations = await db_pool.fetch("""
+    # Validate and normalize parameters
+    limit = min(int(limit), 50)  # Max 50 per page
+    page = max(int(page), 1)  # Minimum page 1
+    offset = (page - 1) * limit
+
+    # Build query filters
+    where_clause = "WHERE user_id = $1"
+    params: list = [user.id]
+
+    if status:
+        where_clause += f" AND status = ${len(params) + 1}"
+        params.append(status)
+
+    # Build sort clause (default: created_at DESC)
+    sort_clause = "created_at DESC"
+    if sort in ['oldest', 'name_asc', 'name_desc']:
+        if sort == 'oldest':
+            sort_clause = "created_at ASC"
+        elif sort == 'name_asc':
+            sort_clause = "address ASC"
+        elif sort == 'name_desc':
+            sort_clause = "address DESC"
+
+    # Get total count
+    total_result = await db_pool.fetchval(f"""
+        SELECT COUNT(*)
+        FROM generations
+        {where_clause}
+    """, *params)
+    total = total_result or 0
+
+    # Get paginated results
+    generations = await db_pool.fetch(f"""
         SELECT
             id,
             status,
@@ -858,16 +895,17 @@ async def list_generations(
             created_at,
             completed_at
         FROM generations
-        WHERE user_id = $1
-        ORDER BY created_at DESC
-        LIMIT $2 OFFSET $3
-    """, user.id, limit, offset)
+        {where_clause}
+        ORDER BY {sort_clause}
+        LIMIT ${len(params) + 1} OFFSET ${len(params) + 2}
+    """, *params, limit, offset)
 
     return {
-        "generations": [dict(g) for g in generations],
-        "total": len(generations),
+        "data": [dict(g) for g in generations],
+        "total": total,
+        "page": page,
         "limit": limit,
-        "offset": offset
+        "has_more": offset + len(generations) < total
     }
 
 

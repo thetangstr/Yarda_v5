@@ -1,8 +1,15 @@
 /**
  * History Page
  *
- * Displays the user's generation history with status and details.
- * Shows authentication-gated content.
+ * Displays the user's generation history with pagination, filtering, and sorting.
+ * Shows authentication-gated content with enhanced UI and features.
+ *
+ * Features:
+ * - Paginated history list (default 20 per page)
+ * - Filter by status (completed, failed, processing, etc.)
+ * - Sort by date or name
+ * - Enhanced generation cards with metadata
+ * - Responsive grid layout
  */
 
 import React, { useState, useEffect } from 'react';
@@ -21,6 +28,12 @@ export default function HistoryPage() {
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
 
+  // Pagination and filtering state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit, setLimit] = useState(20);
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [sortBy, setSortBy] = useState<string>('');
+
   // Redirect if not authenticated
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -38,7 +51,12 @@ export default function HistoryPage() {
 
       try {
         setLoading(true);
-        const response = await generationAPI.list({ limit: 50, page: 1 });
+        const response = await generationAPI.list({
+          limit,
+          page: currentPage,
+          status: statusFilter || undefined,
+          sort: sortBy || undefined
+        });
         setGenerations(response.data);
         setTotal(response.total);
       } catch (err) {
@@ -50,7 +68,7 @@ export default function HistoryPage() {
     };
 
     fetchHistory();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, currentPage, limit, statusFilter, sortBy]);
 
   // Show loading state
   if (loading) {
@@ -75,6 +93,8 @@ export default function HistoryPage() {
     return null;
   }
 
+  const totalPages = Math.ceil(total / limit);
+
   return (
     <div className="min-h-screen bg-brand-cream">
       <Head>
@@ -84,7 +104,7 @@ export default function HistoryPage() {
 
       <Navigation />
 
-      <main className="container mx-auto px-4 py-12">
+      <main className="max-w-6xl mx-auto px-4 py-12">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Generation History</h1>
@@ -97,6 +117,82 @@ export default function HistoryPage() {
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-red-700">{error}</p>
+            <button
+              onClick={() => {
+                setError(null);
+                setCurrentPage(1);
+              }}
+              className="mt-2 text-sm text-red-600 hover:text-red-800 font-medium"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {/* Filters and Controls */}
+        {!loading && generations.length > 0 && (
+          <div className="mb-8 bg-white rounded-lg border border-gray-200 p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Status Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Filter by Status
+                </label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-brand-green"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="completed">Completed</option>
+                  <option value="processing">Processing</option>
+                  <option value="failed">Failed</option>
+                  <option value="pending">Pending</option>
+                </select>
+              </div>
+
+              {/* Sort By */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Sort By
+                </label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => {
+                    setSortBy(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-brand-green"
+                >
+                  <option value="">Newest First</option>
+                  <option value="oldest">Oldest First</option>
+                  <option value="name_asc">Address A-Z</option>
+                  <option value="name_desc">Address Z-A</option>
+                </select>
+              </div>
+
+              {/* Items Per Page */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Items Per Page
+                </label>
+                <select
+                  value={limit}
+                  onChange={(e) => {
+                    setLimit(parseInt(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-brand-green"
+                >
+                  <option value="10">10</option>
+                  <option value="20">20</option>
+                  <option value="50">50</option>
+                </select>
+              </div>
+            </div>
           </div>
         )}
 
@@ -117,10 +213,10 @@ export default function HistoryPage() {
               />
             </svg>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              No generations yet
+              No generations found
             </h3>
             <p className="text-gray-600 mb-6">
-              Start creating beautiful landscape designs with AI
+              {statusFilter ? 'No generations match your filter' : 'Start creating beautiful landscape designs with AI'}
             </p>
             <button
               onClick={() => router.push('/generate')}
@@ -131,35 +227,32 @@ export default function HistoryPage() {
           </div>
         )}
 
-        {/* Generations List */}
+        {/* Generations Grid */}
         {generations.length > 0 && (
-          <div className="space-y-4">
-            {generations.map((generation) => (
-              <div
-                key={generation.id}
-                className="card hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => router.push(`/generate?id=${generation.id}`)}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      {/* Status Badge */}
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {generations.map((generation) => (
+                <div
+                  key={generation.id}
+                  className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow"
+                >
+                  {/* Card Header with Status */}
+                  <div className="p-4 border-b border-gray-200 bg-gray-50">
+                    <div className="flex items-start justify-between gap-3 mb-2">
                       <span
-                        className={`badge ${
+                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
                           generation.status === 'completed'
-                            ? 'badge-success'
+                            ? 'bg-green-100 text-green-800'
                             : generation.status === 'failed'
-                            ? 'badge-error'
+                            ? 'bg-red-100 text-red-800'
                             : generation.status === 'processing'
-                            ? 'badge-warning'
-                            : 'badge-default'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-gray-100 text-gray-800'
                         }`}
                       >
                         {generation.status}
                       </span>
-
-                      {/* Payment Method Badge */}
-                      <span className="badge badge-default">
+                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
                         {generation.payment_method === 'subscription'
                           ? 'Pro'
                           : generation.payment_method === 'trial'
@@ -167,61 +260,78 @@ export default function HistoryPage() {
                           : 'Token'}
                       </span>
                     </div>
+                  </div>
 
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                  {/* Card Content */}
+                  <div className="p-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-1 truncate">
                       {generation.address}
                     </h3>
 
-                    <p className="text-sm text-gray-600">
-                      Created: {new Date(generation.created_at).toLocaleString()}
-                    </p>
+                    <div className="space-y-2 text-sm text-gray-600 mb-4">
+                      <p>Created: {new Date(generation.created_at).toLocaleDateString()}</p>
+                      {generation.completed_at && (
+                        <p>Completed: {new Date(generation.completed_at).toLocaleDateString()}</p>
+                      )}
+                      {generation.error_message && (
+                        <p className="text-red-600">Error: {generation.error_message.substring(0, 50)}...</p>
+                      )}
+                    </div>
 
-                    {generation.completed_at && (
-                      <p className="text-sm text-gray-600">
-                        Completed: {new Date(generation.completed_at).toLocaleString()}
-                      </p>
-                    )}
-
-                    {generation.error_message && (
-                      <p className="text-sm text-red-600 mt-2">
-                        Error: {generation.error_message}
-                      </p>
-                    )}
-
-                    {generation.message && (
-                      <p className="text-sm text-gray-700 mt-2">
-                        {generation.message}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* View Arrow */}
-                  <div className="flex-shrink-0 ml-4">
-                    <svg
-                      className="h-6 w-6 text-brand-green"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
+                    {/* Action Buttons */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => router.push(`/generate?id=${generation.id}`)}
+                        className="flex-1 px-3 py-2 text-sm font-medium text-white bg-brand-green hover:bg-brand-dark-green rounded-lg transition"
+                      >
+                        View Details
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
 
-        {/* Total Count */}
-        {total > 0 && (
-          <div className="mt-8 text-center text-gray-600">
-            Showing {generations.length} of {total} generation{total !== 1 ? 's' : ''}
-          </div>
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mb-8">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-3 py-2 rounded-lg transition ${
+                      currentPage === page
+                        ? 'bg-brand-green text-white'
+                        : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+
+            {/* Info */}
+            <div className="text-center text-sm text-gray-600">
+              Showing {(currentPage - 1) * limit + 1} to {Math.min(currentPage * limit, total)} of {total} generation{total !== 1 ? 's' : ''}
+            </div>
+          </>
         )}
       </main>
 
