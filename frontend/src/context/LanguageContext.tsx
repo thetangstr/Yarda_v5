@@ -25,17 +25,38 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(defaultLocale);
   const [translations, setTranslations] = useState<Record<string, any>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Initialize with default locale translations immediately
+  useEffect(() => {
+    // Load default locale immediately to avoid blank text on initial render
+    loadTranslations(defaultLocale)
+      .then((trans) => {
+        setTranslations(trans);
+        setIsLoading(false);
+        setIsInitialized(true);
+      })
+      .catch((error) => {
+        console.error('Failed to load default translations:', error);
+        setIsLoading(false);
+        setIsInitialized(true);
+      });
+  }, []);
 
   // Load locale from localStorage on mount
   useEffect(() => {
+    if (!isInitialized) return;
+
     const savedLocale = localStorage.getItem('preferred-locale');
-    if (savedLocale && isValidLocale(savedLocale)) {
+    if (savedLocale && isValidLocale(savedLocale) && savedLocale !== locale) {
       setLocaleState(savedLocale);
     }
-  }, []);
+  }, [isInitialized, locale]);
 
   // Load translations whenever locale changes
   useEffect(() => {
+    if (!isInitialized || locale === defaultLocale) return;
+
     setIsLoading(true);
     loadTranslations(locale)
       .then((trans) => {
@@ -50,7 +71,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       .finally(() => {
         setIsLoading(false);
       });
-  }, [locale]);
+  }, [locale, isInitialized]);
 
   const setLocale = (newLocale: Locale) => {
     if (newLocale !== locale) {
