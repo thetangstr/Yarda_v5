@@ -27,9 +27,10 @@
  * Build: 2025-11-11 (cache bust)
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Head from 'next/head';
 import { Share2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import { useUserStore } from '@/store/userStore';
 import { holidayAPI } from '@/lib/api';
@@ -40,6 +41,20 @@ import StyleSelector, { HolidayStyle } from '@/components/StyleSelector';
 import { AuthOptions } from '@/components/auth/AuthOptions';
 import SocialShareModal from '@/components/holiday/SocialShareModal';
 import BeforeAfterSlider from '@/components/BeforeAfterSlider';
+
+/**
+ * Maps generation status to user-friendly display text
+ */
+function getStatusDisplay(status: string | null): string {
+  if (!status) return '';
+  const statusMap: Record<string, string> = {
+    'pending': 'Tinkering',
+    'processing': 'Processing',
+    'completed': 'Completed',
+    'failed': 'Failed',
+  };
+  return statusMap[status] || status;
+}
 
 export default function HolidayDecoratorPage() {
   const { user, isAuthenticated, _hasHydrated } = useUserStore();
@@ -70,6 +85,21 @@ export default function HolidayDecoratorPage() {
   const [decoratedImageUrl, setDecoratedImageUrl] = useState<string | null>(null);
   const [beforeAfterImageUrl, setBeforeAfterImageUrl] = useState<string | null>(null);
 
+  // Credit animation state
+  const [showCreditAnimation, setShowCreditAnimation] = useState(false);
+
+  // Polling cleanup ref (prevent memory leak when unmounting during polling)
+  const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup polling timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingTimeoutRef.current) {
+        clearTimeout(pollingTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Validation
   const canGenerate = isAuthenticated && address.trim() !== '' && selectedStyle !== null && credits > 0 && !isGenerating;
 
@@ -97,15 +127,17 @@ export default function HolidayDecoratorPage() {
 
       // Start polling for status
       pollGenerationStatus(response.id);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Generation failed:', error);
 
+      // Type-safe error handling
+      const axiosError = error as any; // TODO: import AxiosError type
       // If 403 (insufficient credits), immediately refresh from backend
-      if (error.response?.status === 403) {
+      if (axiosError.response?.status === 403) {
         await refreshCredits(); // Unified credit sync handles all credit types
       }
 
-      setGenerationError(error.response?.data?.detail?.message || 'Generation failed. Please try again.');
+      setGenerationError(axiosError.response?.data?.detail?.message || 'Generation failed. Please try again.');
       setIsGenerating(false);
       setGenerationStatus(null);
     }
@@ -113,6 +145,7 @@ export default function HolidayDecoratorPage() {
 
   const pollGenerationStatus = async (genId: string) => {
     const maxPolls = 60; // 2 minutes max (2-second intervals)
+    const pollIntervalMs = 2000;
     let pollCount = 0;
 
     const poll = async () => {
@@ -127,26 +160,30 @@ export default function HolidayDecoratorPage() {
         if (response.status === 'completed') {
           // Success!
           setIsGenerating(false);
+          pollingTimeoutRef.current = null;
           return;
         } else if (response.status === 'failed') {
           // Failed
           setGenerationError(response.error_message || 'Generation failed');
           setIsGenerating(false);
+          pollingTimeoutRef.current = null;
           return;
         } else if (pollCount >= maxPolls) {
           // Timeout
           setGenerationError('Generation timeout. Please try again.');
           setIsGenerating(false);
+          pollingTimeoutRef.current = null;
           return;
         }
 
         // Still processing, poll again
         pollCount++;
-        setTimeout(poll, 2000);
-      } catch (error: any) {
+        pollingTimeoutRef.current = setTimeout(poll, pollIntervalMs);
+      } catch (error) {
         console.error('Polling error:', error);
         setGenerationError('Failed to check generation status');
         setIsGenerating(false);
+        pollingTimeoutRef.current = null;
       }
     };
 
@@ -170,10 +207,10 @@ export default function HolidayDecoratorPage() {
   // Wait for hydration before checking auth
   if (!_hasHydrated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background-light dark:bg-background-dark flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-text-light dark:text-text-dark">Loading...</p>
         </div>
       </div>
     );
@@ -187,11 +224,11 @@ export default function HolidayDecoratorPage() {
           <title>Holiday Decorator | Yarda AI</title>
         </Head>
 
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+        <div className="min-h-screen bg-background-light dark:bg-background-dark">
           <HolidayHero />
 
           {/* Sign-in prompt */}
-          <div className="max-w-md mx-auto mt-12 p-8 bg-white rounded-xl shadow-lg">
+          <div className="max-w-md mx-auto mt-12 p-8 bg-surface-light dark:bg-surface-dark rounded-2xl shadow-card dark:shadow-card-dark border border-gray-200 dark:border-gray-700">
             <AuthOptions
               redirectTo="/holiday"
               title="Sign in to Get Started"
@@ -209,252 +246,328 @@ export default function HolidayDecoratorPage() {
         <title>Holiday Decorator | Yarda AI</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
-        {/* Holiday Hero - Entry Point */}
-        <HolidayHero />
-
-        <div className="max-w-7xl mx-auto px-4 py-12">
-          {/* Header with credit badge */}
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">
-                🎄 Holiday Decorator
-              </h1>
-              <p className="text-gray-600">
-                Transform your home into a festive masterpiece
-              </p>
-            </div>
-
-            {/* Credit badge */}
-            <div
-              data-testid="credit-display"
-              className="px-6 py-3 bg-white rounded-full shadow-lg border-2 border-green-200"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">🎁</span>
-                <div>
-                  <p className="text-xs text-gray-500">Holiday Credits</p>
-                  <p className="text-2xl font-bold text-green-600">
-                    {credits}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Holiday Showcase Slider */}
+      <div className="min-h-screen bg-background-light dark:bg-background-dark">
+        {/* Holiday Hero - Entry Point with integrated before/after slider */}
+        <AnimatePresence mode="popLayout">
           {!generationStatus && (
-            <div className="mb-12 bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200 p-6">
-              <div className="mb-6 text-center">
-                <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                  ✨ See the Magic
-                </h2>
-                <p className="text-gray-600">
-                  Transform your home into a festive wonderland with AI
-                </p>
-              </div>
-              <div className="aspect-video w-full mb-4 rounded-xl overflow-hidden">
-                <BeforeAfterSlider
-                  beforeImage="/images/holiday_before.jpg"
-                  afterImage="/images/holiday_after.jpg"
-                  beforeAlt="Holiday home before festive decoration"
-                  afterAlt="Holiday home after AI festive decoration"
-                />
-              </div>
-            </div>
+            <motion.div
+              key="holiday-hero"
+              initial={{ opacity: 1, y: 0 }}
+              exit={{
+                opacity: 0,
+                y: -100,
+                transition: { duration: 0.6, ease: 'easeIn' }
+              }}
+            >
+              <HolidayHero />
+            </motion.div>
           )}
+        </AnimatePresence>
 
-          {/* Main content */}
+        <div className="max-w-6xl mx-auto px-4 py-12">
+          {/* Main content - Form right after hero for prominence */}
           {!generationStatus && (
             <div className="space-y-8">
-              {/* Address input */}
-              <div className="bg-white rounded-xl p-6 shadow-lg">
-                <label htmlFor="address" className="block text-lg font-semibold text-gray-900 mb-2">
-                  Enter Your Home Address
-                </label>
-                <input
-                  id="address"
-                  name="address"
-                  type="text"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="123 Main St, San Francisco, CA"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none text-lg"
-                  disabled={isGenerating}
-                />
+              {/* Premium Header Section */}
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h2 className="font-display text-4xl font-bold text-text-light dark:text-text-dark mb-1 tracking-tight">
+                    ✨ Create Your Holiday Design
+                  </h2>
+                  <p className="text-lg text-subtle-light dark:text-subtle-dark font-light">Decorate your home in seconds with AI magic</p>
+                </div>
+
+                {/* Credit badge - premium red theme */}
+                <div
+                  data-testid="credit-display"
+                  className="px-6 py-3 bg-gradient-to-r from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 rounded-full border-2 border-primary hover:border-primary/80 transition-all shadow-md dark:shadow-card-dark"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl">🎁</span>
+                    <div className="text-right">
+                      <p className="text-xs font-semibold text-primary tracking-widest uppercase">Credits</p>
+                      <p className="text-2xl font-bold text-primary">
+                        {credits}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Street View rotator (shown after address entered) */}
+              {/* Premium Address Input - Ultra-thin design */}
+              <div className="bg-gradient-to-b from-surface-light to-background-light dark:from-surface-dark dark:to-background-dark rounded-2xl p-1 shadow-card dark:shadow-card-dark border border-gray-200 dark:border-gray-700 hover:border-primary/30 transition-all">
+                <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-8 space-y-4">
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-4xl">📍</span>
+                    <div>
+                      <label htmlFor="address" className="block text-sm font-semibold text-text-light dark:text-text-dark uppercase tracking-widest mb-1">
+                        Home Address
+                      </label>
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark">Let's find your home and add some holiday magic</p>
+                    </div>
+                  </div>
+
+                  <input
+                    id="address"
+                    name="address"
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Enter your address..."
+                    className="w-full px-6 py-3.5 border border-gray-200 dark:border-gray-700 dark:bg-surface-dark dark:text-text-dark rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 focus:outline-none text-base font-light placeholder-subtle-light dark:placeholder-subtle-dark transition-all"
+                    disabled={isGenerating}
+                  />
+
+                  <div className="flex items-center gap-2 text-xs text-subtle-light dark:text-subtle-dark font-light">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Google Street View will be pulled automatically
+                  </div>
+                </div>
+              </div>
+
+              {/* Street View rotator (shown after address entered) - Premium card */}
               {address && (
-                <StreetViewRotator
-                  address={address}
-                  initialHeading={heading}
-                  onHeadingChange={setHeading}
-                  onStreetOffsetChange={setStreetOffsetFeet}
-                  disabled={isGenerating}
-                />
+                <div className="bg-gradient-to-b from-surface-light to-background-light dark:from-surface-dark dark:to-background-dark rounded-2xl p-1 shadow-card dark:shadow-card-dark border border-gray-200 dark:border-gray-700 hover:border-primary/30 transition-all">
+                  <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-8">
+                    <StreetViewRotator
+                      address={address}
+                      initialHeading={heading}
+                      onHeadingChange={setHeading}
+                      onStreetOffsetChange={setStreetOffsetFeet}
+                      disabled={isGenerating}
+                    />
+                  </div>
+                </div>
               )}
 
-              {/* Style selector */}
-              <StyleSelector
-                selectedStyle={selectedStyle}
-                onStyleChange={setSelectedStyle}
-                disabled={isGenerating}
-              />
+              {/* Style selector - Premium card */}
+              <div className="bg-gradient-to-b from-surface-light to-background-light dark:from-surface-dark dark:to-background-dark rounded-2xl p-1 shadow-card dark:shadow-card-dark border border-gray-200 dark:border-gray-700 hover:border-primary/30 transition-all">
+                <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-8">
+                  <StyleSelector
+                    selectedStyle={selectedStyle}
+                    onStyleChange={setSelectedStyle}
+                    disabled={isGenerating}
+                  />
+                </div>
+              </div>
 
-              {/* Error message */}
+              {/* Error message - Premium minimal design */}
               {generationError && (
                 <div
                   data-testid="error-message"
-                  className="p-4 bg-red-50 border border-red-200 rounded-lg"
+                  className="p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-xl backdrop-blur-sm"
                 >
-                  <p className="text-red-800">{generationError}</p>
+                  <p className="text-red-700 dark:text-red-200 font-light flex items-center gap-2">
+                    <span className="text-lg">⚠️</span>
+                    {generationError}
+                  </p>
                 </div>
               )}
 
-              {/* Generate button */}
-              <div className="flex justify-center">
+              {/* Premium Generate Button - Festive Red */}
+              <div className="flex justify-center pt-4">
                 <button
                   onClick={handleGenerate}
                   disabled={!canGenerate}
                   className={`
-                    px-12 py-4 rounded-xl text-xl font-bold
-                    transition-all duration-200
+                    px-16 py-4 rounded-xl text-lg font-bold tracking-wide
+                    transition-all duration-300 group
                     ${
                       canGenerate
-                        ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 shadow-lg hover:shadow-xl transform hover:scale-105'
-                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        ? 'bg-gradient-to-r from-primary to-red-600 text-white hover:from-red-700 hover:to-red-700 shadow-lg hover:shadow-2xl hover:shadow-primary/30'
+                        : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
                     }
                   `}
                 >
-                  {isGenerating ? 'Generating...' : '🎄 Generate Decoration'}
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="text-xl group-hover:scale-110 transition-transform">
+                      {isGenerating ? '⏳' : '🎄'}
+                    </span>
+                    {isGenerating ? 'Creating Magic...' : 'Generate Decoration'}
+                  </span>
                 </button>
               </div>
 
               {credits === 0 && (
-                <div data-testid="error-message" className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
-                  <p className="text-yellow-800 font-medium">
-                    Insufficient credits! Share your decorated home to earn more. 🎁
+                <div data-testid="error-message" className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl backdrop-blur-sm text-center">
+                  <p className="text-amber-700 dark:text-amber-200 font-light flex items-center justify-center gap-2">
+                    <span className="text-lg">✨</span>
+                    Earn more credits by sharing your decorated home!
                   </p>
                 </div>
               )}
             </div>
           )}
 
-          {/* Progress tracking (inline) - Show before image while generating */}
-          {generationStatus && generationStatus !== 'completed' && generationStatus !== 'failed' && originalImageUrl && (
-            <div
+          {/* Progress tracking (inline) - Premium waiting experience */}
+          {generationStatus && generationStatus !== 'completed' && generationStatus !== 'failed' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
               data-testid="generation-progress"
-              className="bg-white rounded-xl p-8 shadow-lg"
+              className="w-full max-w-3xl mx-auto"
             >
               <div className="space-y-6">
-                {/* Original image displayed while waiting */}
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-800 mb-4 text-center">
+                {/* Headline */}
+                <div className="text-center space-y-2">
+                  <h2 className="text-3xl md:text-4xl font-bold text-text-light dark:text-text-dark">
                     ✨ Decorating Your Home... 🎄
-                  </h3>
-                  <img
-                    src={originalImageUrl}
-                    alt="Original before decoration"
-                    className="w-full rounded-lg shadow-lg mb-4"
-                  />
+                  </h2>
+                  <p className="text-subtle-light dark:text-subtle-dark font-light">
+                    AI is working its magic on your home
+                  </p>
                 </div>
 
-                {/* Loading indicator */}
-                <div className="text-center border-t pt-6">
-                  <div className="animate-spin w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-3" />
-                  <p className="text-gray-600 font-medium">
-                    Status: <span className="capitalize">{generationStatus}</span>
+                {/* Premium Image Card with Processing Overlay */}
+                <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-gray-900" style={{ minHeight: '300px' }}>
+                  {/* Original image displayed while waiting (if available) */}
+                  {originalImageUrl && (
+                    <img
+                      src={originalImageUrl}
+                      alt="Original before decoration"
+                      className="w-full h-auto object-cover"
+                      style={{ maxHeight: '500px' }}
+                    />
+                  )}
+
+                  {/* Processing Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent">
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      {/* 🎄 Bouncing Christmas Tree Animation 🎄 */}
+                      <motion.div
+                        animate={{
+                          y: [0, -20, 0],
+                          scale: [1, 1.1, 1],
+                        }}
+                        transition={{
+                          repeat: Infinity,
+                          duration: 1.5,
+                          ease: 'easeInOut',
+                        }}
+                        className="text-8xl drop-shadow-2xl"
+                        style={{
+                          filter: 'drop-shadow(0 0 30px rgba(255,255,255,0.8))',
+                        }}
+                      >
+                        🎄
+                      </motion.div>
+                    </div>
+
+                    {/* Animated Pulsing Dots */}
+                    <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2">
+                      <motion.div
+                        animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
+                        transition={{ repeat: Infinity, duration: 1, delay: 0 }}
+                        className="w-3 h-3 bg-white rounded-full"
+                      />
+                      <motion.div
+                        animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
+                        transition={{ repeat: Infinity, duration: 1, delay: 0.2 }}
+                        className="w-3 h-3 bg-white rounded-full"
+                      />
+                      <motion.div
+                        animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
+                        transition={{ repeat: Infinity, duration: 1, delay: 0.4 }}
+                        className="w-3 h-3 bg-white rounded-full"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Status Badge - Bottom Right */}
+                  <div className="absolute bottom-4 right-4">
+                    <div className="bg-black/70 backdrop-blur-md rounded-lg px-4 py-2 border border-white/20">
+                      <p className="text-sm text-white font-bold flex items-center gap-2">
+                        ⚡ Generating...
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status Text */}
+                <div className="text-center space-y-3 border-t border-gray-200 dark:border-gray-700 pt-6">
+                  <p className="text-text-light dark:text-text-dark font-medium">
+                    Status: <span className="text-primary font-bold">{getStatusDisplay(generationStatus)}</span>
                   </p>
-                  <p className="text-sm text-gray-500 mt-2">
+                  <p className="text-sm text-subtle-light dark:text-subtle-dark font-light">
                     Creating your decorated version... (this usually takes 10-15 seconds)
                   </p>
                 </div>
               </div>
-            </div>
+            </motion.div>
           )}
 
-          {/* Results display (inline) - Enlarged generated image with before thumbnail */}
+          {/* Results display (inline) - New premium card design */}
           {generationStatus === 'completed' && decoratedImageUrl && (
             <div
               data-testid="generation-results"
-              className="bg-white rounded-xl p-8 shadow-lg"
+              className="min-h-screen flex flex-col items-center justify-center py-8"
             >
-              <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">
-                ✨ Your Holiday Decorated Home! ✨
-              </h2>
+              {/* Main results card */}
+              <div className="w-full max-w-2xl space-y-8">
+                {/* Headline */}
+                <div className="text-center space-y-2">
+                  <h2 className="text-4xl md:text-5xl font-bold text-text-light dark:text-text-dark">
+                    ✨ Your Holiday Decorated Home!
+                  </h2>
+                </div>
 
-              {/* Show before/after comparison with interactive slider */}
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-3 text-center">
-                  ✨ Before & After Comparison
-                </h3>
-
-                {beforeAfterImageUrl ? (
-                  /* Use composite before/after image with static display */
-                  <img
-                    data-testid="before-after-image"
-                    src={beforeAfterImageUrl}
-                    alt="Before and After Comparison"
-                    className="w-full rounded-lg shadow-lg"
-                  />
-                ) : originalImageUrl && decoratedImageUrl ? (
-                  /* Use interactive slider when separate images available */
-                  <BeforeAfterSlider
-                    beforeImage={originalImageUrl}
-                    afterImage={decoratedImageUrl}
-                    beforeAlt="Original before decoration"
-                    afterAlt="Your decorated home"
-                    className="mb-4"
-                  />
-                ) : (
-                  /* Fallback: Show enlarged decorated image only */
+                {/* Image card with share button overlay */}
+                <div className="relative group rounded-3xl overflow-hidden shadow-2xl">
+                  {/* Main decorated image */}
                   <img
                     data-testid="decorated-image"
                     src={decoratedImageUrl}
                     alt="Your Decorated Home"
-                    className="w-full rounded-lg shadow-lg"
+                    className="w-full h-auto rounded-3xl object-cover"
                   />
+
+                  {/* Share button overlay - top right */}
+                  <button
+                    onClick={() => setIsShareModalOpen(true)}
+                    className="absolute top-6 right-6 p-4 bg-white/90 hover:bg-white rounded-full shadow-lg hover:shadow-xl transition transform hover:scale-110 flex items-center justify-center backdrop-blur-sm"
+                    title="Share your decorated home & earn credit"
+                  >
+                    <Share2 className="w-6 h-6 text-gray-800" />
+                  </button>
+                </div>
+
+                {/* Before/After comparison (optional, collapsed) */}
+                {beforeAfterImageUrl && (
+                  <details className="w-full">
+                    <summary className="cursor-pointer text-center text-text-light dark:text-text-dark font-semibold hover:text-primary transition">
+                      📊 View Before & After Comparison
+                    </summary>
+                    <div className="mt-4 rounded-2xl overflow-hidden shadow-lg">
+                      <img
+                        data-testid="before-after-image"
+                        src={beforeAfterImageUrl}
+                        alt="Before and After Comparison"
+                        className="w-full"
+                      />
+                    </div>
+                  </details>
                 )}
-              </div>
 
-              {/* Action buttons */}
-              <div className="flex gap-4 justify-center items-center">
-                <a
-                  href={decoratedImageUrl}
-                  download
-                  className="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition flex items-center gap-2"
-                  title="Download your decorated home image"
-                >
-                  <span>📥</span> Download
-                </a>
-
-                {/* Share icon button */}
+                {/* Action button - Primary CTA is "New Design" */}
                 <button
-                  onClick={() => setIsShareModalOpen(true)}
-                  className="p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition transform hover:scale-110 flex items-center justify-center group relative"
-                  title="Share & earn credit"
-                  aria-label="Share on social media"
+                  onClick={resetForm}
+                  className="w-full py-4 px-8 bg-gradient-to-r from-primary to-red-600 hover:from-red-700 hover:to-red-700 text-white font-bold text-lg rounded-2xl shadow-lg hover:shadow-xl transition transform hover:scale-105"
                 >
-                  <Share2 className="w-6 h-6" />
-                  <span className="absolute bottom-full mb-2 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
-                    Share & Earn
+                  <span className="flex items-center justify-center gap-3">
+                    <span>✨</span>
+                    New Design
+                    <span>✨</span>
                   </span>
                 </button>
 
-                <button
-                  onClick={resetForm}
-                  className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition flex items-center gap-2"
-                >
-                  <span>🎄</span> New Design
-                </button>
-              </div>
-
-              {/* Share prompt */}
-              <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-center text-blue-800 font-medium">
-                  💡 Share your decorated home to earn more credits!
-                </p>
+                {/* Share prompt */}
+                <div className="p-6 bg-gradient-to-r from-accent-light/30 to-accent-dark/30 dark:from-accent-dark/20 dark:to-accent-light/20 border-2 border-accent-light dark:border-accent-dark rounded-2xl">
+                  <p className="text-center text-text-light dark:text-text-dark font-semibold text-lg">
+                    💡 Share your magical home to earn more credits!
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -462,18 +575,39 @@ export default function HolidayDecoratorPage() {
       </div>
 
       {/* Social Share Modal */}
-      {generationId && beforeAfterImageUrl && (
+      {generationId && decoratedImageUrl && (
         <SocialShareModal
           isOpen={isShareModalOpen}
           onClose={() => setIsShareModalOpen(false)}
           generationId={generationId}
-          imageUrl={beforeAfterImageUrl}
+          imageUrl={decoratedImageUrl}
           onShareComplete={() => {
+            // Show credit animation
+            setShowCreditAnimation(true);
             // Refresh credits after successful share
             refreshCredits();
             setIsShareModalOpen(false);
+            // Hide animation after 2 seconds
+            setTimeout(() => setShowCreditAnimation(false), 2000);
           }}
         />
+      )}
+
+      {/* Credit Animation - Floats up when credit is earned */}
+      {showCreditAnimation && (
+        <motion.div
+          initial={{ opacity: 0, y: 100, scale: 0.5 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -100, scale: 0.5 }}
+          transition={{ duration: 0.6, ease: 'easeOut' }}
+          className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50"
+        >
+          <div className="bg-gradient-to-r from-primary to-red-500 text-white px-8 py-4 rounded-full shadow-2xl font-bold text-lg flex items-center gap-3">
+            <span className="text-2xl">⭐</span>
+            <span>+1 Credit</span>
+            <span className="text-2xl">✨</span>
+          </div>
+        </motion.div>
       )}
     </>
   );
