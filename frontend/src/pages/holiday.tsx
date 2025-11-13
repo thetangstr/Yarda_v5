@@ -242,6 +242,28 @@ export default function HolidayDecoratorPage() {
             </div>
           </div>
 
+          {/* Holiday Showcase Slider */}
+          {!generationStatus && (
+            <div className="mb-12 bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200 p-6">
+              <div className="mb-6 text-center">
+                <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                  ✨ See the Magic
+                </h2>
+                <p className="text-gray-600">
+                  Transform your home into a festive wonderland with AI
+                </p>
+              </div>
+              <div className="aspect-video w-full mb-4 rounded-xl overflow-hidden">
+                <BeforeAfterSlider
+                  beforeImage="/images/holiday_before.jpg"
+                  afterImage="/images/holiday_after.jpg"
+                  beforeAlt="Holiday home before festive decoration"
+                  afterAlt="Holiday home after AI festive decoration"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Main content */}
           {!generationStatus && (
             <div className="space-y-8">

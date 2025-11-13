@@ -134,8 +134,8 @@ export default function AuthCallback() {
               }
             }
 
-            // Redirect to the generate page or intended destination
-            const redirectTo = router.query.redirect as string || '/generate';
+            // Redirect to the home page or intended destination
+            const redirectTo = router.query.redirect as string || '/';
             console.log('[Auth Callback] Redirecting to:', redirectTo);
             router.push(redirectTo);
           } else if (event === 'SIGNED_OUT') {
@@ -187,7 +187,7 @@ export default function AuthCallback() {
               full_name: googleMetadata?.full_name || googleMetadata?.name,
             } as any);
             await syncAllCredits();
-            const redirectTo = router.query.redirect as string || '/generate';
+            const redirectTo = router.query.redirect as string || '/';
             console.log('[Auth Callback] Redirecting to:', redirectTo);
             router.push(redirectTo);
             return;
@@ -218,7 +218,7 @@ export default function AuthCallback() {
             await syncAllCredits();
           }
 
-          const redirectTo = router.query.redirect as string || '/generate';
+          const redirectTo = router.query.redirect as string || '/';
           console.log('[Auth Callback] Redirecting to:', redirectTo);
           router.push(redirectTo);
         } else if (!window.location.hash && !window.location.search.includes('code=') && !window.location.search.includes('error=')) {

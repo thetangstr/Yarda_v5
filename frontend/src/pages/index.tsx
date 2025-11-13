@@ -19,7 +19,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
-import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUserStore } from '@/store/userStore';
 import { useGenerationStore } from '@/store/generationStore';
@@ -52,7 +51,6 @@ import {
 } from '@/lib/error-handling';
 
 export default function Home() {
-  const router = useRouter();
   const toast = useToast();
   const { isAuthenticated, _hasHydrated } = useUserStore();
   const {
@@ -81,32 +79,8 @@ export default function Home() {
   const progressRef = useRef<HTMLDivElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
 
-  // Redirect if not authenticated (but wait for hydration first)
-  // Skip redirect in E2E test mode to prevent test flakiness
-  useEffect(() => {
-    // Check if we're in Playwright E2E test mode (check both window and localStorage)
-    const isE2ETest = typeof window !== 'undefined' && (
-      (window as any).__PLAYWRIGHT_E2E__ ||
-      localStorage.getItem('__PLAYWRIGHT_E2E__') === 'true'
-    );
-
-    // Debug logging for E2E tests
-    if (isE2ETest) {
-      console.log('[home] E2E test mode detected, skipping auth redirect');
-      console.log('[home] Auth state:', {
-        _hasHydrated,
-        isAuthenticated,
-        isE2ETest,
-        windowFlag: (window as any).__PLAYWRIGHT_E2E__,
-        localStorageFlag: localStorage.getItem('__PLAYWRIGHT_E2E__')
-      });
-    }
-
-    if (!isE2ETest && _hasHydrated && !isAuthenticated) {
-      console.log('[home] Redirecting to login:', { isE2ETest, _hasHydrated, isAuthenticated });
-      router.push('/login');
-    }
-  }, [isAuthenticated, _hasHydrated, router]);
+  // No auth guard on home page - show marketing to everyone, app to authenticated users
+  // Home page is public landing page for all users
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -348,10 +322,6 @@ export default function Home() {
     );
   }
 
-  if (!isAuthenticated) {
-    return null; // Will redirect
-  }
-
   const isGenerating = generationPhase === 'progress';
   const hasResults = generationPhase === 'results';
 
@@ -368,15 +338,17 @@ export default function Home() {
       {/* Navigation with user profile icon */}
       <Navigation />
 
-      {/* Credits/Balance Bar */}
-      <div className="bg-white border-b border-gray-200 px-6 py-3 mt-16">
-        <div className="max-w-7xl mx-auto flex items-center justify-end gap-4">
-          <TokenBalance variant="compact" autoRefresh={true} />
-          <div data-testid="trial-counter">
-            <TrialCounter variant="compact" />
+      {/* Credits/Balance Bar - Only show to authenticated users */}
+      {isAuthenticated && (
+        <div className="bg-white border-b border-gray-200 px-6 py-3 mt-16">
+          <div className="max-w-7xl mx-auto flex items-center justify-end gap-4">
+            <TokenBalance variant="compact" autoRefresh={true} />
+            <div data-testid="trial-counter">
+              <TrialCounter variant="compact" />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-12 space-y-12">
@@ -400,9 +372,9 @@ export default function Home() {
             <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
               <div className="aspect-video w-full">
                 <BeforeAfterSlider
-                  beforeImage="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200&h=675&fit=crop"
-                  afterImage="https://images.unsplash.com/photo-1585330114519-ac47f91e0e01?w=1200&h=675&fit=crop"
-                  beforeAlt="Landscape before transformation"
+                  beforeImage="/images/yarda_main_before.jpeg"
+                  afterImage="/images/yarda_main_after.png"
+                  beforeAlt="Landscape before AI transformation"
                   afterAlt="Landscape after AI transformation"
                 />
               </div>
@@ -425,33 +397,66 @@ export default function Home() {
           </motion.div>
         )}
 
-        {/* FORM SECTION - Always visible, disabled during generation */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <div className="mb-6">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">
-              Create Your Landscape Design
-            </h2>
-            <p className="text-gray-600">
-              Enter your property address and choose your design preferences
-            </p>
-          </div>
-
-          <GenerationFormEnhanced
-            onGenerationStart={handleGenerationStart}
-          />
-
-          {isGenerating && (
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
-              <p className="text-sm text-blue-800">
-                ℹ️ Design creation in progress. Results will appear below.
+        {/* FORM SECTION - Only visible to authenticated users */}
+        {isAuthenticated && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="mb-6">
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                Create Your Landscape Design
+              </h2>
+              <p className="text-gray-600">
+                Enter your property address and choose your design preferences
               </p>
             </div>
-          )}
-        </motion.div>
+
+            <GenerationFormEnhanced
+              onGenerationStart={handleGenerationStart}
+            />
+
+            {isGenerating && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
+                <p className="text-sm text-blue-800">
+                  ℹ️ Design creation in progress. Results will appear below.
+                </p>
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* Sign In Prompt - Show to unauthenticated users */}
+        {!isAuthenticated && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="text-center py-12"
+          >
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              Ready to Transform Your Landscape?
+            </h2>
+            <p className="text-gray-600 mb-8 text-lg">
+              Sign in to get started with your AI-powered landscape design. New users get 3 free trial credits!
+            </p>
+            <div className="flex gap-4 justify-center">
+              <a
+                href="/login"
+                className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition"
+              >
+                Sign In
+              </a>
+              <a
+                href="/login"
+                className="px-8 py-3 bg-white hover:bg-gray-50 text-blue-600 font-semibold rounded-lg border border-blue-300 transition"
+              >
+                Create Account
+              </a>
+            </div>
+          </motion.div>
+        )}
 
         {/* PROGRESS SECTION - Visible during generation */}
         <AnimatePresence>
