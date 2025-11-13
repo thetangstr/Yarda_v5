@@ -7,6 +7,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Locale, defaultLocale, isValidLocale } from '@/i18n.config';
 import { loadTranslations, getTranslation } from '@/lib/i18n/loader';
+import { usersAPI } from '@/lib/api';
+import { useUserStore } from '@/store/userStore';
 
 interface LanguageContextType {
   locale: Locale;
@@ -26,6 +28,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [translations, setTranslations] = useState<Record<string, any>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
+  const { user, isAuthenticated } = useUserStore();
 
   // Initialize with default locale translations immediately
   useEffect(() => {
@@ -42,6 +45,29 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         setIsInitialized(true);
       });
   }, []);
+
+  // Sync with user's preferred language from backend when authenticated
+  useEffect(() => {
+    if (!isInitialized || !isAuthenticated || !user) return;
+
+    const syncUserLanguage = async () => {
+      try {
+        const profile = await usersAPI.getProfile();
+        if (profile.preferred_language && isValidLocale(profile.preferred_language)) {
+          const userLang = profile.preferred_language as Locale;
+          if (userLang !== locale) {
+            setLocaleState(userLang);
+            localStorage.setItem('preferred-locale', userLang);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to sync user language preference:', error);
+        // Non-critical error - continue with current locale
+      }
+    };
+
+    syncUserLanguage();
+  }, [isInitialized, isAuthenticated, user]);
 
   // Load locale from localStorage on mount
   useEffect(() => {
@@ -76,6 +102,14 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const setLocale = (newLocale: Locale) => {
     if (newLocale !== locale) {
       setLocaleState(newLocale);
+
+      // Sync to backend if user is authenticated
+      if (isAuthenticated && user) {
+        usersAPI.updateLanguagePreference(newLocale).catch((error) => {
+          console.error('Failed to update language preference on server:', error);
+          // Non-critical error - local preference still changed
+        });
+      }
     }
   };
 

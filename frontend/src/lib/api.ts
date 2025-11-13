@@ -809,7 +809,48 @@ export interface UpdateModalStateResponse {
   whats_new_modal_shown: boolean;
 }
 
+export interface UserProfile {
+  user_id: string;
+  email: string;
+  email_verified: boolean;
+  trial_remaining: number;
+  trial_used: number;
+  subscription_tier: string;
+  subscription_status: string;
+  preferred_language: string;
+  created_at: string;
+}
+
+export interface UpdateLanguagePreferenceResponse {
+  success: boolean;
+  preferred_language: string;
+}
+
 export const usersAPI = {
+  /**
+   * Get current user's full profile including language preference
+   *
+   * @returns User profile with all account information
+   */
+  async getProfile(): Promise<UserProfile> {
+    const response = await apiClient.get<UserProfile>('/v1/users/me/profile');
+    return response.data;
+  },
+
+  /**
+   * Update user's preferred language
+   *
+   * @param language - Language code: en, es, or zh
+   * @returns Response with success status and updated language preference
+   */
+  async updateLanguagePreference(language: string): Promise<UpdateLanguagePreferenceResponse> {
+    const response = await apiClient.put<UpdateLanguagePreferenceResponse>(
+      '/v1/users/preferences/language',
+      { language }
+    );
+    return response.data;
+  },
+
   /**
    * Mark the "What's New" modal as shown for the current user
    *

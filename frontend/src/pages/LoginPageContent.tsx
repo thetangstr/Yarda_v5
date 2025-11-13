@@ -20,6 +20,7 @@ import Link from 'next/link';
 import { authAPI, getErrorMessage } from '@/lib/api';
 import { useUserStore } from '@/store/userStore';
 import { useLanguage } from '@/context/LanguageContext';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
 import GoogleOneTap from '@/components/GoogleOneTap';
 import { MagicLinkForm } from '@/components/auth/MagicLinkForm';
@@ -121,6 +122,11 @@ export default function LoginPage() {
           content="Sign in to your Yarda account to generate AI-powered landscape designs"
         />
       </Head>
+
+      {/* Language Switcher - Top Right */}
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
 
       {/* Google One Tap - auto sign-in for returning users */}
       <GoogleOneTap

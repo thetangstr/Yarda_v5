@@ -15,6 +15,7 @@ import React from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { useLanguage } from '@/context/LanguageContext';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -30,6 +31,11 @@ export default function RegisterPage() {
           content="New user registration is temporarily disabled"
         />
       </Head>
+
+      {/* Language Switcher - Top Right */}
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
 
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-8">
         {/* Maintenance Icon */}
