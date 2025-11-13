@@ -40,7 +40,7 @@ import StreetViewRotator from '@/components/StreetViewRotator';
 import StyleSelector, { HolidayStyle } from '@/components/StyleSelector';
 import { AuthOptions } from '@/components/auth/AuthOptions';
 import SocialShareModal from '@/components/holiday/SocialShareModal';
-import BeforeAfterSlider from '@/components/BeforeAfterSlider';
+import BounceLoadingIcon from '@/components/BounceLoadingIcon';
 
 /**
  * Maps generation status to user-friendly display text
@@ -335,7 +335,6 @@ export default function HolidayDecoratorPage() {
                       address={address}
                       initialHeading={heading}
                       onHeadingChange={setHeading}
-                      onStreetOffsetChange={setStreetOffsetFeet}
                       disabled={isGenerating}
                     />
                   </div>
@@ -434,45 +433,7 @@ export default function HolidayDecoratorPage() {
 
                   {/* Processing Overlay */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      {/* 🎄 Bouncing Christmas Tree Animation 🎄 */}
-                      <motion.div
-                        animate={{
-                          y: [0, -20, 0],
-                          scale: [1, 1.1, 1],
-                        }}
-                        transition={{
-                          repeat: Infinity,
-                          duration: 1.5,
-                          ease: 'easeInOut',
-                        }}
-                        className="text-8xl drop-shadow-2xl"
-                        style={{
-                          filter: 'drop-shadow(0 0 30px rgba(255,255,255,0.8))',
-                        }}
-                      >
-                        🎄
-                      </motion.div>
-                    </div>
-
-                    {/* Animated Pulsing Dots */}
-                    <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2">
-                      <motion.div
-                        animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
-                        transition={{ repeat: Infinity, duration: 1, delay: 0 }}
-                        className="w-3 h-3 bg-white rounded-full"
-                      />
-                      <motion.div
-                        animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
-                        transition={{ repeat: Infinity, duration: 1, delay: 0.2 }}
-                        className="w-3 h-3 bg-white rounded-full"
-                      />
-                      <motion.div
-                        animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
-                        transition={{ repeat: Infinity, duration: 1, delay: 0.4 }}
-                        className="w-3 h-3 bg-white rounded-full"
-                      />
-                    </div>
+                    <BounceLoadingIcon icon="🎄" className="text-8xl" />
                   </div>
 
                   {/* Status Badge - Bottom Right */}

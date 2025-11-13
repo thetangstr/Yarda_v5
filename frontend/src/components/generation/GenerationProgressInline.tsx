@@ -24,6 +24,7 @@ import {
   getStatusText,
   getStatusColor,
 } from './shared/utils';
+import BounceLoadingIcon from '@/components/BounceLoadingIcon';
 
 export interface GenerationProgressInlineProps {
   /** Array of area results with progress information */
@@ -215,48 +216,7 @@ export default function GenerationProgressInline({
                         {/* Processing Overlay with Bouncing Camera */}
                         {area.status === 'processing' && (
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent">
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              {/* 📷 BOUNCING CAMERA ANIMATION 📷 */}
-                              <motion.div
-                                animate={{
-                                  y: [0, -20, 0],
-                                  scale: [1, 1.1, 1],
-                                }}
-                                transition={{
-                                  repeat: Infinity,
-                                  duration: 1.5,
-                                  ease: 'easeInOut',
-                                }}
-                                className="text-8xl drop-shadow-2xl filter"
-                                style={{
-                                  filter: 'drop-shadow(0 0 30px rgba(255,255,255,0.8))',
-                                }}
-                              >
-                                📷
-                              </motion.div>
-                            </div>
-
-                            {/* Animated Processing Dots */}
-                            <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2">
-                              <motion.div
-                                key="pulse-dot-1"
-                                animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
-                                transition={{ repeat: Infinity, duration: 1, delay: 0 }}
-                                className="w-3 h-3 bg-white rounded-full"
-                              />
-                              <motion.div
-                                key="pulse-dot-2"
-                                animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
-                                transition={{ repeat: Infinity, duration: 1, delay: 0.2 }}
-                                className="w-3 h-3 bg-white rounded-full"
-                              />
-                              <motion.div
-                                key="pulse-dot-3"
-                                animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
-                                transition={{ repeat: Infinity, duration: 1, delay: 0.4 }}
-                                className="w-3 h-3 bg-white rounded-full"
-                              />
-                            </div>
+                            <BounceLoadingIcon icon="📷" className="text-8xl" />
                           </div>
                         )}
 
