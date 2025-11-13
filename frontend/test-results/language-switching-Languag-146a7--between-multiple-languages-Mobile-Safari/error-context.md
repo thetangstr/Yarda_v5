@@ -1,0 +1,58 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - button "Change language" [ref=e6] [cursor=pointer]:
+      - generic [ref=e7]: 🇪🇸
+      - generic [ref=e8]: Español
+      - img [ref=e9]
+    - generic [ref=e11]:
+      - generic [ref=e12]:
+        - link "Yarda" [ref=e13]:
+          - /url: /
+          - heading "Yarda" [level=1] [ref=e14]
+        - paragraph [ref=e15]: Inicia sesión en tu cuenta
+      - button "Sign in with Google" [ref=e18] [cursor=pointer]:
+        - img [ref=e19]
+        - generic [ref=e24]: Sign in with Google
+      - generic [ref=e30]: O inicia sesión con enlace mágico
+      - generic [ref=e32]:
+        - generic [ref=e33]:
+          - generic [ref=e34]: Email Address
+          - textbox "Email Address" [ref=e35]:
+            - /placeholder: Enter your email
+        - button "Send Magic Link" [disabled] [ref=e36]
+        - paragraph [ref=e37]: You'll receive an email with a link to sign in. Check your spam folder if you don't see it.
+      - generic [ref=e39]:
+        - img [ref=e40]
+        - generic [ref=e42]:
+          - paragraph [ref=e43]: ¡Los nuevos usuarios obtienen 3 créditos de prueba gratis!
+          - paragraph [ref=e44]: ¿Nuevo en Yarda? Solo ingresa tu correo arriba y obtén un enlace mágico para iniciar sesión - ¡tu cuenta se creará automáticamente!
+      - button "¿Buscas la opción de correo electrónico/contraseña? Haz clic aquí" [ref=e46] [cursor=pointer]
+  - alert [ref=e47]
+  - dialog "Unhandled Runtime Error" [ref=e50]:
+    - generic [ref=e52]:
+      - generic [ref=e53]:
+        - navigation [ref=e54]:
+          - button "previous" [disabled] [ref=e55]:
+            - img "previous" [ref=e56]
+          - button "next" [disabled] [ref=e58]:
+            - img "next" [ref=e59]
+          - generic [ref=e61]: 1 of 1 error
+          - generic [ref=e62]:
+            - text: Next.js (15.0.2) is outdated
+            - link "(learn more)" [ref=e64]:
+              - /url: https://nextjs.org/docs/messages/version-staleness
+        - button "Close" [ref=e65] [cursor=pointer]:
+          - img [ref=e67]
+      - generic [ref=e70]:
+        - heading "Unhandled Runtime Error" [level=1] [ref=e71]
+        - generic [ref=e72]:
+          - button "Copy error stack" [ref=e73] [cursor=pointer]:
+            - img [ref=e74]
+          - link "Learn more about enabling Node.js inspector for server code with Chrome DevTools" [ref=e77]:
+            - /url: https://nextjs.org/docs/app/building-your-application/configuring/debugging#server-side-code
+            - img [ref=e78]
+      - paragraph [ref=e81]: "AxiosError: Request failed with status code 403"
+```

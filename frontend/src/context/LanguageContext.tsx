@@ -60,8 +60,11 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
             localStorage.setItem('preferred-locale', userLang);
           }
         }
-      } catch (error) {
-        console.error('Failed to sync user language preference:', error);
+      } catch (error: any) {
+        // Silently ignore auth errors (401/403) - token might be invalid/expired
+        if (error?.response?.status !== 401 && error?.response?.status !== 403) {
+          console.error('Failed to sync user language preference:', error);
+        }
         // Non-critical error - continue with current locale
       }
     };

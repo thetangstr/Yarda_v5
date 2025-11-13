@@ -79,11 +79,11 @@ test.describe('Language Switching - Frontend', () => {
   test('should switch between multiple languages', async ({ page }) => {
     // Test switching from English to Spanish
     let langButton = page.locator('button[aria-label="Change language"]');
-    await langButton.click({ force: true });
+    await langButton.click();
     await page.waitForTimeout(500);
 
     let option = page.locator('button[role="option"]:has-text("Español")').first();
-    await option.click({ force: true });
+    await option.click();
     await page.waitForTimeout(500);
 
     // Verify Spanish is set
@@ -92,11 +92,11 @@ test.describe('Language Switching - Frontend', () => {
 
     // Now switch to Chinese
     langButton = page.locator('button[aria-label="Change language"]');
-    await langButton.click({ force: true });
+    await langButton.click();
     await page.waitForTimeout(500);
 
     option = page.locator('button[role="option"]:has-text("中文")').first();
-    await option.click({ force: true });
+    await option.click();
     await page.waitForTimeout(500);
 
     // Verify Chinese is now set
@@ -105,11 +105,11 @@ test.describe('Language Switching - Frontend', () => {
 
     // Switch back to English
     langButton = page.locator('button[aria-label="Change language"]');
-    await langButton.click({ force: true });
+    await langButton.click();
     await page.waitForTimeout(500);
 
     option = page.locator('button[role="option"]:has-text("English")').first();
-    await option.click({ force: true });
+    await option.click();
     await page.waitForTimeout(500);
 
     // Verify English is now set
@@ -120,7 +120,7 @@ test.describe('Language Switching - Frontend', () => {
   test('should display correct active language indicator', async ({ page }) => {
     // Open switcher
     const langButton = page.locator('button[aria-label="Change language"]');
-    await langButton.click({ force: true });
+    await langButton.click();
     await page.waitForTimeout(500);
 
     // English should be selected by default (aria-selected=true)
@@ -130,11 +130,11 @@ test.describe('Language Switching - Frontend', () => {
 
     // Click Spanish
     const spanishOption = page.locator('button[role="option"]:has-text("Español")').first();
-    await spanishOption.click({ force: true });
+    await spanishOption.click();
     await page.waitForTimeout(500);
 
     // Open switcher again
-    await langButton.click({ force: true });
+    await langButton.click();
     await page.waitForTimeout(500);
 
     // Spanish should now be selected
@@ -153,7 +153,7 @@ test.describe('Language Switching - Frontend', () => {
     await expect(langSwitcher).toBeVisible();
 
     // Open switcher
-    await langSwitcher.click({ force: true });
+    await langSwitcher.click();
     await page.waitForTimeout(500);
 
     // Should have language options
@@ -164,7 +164,7 @@ test.describe('Language Switching - Frontend', () => {
   test('language preference should close switcher when clicking outside', async ({ page }) => {
     // Open switcher
     const langButton = page.locator('button[aria-label="Change language"]');
-    await langButton.click({ force: true });
+    await langButton.click();
     await page.waitForTimeout(500);
 
     // Verify dropdown is open (options visible)
@@ -172,7 +172,7 @@ test.describe('Language Switching - Frontend', () => {
     expect(await options.count()).toBeGreaterThan(0);
 
     // Click outside the switcher (on the main form area)
-    await page.click("h1", { force: true });
+    await page.click('h1', { force: true });
     await page.waitForTimeout(300);
 
     // Switcher should be closed - options should not be visible
