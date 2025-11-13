@@ -69,7 +69,7 @@ export default function Navigation({ transparent = false }: NavigationProps) {
     { href: '/pricing', label: 'Pricing' },
     ...(isAuthenticated
       ? [
-          { href: '/generate', label: 'Generate' },
+          { href: '/holiday', label: 'Holiday Decorator' },
           { href: '/history', label: 'History' },
           { href: '/account?tab=subscription', label: 'Subscription' },
           { href: '/account', label: 'Account' },
