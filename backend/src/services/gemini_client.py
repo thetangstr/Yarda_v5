@@ -20,6 +20,7 @@ import uuid
 from datetime import datetime
 import mimetypes
 import structlog
+import asyncio
 
 # Import our prompt building system
 from src.services.prompt_builder import build_landscape_prompt
@@ -128,29 +129,49 @@ class GeminiClient:
             text_response = ""
 
             # Use generate_content_stream (NOT generate_content) for image generation
-            for chunk in self.client.models.generate_content_stream(
-                model=self.model_name,
-                contents=[
-                    types.Content(
-                        role="user",
-                        parts=content_parts
-                    )
-                ],
-                config=generate_content_config
-            ):
-                # Extract image from streaming chunks
-                if (
-                    chunk.candidates is not None
-                    and chunk.candidates[0].content is not None
-                    and chunk.candidates[0].content.parts is not None
-                ):
-                    for part in chunk.candidates[0].content.parts:
-                        # Extract inline image data
-                        if part.inline_data and part.inline_data.data:
-                            image_data = part.inline_data.data
-                        # Also capture any text response
-                        elif hasattr(part, 'text') and part.text:
-                            text_response += part.text
+            # Wrap with 5-minute timeout to prevent hanging
+            try:
+                async with asyncio.timeout(300):  # 5 minute timeout
+                    for chunk in self.client.models.generate_content_stream(
+                        model=self.model_name,
+                        contents=[
+                            types.Content(
+                                role="user",
+                                parts=content_parts
+                            )
+                        ],
+                        config=generate_content_config
+                    ):
+                        # Extract image from streaming chunks
+                        if (
+                            chunk.candidates is not None
+                            and chunk.candidates[0].content is not None
+                            and chunk.candidates[0].content.parts is not None
+                        ):
+                            for part in chunk.candidates[0].content.parts:
+                                # Extract inline image data
+                                if part.inline_data and part.inline_data.data:
+                                    image_data = part.inline_data.data
+                                # Also capture any text response
+                                elif hasattr(part, 'text') and part.text:
+                                    text_response += part.text
+            except asyncio.TimeoutError:
+                response_time_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
+                self.usage_monitor.record_request(
+                    request_id=request_id,
+                    model=self.model_name,
+                    style=style,
+                    address=address,
+                    input_tokens=input_tokens,
+                    output_tokens=0,
+                    image_generated=False,
+                    response_time_ms=response_time_ms,
+                    status="timeout",
+                    error_message="Generation timeout - exceeded 5 minute limit",
+                    preservation_strength=preservation_strength,
+                    area_type=area_type,
+                )
+                raise TimeoutError("Image generation exceeded 5 minute timeout")
 
             # Verify we got image data
             if not image_data:

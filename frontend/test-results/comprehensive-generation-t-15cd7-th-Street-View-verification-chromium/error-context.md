@@ -1,0 +1,50 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - link "Yarda" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - img [ref=e7]
+        - generic [ref=e10]: Yarda
+      - generic [ref=e12]:
+        - img [ref=e13]
+        - paragraph [ref=e15]: Yarda AI Landscape Studio
+      - paragraph [ref=e16]: Create an account to save your design and unlock more possibilities.
+    - generic [ref=e17]:
+      - tablist "Authentication options" [ref=e18]:
+        - tab "Sign Up" [selected] [ref=e19] [cursor=pointer]
+        - tab "Log In" [ref=e20] [cursor=pointer]
+      - button "Sign in with Google" [ref=e23] [cursor=pointer]:
+        - img [ref=e24]
+        - generic [ref=e29]: Sign in with Google
+      - generic [ref=e34]: or
+      - tabpanel "Sign up form" [ref=e35]:
+        - generic [ref=e36]:
+          - generic [ref=e37]: Email Address
+          - textbox "Email Address" [ref=e38]:
+            - /placeholder: Enter your email
+            - text: test.uat.bypass@yarda.app
+        - generic [ref=e39]:
+          - generic [ref=e40]: Password (min. 6 characters)
+          - generic [ref=e41]:
+            - textbox "Password (min. 6 characters)" [active] [ref=e42]:
+              - /placeholder: Create a secure password
+              - text: TestPass123!
+            - button "Show password" [ref=e43] [cursor=pointer]:
+              - img [ref=e44]
+          - paragraph [ref=e52]: Strong password!
+        - button "Create Account" [ref=e53] [cursor=pointer]
+      - paragraph [ref=e54]:
+        - text: By continuing, you agree to Yarda's
+        - link "Terms of Service" [ref=e55] [cursor=pointer]:
+          - /url: /terms
+        - text: and
+        - link "Privacy Policy" [ref=e56] [cursor=pointer]:
+          - /url: /privacy
+        - text: .
+    - link "← Back to Home" [ref=e58] [cursor=pointer]:
+      - /url: /
+  - alert [ref=e59]
+```

@@ -36,7 +36,8 @@ class DatabasePool:
             max_size=10,  # Maximum connections
             max_queries=50000,  # Max queries per connection
             max_inactive_connection_lifetime=300,  # 5 minutes
-            command_timeout=60,  # 60 second timeout
+            timeout=30,  # 30 second timeout for acquiring connection from pool
+            command_timeout=60,  # 60 second timeout for executing queries
             statement_cache_size=0,  # Disable prepared statements for pgbouncer
         )
 

@@ -117,6 +117,11 @@ export default function PricingPage() {
       answer:
         'We accept all major credit cards (Visa, Mastercard, American Express, Discover) through our secure payment processor, Stripe.',
     },
+    {
+      question: 'How long are my generated designs saved?',
+      answer:
+        'With Pay-As-You-Go tokens, your designs are saved for 7 days, then automatically deleted to keep your account clean. With Monthly Pro subscription, your designs are saved permanently—forever! This is one of the key benefits of upgrading to a subscription.',
+    },
   ];
 
   return (
@@ -232,6 +237,21 @@ export default function PricingPage() {
                           <span>All design styles included</span>
                         </li>
                       </ul>
+
+                      {/* Retention Policy Info */}
+                      <div className="bg-blue-50 border-l-4 border-blue-400 p-3 mb-4 rounded">
+                        <div className="flex gap-2">
+                          <span className="text-lg flex-shrink-0">📅</span>
+                          <div>
+                            <p className="text-sm font-semibold text-blue-900">
+                              Designs saved for 7 days
+                            </p>
+                            <p className="text-xs text-blue-800 mt-1">
+                              Your generated designs are automatically saved for 7 days. After that, they're deleted to keep your account clean. Subscribe to Monthly Pro to save designs permanently.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   ))}
 
@@ -394,6 +414,19 @@ export default function PricingPage() {
                 <p className="text-center text-brand-cream text-sm mt-4">
                   14-day money-back guarantee
                 </p>
+
+                {/* Retention Policy Benefit */}
+                <div className="mt-4 pt-4 border-t border-brand-cream/20">
+                  <div className="flex items-start gap-3 text-brand-cream">
+                    <span className="text-lg flex-shrink-0">♾️</span>
+                    <div className="text-sm">
+                      <p className="font-semibold">Designs saved permanently</p>
+                      <p className="text-brand-cream/80 text-xs mt-0.5">
+                        Keep all your generated designs forever. No 7-day deletion like token purchases.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Value Proposition */}

@@ -163,7 +163,8 @@ class MapsService:
                 "key": self.api_key
             }
 
-            async with aiohttp.ClientSession() as session:
+            timeout = aiohttp.ClientTimeout(total=30)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
                 async with session.get(self.GEOCODING_URL, params=params) as response:
                     duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
                     data = await response.json()
@@ -320,7 +321,8 @@ class MapsService:
                 "key": self.api_key
             }
 
-            async with aiohttp.ClientSession() as session:
+            timeout = aiohttp.ClientTimeout(total=30)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
                 async with session.get(self.STREET_VIEW_METADATA_URL, params=params) as response:
                     duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
                     data = await response.json()
@@ -429,7 +431,8 @@ class MapsService:
                 "return_error_code": "true"  # Return 404 instead of gray placeholder
             }
 
-            async with aiohttp.ClientSession() as session:
+            timeout = aiohttp.ClientTimeout(total=30)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
                 async with session.get(self.STREET_VIEW_IMAGE_URL, params=params) as response:
                     duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
 
@@ -535,7 +538,8 @@ class MapsService:
                 "key": self.api_key
             }
 
-            async with aiohttp.ClientSession() as session:
+            timeout = aiohttp.ClientTimeout(total=30)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
                 async with session.get(self.STATIC_MAP_URL, params=params) as response:
                     duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
 

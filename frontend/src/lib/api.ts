@@ -159,6 +159,10 @@ export interface Generation {
   created_at: string;
   completed_at?: string;
   error_message?: string;
+  // Retention policy fields
+  expires_at?: string;
+  retention_days?: number | null;
+  retention_message?: string;
 }
 
 export const generationAPI = {

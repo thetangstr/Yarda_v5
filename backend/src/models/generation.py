@@ -78,7 +78,12 @@ class Generation(BaseModel):
     Landscape generation record
 
     Tracks user requests for landscape designs, including payment method,
-    image source, and generation status.
+    image source, generation status, and retention policy.
+
+    Retention Policy:
+    - Trial: expires_at = created_at (no retention, deleted immediately)
+    - Token: expires_at = created_at + 7 days (7-day retention)
+    - Subscription: expires_at = NULL (permanent retention)
     """
     id: UUID
     user_id: UUID
@@ -92,6 +97,8 @@ class Generation(BaseModel):
     error_message: Optional[str] = None
     created_at: datetime
     completed_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = Field(None, description="Expiry timestamp. NULL = never expires (subscription). For trial/token calculated based on payment_type.")
+    is_deleted: bool = Field(False, description="Soft delete flag. True = generation was deleted per retention policy.")
 
     class Config:
         orm_mode = True
@@ -199,7 +206,12 @@ class MultiAreaGenerationResponse(BaseModel):
     """
     Response model for multi-area generation request
 
-    Includes overall status and per-area progress tracking.
+    Includes overall status, per-area progress tracking, and retention policy info.
+
+    Retention Policy Info:
+    - expires_at: When this generation will be deleted (NULL = never expires for subscriptions)
+    - retention_days: Days remaining before deletion (NULL = permanent for subscriptions)
+    - retention_message: User-friendly message about how long the generation will be kept
     """
     id: UUID = Field(description="Unique generation request ID")
     user_id: Optional[UUID] = Field(None, description="User who created this generation")
@@ -233,6 +245,18 @@ class MultiAreaGenerationResponse(BaseModel):
     estimated_completion: Optional[datetime] = Field(
         None,
         description="Estimated completion time (for pending/processing status)"
+    )
+    expires_at: Optional[datetime] = Field(
+        None,
+        description="When this generation expires and will be deleted. NULL = never expires (subscription). For trial: creation time, for token: 7 days after creation."
+    )
+    retention_days: Optional[int] = Field(
+        None,
+        description="Days remaining before automatic deletion. NULL = permanent (subscription)."
+    )
+    retention_message: Optional[str] = Field(
+        None,
+        description="User-friendly message: 'Saved for 7 days' or 'Saved permanently (Subscription)' or 'Not saved (Trial)'"
     )
     error_message: Optional[str] = Field(
         None,

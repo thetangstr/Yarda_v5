@@ -343,120 +343,155 @@ async def create_multi_area_generation(
         # Step 3.5: Start background task to process generation (Gemini API call)
         # This runs async so we can return immediately with status='pending'
         async def process_areas_background():
-            """Background task to process all areas for this generation"""
+            """Background task to process all areas for this generation with timeout wrapper"""
             try:
-                logger.info(
-                    "background_generation_started",
-                    generation_id=str(generation_id),
-                    num_areas=len(generation_data['area_ids'])
-                )
-
-                # Get Street View bytes from generation_data
-                street_view_bytes = generation_data.get('street_view_bytes')
-                if not street_view_bytes:
-                    logger.error("No street_view_bytes available for processing")
-                    return
-
-                # Upload Street View image to Vercel Blob storage
-                try:
-                    street_view_url = await storage_service.upload_image(
-                        image_data=street_view_bytes,
-                        filename=f"streetview_{generation_id}.jpg",
-                        content_type="image/jpeg"
-                    )
-
-                    # Update generation_source_images with actual URL
-                    await db_pool.execute("""
-                        UPDATE generation_source_images
-                        SET image_url = $1
-                        WHERE generation_id = $2 AND image_type = 'street_view'
-                    """, street_view_url, generation_id)
-
+                # Wrap entire processing with 5-minute timeout (P0 fix)
+                async with asyncio.timeout(300):
                     logger.info(
-                        "street_view_uploaded",
+                        "background_generation_started",
                         generation_id=str(generation_id),
-                        url=street_view_url
+                        num_areas=len(generation_data['area_ids'])
                     )
-                except Exception as e:
-                    logger.error(
-                        "street_view_upload_failed",
-                        generation_id=str(generation_id),
-                        error=str(e)
-                    )
-                    # Continue processing even if Street View upload fails
 
-                # Process each area sequentially
-                for area_id_str in generation_data['area_ids']:
-                    area_id = UUID(area_id_str)
+                    # Get Street View bytes from generation_data
+                    street_view_bytes = generation_data.get('street_view_bytes')
+                    if not street_view_bytes:
+                        logger.error("No street_view_bytes available for processing")
+                        return
 
-                    # Fetch area details from database
-                    area_record = await db_pool.fetchrow("""
-                        SELECT area_type, style, custom_prompt
-                        FROM generation_areas
-                        WHERE id = $1
-                    """, area_id)
-
-                    if not area_record:
-                        logger.error(f"Area {area_id} not found")
-                        continue
-
-                    # Fetch the appropriate image for this area type
-                    # Front yard uses Street View, backyard/walkway use Satellite
-                    area_type = area_record['area_type']
-
-                    # Get area-specific image from maps service
+                    # Upload Street View image to Vercel Blob storage
                     try:
-                        area_image_bytes, _, _, image_source = await generation_service.maps_service.get_property_images(
-                            address=request.address,
-                            area=area_type
+                        street_view_url = await storage_service.upload_image(
+                            image_data=street_view_bytes,
+                            filename=f"streetview_{generation_id}.jpg",
+                            content_type="image/jpeg"
                         )
+
+                        # Update generation_source_images with actual URL
+                        await db_pool.execute("""
+                            UPDATE generation_source_images
+                            SET image_url = $1
+                            WHERE generation_id = $2 AND image_type = 'street_view'
+                        """, street_view_url, generation_id)
+
                         logger.info(
-                            "area_image_retrieved",
-                            area_id=str(area_id),
-                            area_type=area_type,
-                            image_source=image_source,
-                            size_bytes=len(area_image_bytes) if area_image_bytes else 0
+                            "street_view_uploaded",
+                            generation_id=str(generation_id),
+                            url=street_view_url
                         )
                     except Exception as e:
                         logger.error(
-                            "area_image_retrieval_failed",
-                            area_id=str(area_id),
-                            area_type=area_type,
+                            "street_view_upload_failed",
+                            generation_id=str(generation_id),
                             error=str(e)
                         )
-                        # Fallback to street_view_bytes if area-specific image fails
-                        area_image_bytes = street_view_bytes
+                        # Continue processing even if Street View upload fails
 
-                    # Call process_generation for this area with area-specific image
-                    success, error = await generation_service.process_generation(
-                        generation_id=generation_id,
-                        area_id=area_id,
-                        user_id=user.id,
-                        input_image_bytes=area_image_bytes,  # Use area-specific image
-                        address=request.address,
-                        area_type=area_type,
-                        style=area_record['style'],
-                        custom_prompt=area_record['custom_prompt'],
-                        payment_method=generation_data['payment_method'],
-                        preservation_strength=0.5  # Default for now
+                    # Process each area sequentially
+                    for area_id_str in generation_data['area_ids']:
+                        area_id = UUID(area_id_str)
+
+                        # Fetch area details from database
+                        area_record = await db_pool.fetchrow("""
+                            SELECT area_type, style, custom_prompt
+                            FROM generation_areas
+                            WHERE id = $1
+                        """, area_id)
+
+                        if not area_record:
+                            logger.error(f"Area {area_id} not found")
+                            continue
+
+                        # Fetch the appropriate image for this area type
+                        # Front yard uses Street View, backyard/walkway use Satellite
+                        area_type = area_record['area_type']
+
+                        # Get area-specific image from maps service
+                        try:
+                            area_image_bytes, _, _, image_source = await generation_service.maps_service.get_property_images(
+                                address=request.address,
+                                area=area_type
+                            )
+                            logger.info(
+                                "area_image_retrieved",
+                                area_id=str(area_id),
+                                area_type=area_type,
+                                image_source=image_source,
+                                size_bytes=len(area_image_bytes) if area_image_bytes else 0
+                            )
+                        except Exception as e:
+                            logger.error(
+                                "area_image_retrieval_failed",
+                                area_id=str(area_id),
+                                area_type=area_type,
+                                error=str(e)
+                            )
+                            # Fallback to street_view_bytes if area-specific image fails
+                            area_image_bytes = street_view_bytes
+
+                        # Call process_generation for this area with area-specific image
+                        success, error = await generation_service.process_generation(
+                            generation_id=generation_id,
+                            area_id=area_id,
+                            user_id=user.id,
+                            input_image_bytes=area_image_bytes,  # Use area-specific image
+                            address=request.address,
+                            area_type=area_type,
+                            style=area_record['style'],
+                            custom_prompt=area_record['custom_prompt'],
+                            payment_method=generation_data['payment_method'],
+                            preservation_strength=0.5  # Default for now
+                        )
+
+                        if not success:
+                            logger.error(
+                                "area_generation_failed",
+                                area_id=str(area_id),
+                                error=error
+                            )
+                        else:
+                            logger.info(
+                                "area_generation_completed",
+                                area_id=str(area_id)
+                            )
+
+                    logger.info(
+                        "background_generation_completed",
+                        generation_id=str(generation_id)
                     )
-
-                    if not success:
-                        logger.error(
-                            "area_generation_failed",
-                            area_id=str(area_id),
-                            error=error
-                        )
-                    else:
-                        logger.info(
-                            "area_generation_completed",
-                            area_id=str(area_id)
-                        )
-
-                logger.info(
-                    "background_generation_completed",
-                    generation_id=str(generation_id)
+            except asyncio.TimeoutError:
+                # Handle timeout - mark as failed and refund (P0 fix)
+                logger.error(
+                    "background_generation_timeout",
+                    generation_id=str(generation_id),
+                    message="Generation exceeded 5 minute timeout"
                 )
+                try:
+                    # Mark generation as failed
+                    await generation_service.update_generation_status(
+                        generation_id,
+                        "failed",
+                        error_message="Generation timeout - exceeded 5 minute limit"
+                    )
+                    # Refund user based on payment method
+                    await refund_payment(
+                        user.id,
+                        generation_data['payment_method'],
+                        trial_service,
+                        token_service
+                    )
+                    logger.info(
+                        "generation_timeout_refunded",
+                        generation_id=str(generation_id),
+                        user_id=str(user.id)
+                    )
+                except Exception as refund_error:
+                    logger.error(
+                        "generation_timeout_refund_failed",
+                        generation_id=str(generation_id),
+                        user_id=str(user.id),
+                        error=str(refund_error)
+                    )
             except Exception as e:
                 logger.error(
                     "background_generation_error",
@@ -855,8 +890,8 @@ async def list_generations(
     page = max(int(page), 1)  # Minimum page 1
     offset = (page - 1) * limit
 
-    # Build query filters
-    where_clause = "WHERE user_id = $1"
+    # Build query filters - include is_deleted check to exclude deleted generations
+    where_clause = "WHERE user_id = $1 AND is_deleted = FALSE"
     params: list = [user.id]
 
     if status:
@@ -881,7 +916,7 @@ async def list_generations(
     """, *params)
     total = total_result or 0
 
-    # Get paginated results
+    # Get paginated results with retention info
     generations = await db_pool.fetch(f"""
         SELECT
             id,
@@ -893,15 +928,54 @@ async def list_generations(
             image_source,
             error_message,
             created_at,
-            completed_at
+            completed_at,
+            expires_at,
+            is_deleted
         FROM generations
         {where_clause}
         ORDER BY {sort_clause}
         LIMIT ${len(params) + 1} OFFSET ${len(params) + 2}
     """, *params, limit, offset)
 
+    # Process results and add retention info
+    from datetime import datetime, timezone
+    processed_data = []
+    for g in generations:
+        gen_dict = dict(g)
+
+        # Calculate retention information
+        payment_type = gen_dict.get("payment_type")
+        expires_at = gen_dict.get("expires_at")
+
+        if payment_type == "subscription":
+            gen_dict["retention_message"] = "Saved permanently (Subscription)"
+            gen_dict["retention_days"] = None
+        elif payment_type == "trial":
+            gen_dict["retention_message"] = "Not saved (Trial)"
+            gen_dict["retention_days"] = 0
+        elif payment_type == "token":
+            if expires_at:
+                days_remaining = (expires_at - datetime.now(timezone.utc)).days
+                if days_remaining > 1:
+                    gen_dict["retention_message"] = f"Saved for {days_remaining} more days"
+                    gen_dict["retention_days"] = days_remaining
+                elif days_remaining == 1:
+                    gen_dict["retention_message"] = "Expires tomorrow"
+                    gen_dict["retention_days"] = 1
+                else:
+                    gen_dict["retention_message"] = "Expires today"
+                    gen_dict["retention_days"] = 0
+            else:
+                gen_dict["retention_message"] = "Saved for 7 days"
+                gen_dict["retention_days"] = 7
+        else:
+            gen_dict["retention_message"] = "Saved for 7 days"
+            gen_dict["retention_days"] = 7
+
+        processed_data.append(gen_dict)
+
     return {
-        "data": [dict(g) for g in generations],
+        "data": processed_data,
         "total": total,
         "page": page,
         "limit": limit,

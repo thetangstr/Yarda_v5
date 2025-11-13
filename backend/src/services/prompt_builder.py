@@ -175,22 +175,33 @@ class PromptBuilder:
 
 **WHAT YOU ARE GIVEN:**
 - An overhead satellite image as a REFERENCE ONLY
-- Use it to understand: property boundaries, spatial layout, dimensions, orientation
+- Use it to understand: property boundaries, spatial layout, fence locations, dimensions, orientation
+- IGNORE any watermarks, text, grid patterns, or other artifacts from the satellite/Airbus imagery
 
 **WHAT YOU MUST CREATE:**
 - **For Backyard/Side Yard:** A NEW IMAGE from a 45-degree angle, semi-ground level perspective
 - **For Walkway:** A NEW IMAGE from ground-level perspective
 - This should look like a professional architectural rendering or design visualization
 - NOT a modified or enhanced version of the satellite image
+- NO visible satellite artifacts, watermarks, text, or grid patterns
+
+**BOUNDARY & SCALE CONSTRAINTS (CRITICAL):**
+- **RESPECT FENCE BOUNDARIES:** The fences visible in the satellite image define the property boundary
+- **DO NOT ENLARGE THE YARD:** Generate designs within the existing fence boundaries only
+- **MAINTAIN ACCURATE PROPORTIONS:** All landscape features must fit realistically within the fenced area
+- **FENCE LOCATION:** Position fences exactly where they appear in the satellite image - they are hard property boundaries
+- **YARD SIZE:** Generate a design that respects the actual yard dimensions - do NOT make it appear larger than it is
+- **SCALE CHECK:** A 30x40ft yard should look like 30x40ft, not 45x60ft
 
 **PERSPECTIVE REQUIREMENTS:**
 
 **45-Degree Angle (Backyard/Side Yard):**
 - Camera angle: Elevated 45-degree viewing angle (architectural visualization style)
-- Viewpoint: As if standing at the back of the property, looking across the yard
+- Viewpoint: As if standing at the back corner of the property, looking across the yard toward the house
 - Show depth and dimensionality - this is NOT a flat overhead view
-- Include vertical elements: fences, pergolas, plantings, outdoor structures
+- Include vertical elements: existing fences (must be visible and properly scaled), pergolas, plantings, outdoor structures
 - Professional architectural rendering quality
+- Fences should be clearly visible and define the yard edges in the image
 
 **Ground-Level (Walkway):**
 - Camera angle: Eye-level, standing on the pathway looking forward
@@ -200,9 +211,9 @@ class PromptBuilder:
 - Professional photography quality
 
 **DESIGN ELEMENTS TO INCLUDE:**
-1. **Hardscaping:** Patios, decks, pergolas, fire pits, outdoor kitchens, retaining walls
-2. **Softscaping:** Lush plantings, trees, shrubs, flower beds, ground cover
-3. **Features:** Water features, lighting, outdoor furniture, decorative elements
+1. **Hardscaping:** Patios, decks, pergolas, fire pits, outdoor kitchens, retaining walls (all sized proportionally to the yard)
+2. **Softscaping:** Lush plantings, trees, shrubs, flower beds, ground cover (respect fence boundaries)
+3. **Features:** Water features, lighting, outdoor furniture, decorative elements (must fit within yard)
 4. **Materials:** Stone, wood, pavers, gravel - show texture and detail from the new perspective
 5. **Depth & Dimension:** Show layers, depth, and 3D spatial relationships
 
@@ -212,11 +223,14 @@ class PromptBuilder:
 - Natural lighting and shadows appropriate for the perspective
 - Rich colors and textures
 - Seamless integration of all design elements
+- NO satellite image artifacts visible whatsoever
 
 **REMEMBER:**
-- The satellite image is ONLY a reference for understanding the space
+- The satellite image is ONLY a reference for understanding the space and FENCE LOCATIONS
 - You are creating a COMPLETELY NEW IMAGE from a different viewing angle
-- This should look like a professional design rendering, NOT an enhanced satellite photo"""
+- This should look like a professional design rendering, NOT an enhanced satellite photo
+- MAINTAIN REALISTIC PROPORTIONS - fences should define and constrain the space
+- The yard dimensions from the satellite image must be preserved in your 3D visualization"""
         else:
             # Street view: Preserve house structure
             return """

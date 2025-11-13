@@ -1,0 +1,258 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]: ❄️
+        - generic [ref=e8]: ✨
+        - generic [ref=e9]: 🎄
+        - generic [ref=e10]: ⭐
+        - generic [ref=e11]: 🎅
+        - generic [ref=e12]: 🎁
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - generic [ref=e16]:
+            - generic [ref=e17]: 🎁
+            - generic [ref=e18]: "Limited Time: Holiday Season Special"
+          - heading "Transform Your Home into a Christmas Masterpiece🎄" [level=1] [ref=e19]
+          - paragraph [ref=e20]: AI decorates your home with festive lights, decorations & holiday magic! Get decorated instantly. Share & earn more credits! 🎅✨
+          - generic [ref=e21]:
+            - generic [ref=e22]:
+              - generic [ref=e23]: ⚡
+              - generic [ref=e24]: 10-Second Generation
+            - generic [ref=e25]:
+              - generic [ref=e26]: 🎁
+              - generic [ref=e27]: 1 Free Credit
+            - generic [ref=e28]:
+              - generic [ref=e29]: 📱
+              - generic [ref=e30]: Share & Earn More
+          - link "🎄 Get Started Free" [ref=e32] [cursor=pointer]:
+            - /url: /holiday
+            - generic [ref=e33]: 🎄
+            - text: Get Started Free
+            - img [ref=e34]
+          - generic [ref=e42]:
+            - text: Join
+            - strong [ref=e43]: 1,000+
+            - text: homeowners celebrating
+        - generic [ref=e44]:
+          - generic [ref=e45]:
+            - generic [ref=e46]:
+              - generic [ref=e47]:
+                - img "Before landscaping" [ref=e48]
+                - img "After AI landscaping" [ref=e50]
+                - slider "Drag to move or focus and use arrow keys" [ref=e51] [cursor=pointer]:
+                  - generic [ref=e52]:
+                    - img [ref=e53]
+                    - img [ref=e55]
+              - paragraph [ref=e58]: BEFORE
+              - paragraph [ref=e60]: AFTER
+              - paragraph [ref=e62]:
+                - img [ref=e63]
+                - text: Drag the slider to compare
+            - generic [ref=e65]: ⚡ Generated in 10 seconds
+          - generic [ref=e66]: ✨
+          - generic [ref=e67]: ⭐
+      - img [ref=e69]
+    - generic [ref=e72]:
+      - generic [ref=e73]:
+        - generic [ref=e74]:
+          - heading "✨ Create Your Holiday Design" [level=2] [ref=e75]
+          - paragraph [ref=e76]: Decorate your home in seconds with AI magic
+        - generic [ref=e78]:
+          - generic [ref=e79]: 🎁
+          - generic [ref=e80]:
+            - paragraph [ref=e81]: Credits
+            - paragraph [ref=e82]: "1"
+      - generic [ref=e84]:
+        - generic [ref=e85]:
+          - generic [ref=e86]: 📍
+          - generic [ref=e87]:
+            - generic [ref=e88]: Home Address
+            - paragraph [ref=e89]: Let's find your home and add some holiday magic
+        - textbox "Home Address" [active] [ref=e90]:
+          - /placeholder: Enter your address...
+          - text: 1600 Amphitheatre Parkway, Mountain View, CA
+        - generic [ref=e91]:
+          - img [ref=e92]
+          - text: Google Street View will be pulled automatically
+      - generic [ref=e96]:
+        - generic [ref=e97]:
+          - heading "Adjust Street View Angle" [level=3] [ref=e98]
+          - paragraph [ref=e99]: Rotate to find the best view of your home for decoration
+        - generic [ref=e100]:
+          - img "Street View of 1600 Amphitheatre Parkway, Mountain View, CA at 135° heading" [ref=e101]
+          - generic [ref=e102]: 135° SE
+        - generic [ref=e103]:
+          - generic [ref=e104]:
+            - button "Rotate left 45°" [ref=e105] [cursor=pointer]:
+              - img [ref=e106]
+            - generic [ref=e112]:
+              - generic [ref=e113]: 135°
+              - generic [ref=e114]: SE
+            - button "Rotate right 45°" [ref=e115] [cursor=pointer]:
+              - img [ref=e116]
+          - button "▶ Show fine-tune controls" [ref=e119] [cursor=pointer]
+          - generic [ref=e121]:
+            - generic [ref=e122]: 💡
+            - generic [ref=e123]:
+              - strong [ref=e124]: "Tip:"
+              - text: Rotate to show your home's front entrance for the best decoration results. The AI will add festive elements while preserving your home's structure.
+      - generic [ref=e127]:
+        - generic [ref=e128]:
+          - heading "🎨 Choose Your Style" [level=2] [ref=e129]
+          - paragraph [ref=e130]: From timeless classics to trendy vibes, pick your perfect holiday theme.
+        - generic [ref=e131]:
+          - button "🎄 Classic Traditional charm with timeless decorations. check_circle Red & green color scheme check_circle Wreaths on doors check_circle String lights on roofline check_circle Traditional ornaments" [ref=e132] [cursor=pointer]:
+            - generic [ref=e133]:
+              - generic [ref=e134]: 🎄
+              - generic [ref=e135]:
+                - heading "Classic" [level=3] [ref=e136]
+                - paragraph [ref=e137]: Traditional charm with timeless decorations.
+                - list [ref=e138]:
+                  - listitem [ref=e139]:
+                    - generic [ref=e140]: check_circle
+                    - generic [ref=e141]: Red & green color scheme
+                  - listitem [ref=e142]:
+                    - generic [ref=e143]: check_circle
+                    - generic [ref=e144]: Wreaths on doors
+                  - listitem [ref=e145]:
+                    - generic [ref=e146]: check_circle
+                    - generic [ref=e147]: String lights on roofline
+                  - listitem [ref=e148]:
+                    - generic [ref=e149]: check_circle
+                    - generic [ref=e150]: Traditional ornaments
+              - img [ref=e153]
+          - button "✨ Modern Minimalist Elegant and sophisticated with clean lines. check_circle White & silver palette check_circle Geometric patterns check_circle Minimal decorations check_circle LED lighting" [ref=e155] [cursor=pointer]:
+            - generic [ref=e156]:
+              - generic [ref=e157]: ✨
+              - generic [ref=e158]:
+                - heading "Modern Minimalist" [level=3] [ref=e159]
+                - paragraph [ref=e160]: Elegant and sophisticated with clean lines.
+                - list [ref=e161]:
+                  - listitem [ref=e162]:
+                    - generic [ref=e163]: check_circle
+                    - generic [ref=e164]: White & silver palette
+                  - listitem [ref=e165]:
+                    - generic [ref=e166]: check_circle
+                    - generic [ref=e167]: Geometric patterns
+                  - listitem [ref=e168]:
+                    - generic [ref=e169]: check_circle
+                    - generic [ref=e170]: Minimal decorations
+                  - listitem [ref=e171]:
+                    - generic [ref=e172]: check_circle
+                    - generic [ref=e173]: LED lighting
+          - button "🎅 Over-the-Top Maximum festivity! Go big or go home. check_circle Inflatable displays check_circle Synchronized lights check_circle Yard decorations check_circle Animated characters" [ref=e174] [cursor=pointer]:
+            - generic [ref=e175]:
+              - generic [ref=e176]: 🎅
+              - generic [ref=e177]:
+                - heading "Over-the-Top" [level=3] [ref=e178]
+                - paragraph [ref=e179]: Maximum festivity! Go big or go home.
+                - list [ref=e180]:
+                  - listitem [ref=e181]:
+                    - generic [ref=e182]: check_circle
+                    - generic [ref=e183]: Inflatable displays
+                  - listitem [ref=e184]:
+                    - generic [ref=e185]: check_circle
+                    - generic [ref=e186]: Synchronized lights
+                  - listitem [ref=e187]:
+                    - generic [ref=e188]: check_circle
+                    - generic [ref=e189]: Yard decorations
+                  - listitem [ref=e190]:
+                    - generic [ref=e191]: check_circle
+                    - generic [ref=e192]: Animated characters
+          - button "🌟 ✨ Pop Culture Christmas Trendy & fun with memes, K-pop & collector vibes. check_circle Labubu Santa & designer toys check_circle K-pop Christmas aesthetics check_circle Gen-Z trendy decorations check_circle Meme-worthy displays" [ref=e193] [cursor=pointer]:
+            - generic [ref=e194]:
+              - generic [ref=e195]: 🌟
+              - generic [ref=e196]:
+                - heading "✨ Pop Culture Christmas" [level=3] [ref=e197]
+                - paragraph [ref=e198]: Trendy & fun with memes, K-pop & collector vibes.
+                - list [ref=e199]:
+                  - listitem [ref=e200]:
+                    - generic [ref=e201]: check_circle
+                    - generic [ref=e202]: Labubu Santa & designer toys
+                  - listitem [ref=e203]:
+                    - generic [ref=e204]: check_circle
+                    - generic [ref=e205]: K-pop Christmas aesthetics
+                  - listitem [ref=e206]:
+                    - generic [ref=e207]: check_circle
+                    - generic [ref=e208]: Gen-Z trendy decorations
+                  - listitem [ref=e209]:
+                    - generic [ref=e210]: check_circle
+                    - generic [ref=e211]: Meme-worthy displays
+          - button "👑 💎 Glam & Gold Luxe and glamorous with gold, white & sparkles. check_circle Gold & white color scheme check_circle Luxury garland & bows check_circle Crystal-like decorations check_circle Sophisticated sparkle" [ref=e212] [cursor=pointer]:
+            - generic [ref=e213]:
+              - generic [ref=e214]: 👑
+              - generic [ref=e215]:
+                - heading "💎 Glam & Gold" [level=3] [ref=e216]
+                - paragraph [ref=e217]: Luxe and glamorous with gold, white & sparkles.
+                - list [ref=e218]:
+                  - listitem [ref=e219]:
+                    - generic [ref=e220]: check_circle
+                    - generic [ref=e221]: Gold & white color scheme
+                  - listitem [ref=e222]:
+                    - generic [ref=e223]: check_circle
+                    - generic [ref=e224]: Luxury garland & bows
+                  - listitem [ref=e225]:
+                    - generic [ref=e226]: check_circle
+                    - generic [ref=e227]: Crystal-like decorations
+                  - listitem [ref=e228]:
+                    - generic [ref=e229]: check_circle
+                    - generic [ref=e230]: Sophisticated sparkle
+          - button "🔮 🌐 Cyber Christmas Futuristic with neon lights & tech vibes. check_circle Neon purple & cyan lights check_circle Holographic decorations check_circle Tech-inspired patterns check_circle Glow-in-the-dark elements" [ref=e231] [cursor=pointer]:
+            - generic [ref=e232]:
+              - generic [ref=e233]: 🔮
+              - generic [ref=e234]:
+                - heading "🌐 Cyber Christmas" [level=3] [ref=e235]
+                - paragraph [ref=e236]: Futuristic with neon lights & tech vibes.
+                - list [ref=e237]:
+                  - listitem [ref=e238]:
+                    - generic [ref=e239]: check_circle
+                    - generic [ref=e240]: Neon purple & cyan lights
+                  - listitem [ref=e241]:
+                    - generic [ref=e242]: check_circle
+                    - generic [ref=e243]: Holographic decorations
+                  - listitem [ref=e244]:
+                    - generic [ref=e245]: check_circle
+                    - generic [ref=e246]: Tech-inspired patterns
+                  - listitem [ref=e247]:
+                    - generic [ref=e248]: check_circle
+                    - generic [ref=e249]: Glow-in-the-dark elements
+          - button "🏡 🔥 Cozy & Rustic Warm and inviting with cabin charm. check_circle Wood & plaid elements check_circle Warm fireplace glow check_circle Natural greenery check_circle Comfort-focused design" [ref=e250] [cursor=pointer]:
+            - generic [ref=e251]:
+              - generic [ref=e252]: 🏡
+              - generic [ref=e253]:
+                - heading "🔥 Cozy & Rustic" [level=3] [ref=e254]
+                - paragraph [ref=e255]: Warm and inviting with cabin charm.
+                - list [ref=e256]:
+                  - listitem [ref=e257]:
+                    - generic [ref=e258]: check_circle
+                    - generic [ref=e259]: Wood & plaid elements
+                  - listitem [ref=e260]:
+                    - generic [ref=e261]: check_circle
+                    - generic [ref=e262]: Warm fireplace glow
+                  - listitem [ref=e263]:
+                    - generic [ref=e264]: check_circle
+                    - generic [ref=e265]: Natural greenery
+                  - listitem [ref=e266]:
+                    - generic [ref=e267]: check_circle
+                    - generic [ref=e268]: Comfort-focused design
+        - generic [ref=e269]:
+          - generic [ref=e271]:
+            - generic [ref=e272]: 🎄
+            - paragraph [ref=e273]:
+              - strong [ref=e274]: Classic
+              - text: style selected! Ready to generate your decoration.
+          - generic [ref=e276]:
+            - generic [ref=e277]: 💡
+            - generic [ref=e278]:
+              - paragraph [ref=e279]: AI WILL USE THIS PROMPT
+              - paragraph [ref=e280]: "\"Add classic Christmas decorations with red bows, wreath, and warm white lights\""
+      - button "🎄 Generate Decoration" [ref=e282] [cursor=pointer]:
+        - generic [ref=e283]:
+          - generic [ref=e284]: 🎄
+          - text: Generate Decoration
+  - alert [ref=e285]
+```

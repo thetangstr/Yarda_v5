@@ -276,6 +276,24 @@ export default function HistoryPage() {
                       {generation.error_message && (
                         <p className="text-red-600">Error: {generation.error_message.substring(0, 50)}...</p>
                       )}
+
+                      {/* Retention Policy Info */}
+                      {generation.retention_message && (
+                        <div className={`flex items-center gap-2 pt-2 border-t border-gray-200 text-xs font-medium ${
+                          generation.payment_method === 'subscription'
+                            ? 'text-green-700'
+                            : generation.payment_method === 'trial'
+                            ? 'text-amber-700'
+                            : 'text-blue-700'
+                        }`}>
+                          <span>{
+                            generation.payment_method === 'subscription' ? '♾️' :
+                            generation.payment_method === 'trial' ? '⏰' :
+                            '📅'
+                          }</span>
+                          <span>{generation.retention_message}</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Action Buttons */}

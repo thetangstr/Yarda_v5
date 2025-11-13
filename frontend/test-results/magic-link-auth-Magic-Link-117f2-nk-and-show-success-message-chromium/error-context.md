@@ -1,0 +1,75 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - alert [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]: ❌
+        - paragraph [ref=e8]: Unable to send magic link. Please try password login or try again later.
+        - button "Dismiss notification" [ref=e9] [cursor=pointer]:
+          - img [ref=e10]
+    - generic [ref=e13]:
+      - generic [ref=e14]:
+        - link "Yarda" [ref=e15] [cursor=pointer]:
+          - /url: /
+          - heading "Yarda" [level=1] [ref=e16]
+        - paragraph [ref=e17]: Sign in to your account
+      - button "Sign in with Google" [ref=e20] [cursor=pointer]:
+        - img [ref=e21]
+        - generic [ref=e26]: Sign in with Google
+      - generic [ref=e32]: Or sign in with magic link
+      - generic [ref=e34]:
+        - generic [ref=e35]:
+          - generic [ref=e36]: Email Address
+          - textbox "Email Address" [ref=e37]:
+            - /placeholder: Enter your email
+            - text: test@example.com
+        - button "Send Magic Link" [ref=e38] [cursor=pointer]
+        - paragraph [ref=e39]: You'll receive an email with a link to sign in. Check your spam folder if you don't see it.
+      - generic [ref=e41]:
+        - img [ref=e42]
+        - generic [ref=e44]:
+          - paragraph [ref=e45]: New users get 3 free trial credits!
+          - paragraph [ref=e46]: New to Yarda? Just enter your email above and get a magic link to sign in - your account will be created automatically!
+      - button "Looking for the email/password option? Click here" [ref=e48] [cursor=pointer]
+  - alert [ref=e49]
+  - dialog "Unhandled Runtime Error" [ref=e52]:
+    - generic [ref=e53]:
+      - generic [ref=e54]:
+        - generic [ref=e55]:
+          - navigation [ref=e56]:
+            - button "previous" [disabled] [ref=e57]:
+              - img "previous" [ref=e58]
+            - button "next" [disabled] [ref=e60]:
+              - img "next" [ref=e61]
+            - generic [ref=e63]: 1 of 1 error
+            - generic [ref=e64]:
+              - text: Next.js (15.0.2) is outdated
+              - link "(learn more)" [ref=e66] [cursor=pointer]:
+                - /url: https://nextjs.org/docs/messages/version-staleness
+          - button "Close" [ref=e67] [cursor=pointer]:
+            - img [ref=e69]
+        - generic [ref=e72]:
+          - heading "Unhandled Runtime Error" [level=1] [ref=e73]
+          - generic [ref=e74]:
+            - button "Copy error stack" [ref=e75] [cursor=pointer]:
+              - img [ref=e76]
+            - link "Learn more about enabling Node.js inspector for server code with Chrome DevTools" [ref=e79] [cursor=pointer]:
+              - /url: https://nextjs.org/docs/app/building-your-application/configuring/debugging#server-side-code
+              - img [ref=e80]
+        - paragraph [ref=e83]: "AuthApiError: Email address \"test@example.com\" is invalid"
+      - generic [ref=e84]:
+        - heading "Source" [level=2] [ref=e85]
+        - generic [ref=e86]:
+          - link "src/lib/supabase.ts (170:27) @ async sendMagicLink" [ref=e88] [cursor=pointer]:
+            - generic [ref=e89]: src/lib/supabase.ts (170:27) @ async sendMagicLink
+            - img [ref=e90]
+          - generic [ref=e94]: "168 | } 169 | > 170 | const { data, error } = await supabase.auth.signInWithOtp({ | ^ 171 | email: email, 172 | options: { 173 | emailRedirectTo: emailRedirectTo,"
+        - heading "Call Stack" [level=2] [ref=e95]
+        - generic [ref=e96]:
+          - heading "async handleSubmit" [level=3] [ref=e97]
+          - link "src/components/auth/MagicLinkForm.tsx (44:7)" [ref=e98] [cursor=pointer]:
+            - generic [ref=e99]: src/components/auth/MagicLinkForm.tsx (44:7)
+            - img [ref=e100]
+```

@@ -76,6 +76,29 @@ export default function Home() {
   const [geocodedAddress, setGeocodedAddress] = useState<string | undefined>(undefined);
   const [geocodingAccuracy, setGeocodingAccuracy] = useState<string | undefined>(undefined);
 
+  // Showcase examples state
+  const [activeExample, setActiveExample] = useState(0);
+  const examples = [
+    {
+      title: 'Front Yard',
+      before: '/images/yarda_main_before.jpeg',
+      after: '/images/yarda_main_after.png',
+      description: 'Modern landscaping with native plants'
+    },
+    {
+      title: 'Backyard',
+      before: '/images/backyard_before.jpeg',
+      after: '/images/backyard_after.png',
+      description: 'Complete backyard transformation'
+    },
+    {
+      title: 'Entryway',
+      before: '/images/entryway_before.jpeg',
+      after: '/images/entryway_after.png',
+      description: 'Professional walkway design'
+    }
+  ];
+
   // Refs for cleanup and scrolling
   const cleanupRef = useRef<(() => void) | null>(null);
   const progressRef = useRef<HTMLDivElement>(null);
@@ -461,15 +484,12 @@ export default function Home() {
 
             {/* Example selector tabs */}
             <div className="flex justify-center gap-4 mb-8">
-              {[
-                { title: 'Front Yard' },
-                { title: 'Backyard' },
-                { title: 'Entryway' }
-              ].map((example, index) => (
+              {examples.map((example, index) => (
                 <button
                   key={index}
+                  onClick={() => setActiveExample(index)}
                   className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                    index === 0
+                    activeExample === index
                       ? 'bg-sage-600 text-white shadow-lg scale-105'
                       : 'bg-white text-sage-600 hover:bg-sage-50 border border-sage-200'
                   }`}
@@ -483,10 +503,10 @@ export default function Home() {
               <div className="bg-white rounded-2xl shadow-2xl border border-sage-200 p-4 sm:p-6 overflow-hidden">
                 <div className="aspect-video rounded-lg overflow-hidden relative">
                   <BeforeAfterSlider
-                    beforeImage="/images/yarda_main_before.jpeg"
-                    afterImage="/images/yarda_main_after.png"
-                    beforeAlt="Landscape before AI transformation"
-                    afterAlt="Landscape after AI transformation"
+                    beforeImage={examples[activeExample].before}
+                    afterImage={examples[activeExample].after}
+                    beforeAlt={`${examples[activeExample].title} before AI transformation`}
+                    afterAlt={`${examples[activeExample].title} after AI transformation`}
                   />
 
                   {/* BEFORE/AFTER labels */}
@@ -500,10 +520,10 @@ export default function Home() {
 
                 <div className="mt-6 text-center space-y-2">
                   <p className="text-sage-800 font-semibold text-lg">
-                    Front Yard Transformation
+                    {examples[activeExample].title} Transformation
                   </p>
                   <p className="text-sage-600 text-sm">
-                    Modern landscaping with native plants
+                    {examples[activeExample].description}
                   </p>
                   <p className="text-xs text-sage-500 mt-2">
                     💡 Drag the slider to compare before and after

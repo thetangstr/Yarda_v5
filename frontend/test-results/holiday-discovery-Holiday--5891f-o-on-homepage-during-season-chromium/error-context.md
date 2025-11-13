@@ -1,0 +1,144 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - navigation [ref=e4]:
+      - generic [ref=e6]:
+        - link "Yarda" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e8]:
+            - img [ref=e9]
+            - generic [ref=e12]: Yarda
+        - generic [ref=e13]:
+          - link "Home" [ref=e14] [cursor=pointer]:
+            - /url: /
+          - link "Pricing" [ref=e15] [cursor=pointer]:
+            - /url: /pricing
+          - link "Holiday Decorator" [ref=e16] [cursor=pointer]:
+            - /url: /holiday
+          - link "History" [ref=e17] [cursor=pointer]:
+            - /url: /history
+          - link "Subscription" [ref=e18] [cursor=pointer]:
+            - /url: /account?tab=subscription
+          - link "Account" [ref=e19] [cursor=pointer]:
+            - /url: /account
+        - button "Profile menu" [ref=e22] [cursor=pointer]:
+          - generic [ref=e23]: E
+    - generic [ref=e25]:
+      - generic [ref=e26]:
+        - img [ref=e27]
+        - generic [ref=e29]: 0 tokens
+      - generic [ref=e31]:
+        - img [ref=e32]
+        - generic [ref=e34]: 3 trial credits
+    - generic [ref=e39]:
+      - generic [ref=e40]:
+        - generic [ref=e41]:
+          - heading "See the Transformation" [level=2] [ref=e42]
+          - paragraph [ref=e43]: Explore what AI can do with your landscape
+        - generic [ref=e44]:
+          - button "Front Yard" [ref=e45] [cursor=pointer]
+          - button "Backyard" [ref=e46] [cursor=pointer]
+          - button "Entryway" [ref=e47] [cursor=pointer]
+        - generic [ref=e49]:
+          - generic [ref=e50]:
+            - generic [ref=e51]:
+              - generic [ref=e52]:
+                - img "Front Yard before AI transformation" [ref=e53]
+                - img "Front Yard after AI transformation" [ref=e55]
+                - slider "Drag to move or focus and use arrow keys" [ref=e56] [cursor=pointer]:
+                  - generic [ref=e57]:
+                    - img [ref=e58]
+                    - img [ref=e60]
+              - paragraph [ref=e63]: BEFORE
+              - paragraph [ref=e65]: AFTER
+              - paragraph [ref=e67]:
+                - img [ref=e68]
+                - text: Drag the slider to compare
+            - generic: BEFORE
+            - generic: AFTER
+          - generic [ref=e70]:
+            - paragraph [ref=e71]: Front Yard Transformation
+            - paragraph [ref=e72]: Modern landscaping with native plants
+            - paragraph [ref=e73]: 💡 Drag the slider to compare before and after
+      - generic [ref=e74]:
+        - generic [ref=e75]:
+          - heading "Create Your Landscape Design" [level=2] [ref=e76]
+          - paragraph [ref=e77]: Enter your property address and choose your design preferences
+        - generic [ref=e78]:
+          - generic [ref=e79]:
+            - generic [ref=e80]:
+              - heading "Property Address" [level=3] [ref=e81]
+              - paragraph [ref=e82]: Start by entering your property address
+            - generic [ref=e83]:
+              - generic [ref=e84]: Property Address
+              - textbox "Property Address" [ref=e86]:
+                - /placeholder: 123 Main Street, San Francisco, CA
+              - paragraph [ref=e87]: Start typing to see address suggestions
+          - generic [ref=e89]:
+            - generic [ref=e90]:
+              - heading "Choose Your Landscape Areas" [level=3] [ref=e91]
+              - paragraph [ref=e92]: Select the areas you'd like to transform
+            - generic [ref=e93]:
+              - button "🏠 Front Yard" [ref=e96] [cursor=pointer]:
+                - generic [ref=e97]:
+                  - generic [ref=e99]: 🏠
+                  - heading "Front Yard" [level=4] [ref=e101]
+              - button "🌲 Back Yard" [ref=e104] [cursor=pointer]:
+                - generic [ref=e105]:
+                  - generic [ref=e107]: 🌲
+                  - heading "Back Yard" [level=4] [ref=e109]
+              - button "🚶 Walkway" [ref=e112] [cursor=pointer]:
+                - generic [ref=e113]:
+                  - generic [ref=e115]: 🚶
+                  - heading "Walkway" [level=4] [ref=e117]
+            - generic [ref=e122]: 0 areas selected
+          - generic [ref=e124]:
+            - generic [ref=e125]:
+              - heading "Choose Your Design Style" [level=3] [ref=e126]
+              - paragraph [ref=e127]: Select your preferred design style
+            - generic [ref=e128]:
+              - button "🏠 Modern Minimalist Clean lines and contemporary design" [ref=e131] [cursor=pointer]:
+                - img [ref=e133]
+                - generic [ref=e135]:
+                  - generic [ref=e136]: 🏠
+                  - generic [ref=e137]:
+                    - heading "Modern Minimalist" [level=4] [ref=e138]
+                    - paragraph [ref=e139]: Clean lines and contemporary design
+              - button "🌲 California Native Drought-tolerant native plants" [ref=e142] [cursor=pointer]:
+                - generic [ref=e143]:
+                  - generic [ref=e144]: 🌲
+                  - generic [ref=e145]:
+                    - heading "California Native" [level=4] [ref=e146]
+                    - paragraph [ref=e147]: Drought-tolerant native plants
+              - button "🌸 English Garden Lush flowers and cottage charm" [ref=e150] [cursor=pointer]:
+                - generic [ref=e151]:
+                  - generic [ref=e152]: 🌸
+                  - generic [ref=e153]:
+                    - heading "English Garden" [level=4] [ref=e154]
+                    - paragraph [ref=e155]: Lush flowers and cottage charm
+            - generic [ref=e157]:
+              - generic [ref=e158]: Custom Instructions (Optional)
+              - textbox "Describe any specific features or preferences..." [ref=e159]
+              - generic [ref=e161]: 0/500 characters
+          - button "Show Advanced Options" [ref=e163] [cursor=pointer]:
+            - img [ref=e164]
+            - generic [ref=e166]: Show Advanced Options
+          - generic [ref=e168]:
+            - button "Generate Landscape Design" [ref=e169] [cursor=pointer]:
+              - generic [ref=e170]:
+                - img [ref=e171]
+                - generic [ref=e173]: Generate Landscape Design
+            - paragraph [ref=e174]: Please enter an address to continue
+      - paragraph [ref=e176]: Fill out the form above to start generating your landscape design
+    - generic [ref=e178] [cursor=pointer]:
+      - generic [ref=e180]: DEBUG PANEL
+      - generic [ref=e181]:
+        - button "Copy logs to clipboard" [ref=e182]:
+          - img [ref=e183]
+        - button "Clear logs" [ref=e186]:
+          - img [ref=e187]
+        - img [ref=e190]
+  - alert [ref=e192]
+```

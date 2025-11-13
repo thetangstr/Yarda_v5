@@ -79,11 +79,11 @@ export default function Navigation({ transparent = false }: NavigationProps) {
 
   const bgClass = transparent && !scrolled
     ? 'bg-transparent'
-    : 'bg-white shadow-sm';
+    : 'bg-white/95 backdrop-blur-sm shadow-sm';
 
   const textClass = transparent && !scrolled
-    ? 'text-neutral-900'  // Dark text for better contrast on cream background
-    : 'text-neutral-800';
+    ? 'text-sage-800'  // Sage color for better contrast on cream background
+    : 'text-sage-800';
 
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${bgClass}`}>
@@ -93,18 +93,18 @@ export default function Navigation({ transparent = false }: NavigationProps) {
           <Link href="/" className="flex items-center space-x-2">
             <div className="flex items-center">
               <svg
-                className={`h-8 w-8 ${transparent && !scrolled ? 'text-brand-green' : 'text-brand-green'}`}
+                className={`h-8 w-8 ${transparent && !scrolled ? 'text-sage-600' : 'text-sage-600'}`}
                 viewBox="0 0 40 40"
                 fill="currentColor"
               >
                 <path d="M20 5L5 15v10l15 10 15-10V15L20 5zm0 3.5L31 18v7l-11 7.5L9 25v-7l11-9.5z" />
                 <circle cx="20" cy="20" r="4" />
               </svg>
-              <span className={`ml-2 text-xl font-bold ${textClass}`}>
+              <span className={`ml-2 text-lg font-semibold ${textClass}`}>
                 Yarda
               </span>
               {isProUser && (
-                <span className="ml-2 px-2 py-0.5 text-xs font-bold bg-brand-green text-white rounded-full">
+                <span className="ml-2 px-2 py-0.5 text-xs font-bold bg-sage-600 text-white rounded-full">
                   PRO
                 </span>
               )}
@@ -119,10 +119,10 @@ export default function Navigation({ transparent = false }: NavigationProps) {
                 href={link.href}
                 className={`text-sm font-medium transition-colors duration-200 ${
                   isActive(link.href)
-                    ? 'text-brand-green font-semibold'
+                    ? 'text-sage-600 font-semibold'
                     : transparent && !scrolled
-                    ? 'text-neutral-900 hover:text-brand-green'
-                    : 'text-neutral-700 hover:text-brand-green'
+                    ? 'text-sage-700 hover:text-sage-600'
+                    : 'text-sage-700 hover:text-sage-600'
                 }`}
               >
                 {link.label}
@@ -135,7 +135,7 @@ export default function Navigation({ transparent = false }: NavigationProps) {
             {isAuthenticated ? (
               <div className="flex items-center gap-3 profile-menu-container relative">
                 {isProUser && (
-                  <span className="text-xs font-semibold text-brand-green bg-brand-sage px-3 py-1 rounded-full">
+                  <span className="text-xs font-semibold text-white bg-sage-600 px-3 py-1 rounded-full">
                     Monthly Pro
                   </span>
                 )}
@@ -150,10 +150,10 @@ export default function Navigation({ transparent = false }: NavigationProps) {
                     <img
                       src={user.avatar_url}
                       alt={user.full_name || user.email}
-                      className="w-9 h-9 rounded-full border-2 border-brand-green object-cover"
+                      className="w-9 h-9 rounded-full border-2 border-sage-600 object-cover"
                     />
                   ) : (
-                    <div className="w-9 h-9 rounded-full bg-brand-green text-white flex items-center justify-center font-semibold text-sm">
+                    <div className="w-9 h-9 rounded-full bg-sage-600 text-white flex items-center justify-center font-semibold text-sm">
                       {user?.email?.charAt(0).toUpperCase()}
                     </div>
                   )}
@@ -229,8 +229,8 @@ export default function Navigation({ transparent = false }: NavigationProps) {
                   href="/login"
                   className={`text-sm font-medium ${
                     transparent && !scrolled
-                      ? 'text-neutral-900 hover:text-brand-green'
-                      : 'text-neutral-600 hover:text-brand-green'
+                      ? 'text-sage-700 hover:text-sage-600'
+                      : 'text-sage-700 hover:text-sage-600'
                   }`}
                 >
                   Sign In

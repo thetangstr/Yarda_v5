@@ -1,0 +1,41 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - link "Yarda" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - img [ref=e7]
+        - generic [ref=e10]: Yarda
+      - generic [ref=e12]:
+        - img [ref=e13]
+        - paragraph [ref=e15]: Yarda AI Landscape Studio
+      - paragraph [ref=e16]: Create an account to save your design and unlock more possibilities.
+    - generic [ref=e17]:
+      - tablist "Authentication options" [ref=e18]:
+        - tab "Sign Up" [ref=e19] [cursor=pointer]
+        - tab "Log In" [active] [selected] [ref=e20] [cursor=pointer]
+      - button "Sign in with Google" [ref=e23] [cursor=pointer]:
+        - img [ref=e24]
+        - generic [ref=e29]: Sign in with Google
+      - generic [ref=e34]: or
+      - tabpanel "Log in form" [ref=e35]:
+        - generic [ref=e36]:
+          - generic [ref=e37]: Email Address
+          - textbox "Email Address" [ref=e38]:
+            - /placeholder: Enter your email
+            - text: thetangstr@gmail.com
+        - generic [ref=e39]:
+          - generic [ref=e40]: Password
+          - generic [ref=e41]:
+            - textbox "Password" [ref=e42]:
+              - /placeholder: Enter your password
+              - text: Test@1234
+            - button "Show password" [ref=e43] [cursor=pointer]:
+              - img [ref=e44]
+        - button "Sign In" [ref=e47] [cursor=pointer]
+    - link "← Back to Home" [ref=e49] [cursor=pointer]:
+      - /url: /
+  - alert [ref=e50]
+```
