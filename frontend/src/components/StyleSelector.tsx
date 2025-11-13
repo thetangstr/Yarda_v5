@@ -1,29 +1,28 @@
 'use client';
 
 /**
- * Style Selector Component
+ * Style Selector Component - Premium Design
  *
- * Allows users to choose their holiday decoration style:
- * - Classic: Traditional red/green with wreaths and string lights
- * - Modern: Minimalist whites/silvers with geometric patterns
- * - Over-the-Top: Maximum festivity with inflatables and synchronized lights
+ * Allows users to choose their holiday decoration style with a festive red theme,
+ * Material Icons, and premium typography (Playfair Display + Poppins).
  *
  * Feature: 007-holiday-decorator (T026)
  * User Story 1: New User Discovery & First Generation
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
+import type { HolidayStyle } from '@/types/holiday';
 
-// Type definition matching backend contract
-export type HolidayStyle = 'classic' | 'modern' | 'over_the_top';
+// Re-export for backward compatibility with holiday.tsx
+export type { HolidayStyle };
 
 interface StyleOption {
   id: HolidayStyle;
   name: string;
   description: string;
-  icon: string;
   emoji: string;
   features: string[];
+  suggestedPrompt?: string;
   testId: string;
 }
 
@@ -31,44 +30,100 @@ const STYLE_OPTIONS: StyleOption[] = [
   {
     id: 'classic',
     name: 'Classic',
-    description: 'Traditional holiday charm with timeless decorations',
-    icon: '🎄',
-    emoji: '🎁',
+    description: 'Traditional charm with timeless decorations.',
+    emoji: '🎄',
     features: [
       'Red & green color scheme',
       'Wreaths on doors',
       'String lights on roofline',
       'Traditional ornaments',
     ],
+    suggestedPrompt: 'Add classic Christmas decorations with red bows, wreath, and warm white lights',
     testId: 'style-classic',
   },
   {
     id: 'modern',
     name: 'Modern Minimalist',
-    description: 'Elegant and sophisticated with clean lines',
-    icon: '✨',
-    emoji: '❄️',
+    description: 'Elegant and sophisticated with clean lines.',
+    emoji: '✨',
     features: [
       'White & silver palette',
       'Geometric patterns',
       'Minimal decorations',
       'LED lighting',
     ],
+    suggestedPrompt: 'Create a modern minimalist Christmas look with white and silver geometric patterns',
     testId: 'style-modern',
   },
   {
     id: 'over_the_top',
     name: 'Over-the-Top',
-    description: 'Maximum festivity! Go big or go home',
-    icon: '🎅',
-    emoji: '🦌',
+    description: 'Maximum festivity! Go big or go home.',
+    emoji: '🎅',
     features: [
       'Inflatable displays',
       'Synchronized lights',
       'Yard decorations',
       'Animated characters',
     ],
+    suggestedPrompt: 'Go all out with giant inflatables, animated lights, and yard decorations that light up the neighborhood',
     testId: 'style-over-the-top',
+  },
+  {
+    id: 'pop_culture',
+    name: '✨ Pop Culture Christmas',
+    description: 'Trendy & fun with memes, K-pop & collector vibes.',
+    emoji: '🌟',
+    features: [
+      'Labubu Santa & designer toys',
+      'K-pop Christmas aesthetics',
+      'Gen-Z trendy decorations',
+      'Meme-worthy displays',
+    ],
+    suggestedPrompt: 'Decorate with trendy collector items, cute Labubu Santa figures, K-pop inspired colors and motifs, and Gen-Z aesthetic Christmas vibes',
+    testId: 'style-pop-culture',
+  },
+  {
+    id: 'glam_gold',
+    name: '💎 Glam & Gold',
+    description: 'Luxe and glamorous with gold, white & sparkles.',
+    emoji: '👑',
+    features: [
+      'Gold & white color scheme',
+      'Luxury garland & bows',
+      'Crystal-like decorations',
+      'Sophisticated sparkle',
+    ],
+    suggestedPrompt: 'Transform your home into a luxury palace with gold accents, white decorations, sparkling lights, and elegant garland',
+    testId: 'style-glam-gold',
+  },
+  {
+    id: 'cyber_christmas',
+    name: '🌐 Cyber Christmas',
+    description: 'Futuristic with neon lights & tech vibes.',
+    emoji: '🔮',
+    features: [
+      'Neon purple & cyan lights',
+      'Holographic decorations',
+      'Tech-inspired patterns',
+      'Glow-in-the-dark elements',
+    ],
+    suggestedPrompt: 'Create a futuristic cyberpunk Christmas with neon purple and cyan lights, holographic decorations, and electric tech vibes',
+    testId: 'style-cyber-christmas',
+  },
+  {
+    id: 'cozy_rustic',
+    name: '🔥 Cozy & Rustic',
+    description: 'Warm and inviting with cabin charm.',
+    emoji: '🏡',
+    features: [
+      'Wood & plaid elements',
+      'Warm fireplace glow',
+      'Natural greenery',
+      'Comfort-focused design',
+    ],
+    suggestedPrompt: 'Create a cozy cabin aesthetic with wooden decorations, plaid accents, warm fireplace, hot cocoa vibes, and natural greenery',
+    testId: 'style-cozy-rustic',
   },
 ];
 
@@ -83,26 +138,29 @@ export default function StyleSelector({
   onStyleChange,
   disabled = false,
 }: StyleSelectorProps) {
+  // Memoize selected option to avoid O(n) .find() calls on every render
+  const selectedOption = useMemo(
+    () => STYLE_OPTIONS.find((s) => s.id === selectedStyle),
+    [selectedStyle]
+  );
+
   return (
     <div
       data-testid="style-selector"
-      className={`
-        w-full max-w-5xl mx-auto
-        ${disabled ? 'opacity-50 pointer-events-none' : ''}
-      `}
+      className={`w-full ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
     >
       {/* Header */}
-      <div className="mb-6 text-center">
-        <h3 className="text-2xl font-bold text-gray-900 mb-2">
-          Choose Your Decoration Style
-        </h3>
-        <p className="text-gray-600">
-          Select the holiday vibe that matches your home's personality
+      <div className="text-center mb-8">
+        <h2 className="font-display text-3xl font-bold text-text-light dark:text-text-dark mb-2">
+          <span className="text-accent-light dark:text-accent-dark">🎨</span> Choose Your Style
+        </h2>
+        <p className="text-subtle-light dark:text-subtle-dark max-w-sm mx-auto">
+          From timeless classics to trendy vibes, pick your perfect holiday theme.
         </p>
       </div>
 
-      {/* Style Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Style Cards Grid - Vertical layout (like the design) */}
+      <div className="space-y-4">
         {STYLE_OPTIONS.map((style) => {
           const isSelected = selectedStyle === style.id;
 
@@ -112,121 +170,101 @@ export default function StyleSelector({
               data-testid={style.testId}
               onClick={() => onStyleChange(style.id)}
               disabled={disabled}
-              className={`
-                relative p-6 rounded-xl text-left
-                border-2 transition-all duration-200
-                hover:scale-105 hover:shadow-xl
-                disabled:cursor-not-allowed
-                ${
-                  isSelected
-                    ? 'border-green-500 bg-green-50 ring-4 ring-green-200 shadow-lg scale-105'
-                    : 'border-gray-200 bg-white hover:border-green-300'
-                }
-              `}
+              className={`w-full bg-surface-light dark:bg-surface-dark rounded-xl p-5 shadow-card dark:shadow-card-dark transition-all duration-300 text-left ${
+                isSelected
+                  ? 'border-2 border-primary ring-4 ring-primary/20'
+                  : 'border border-gray-200/50 dark:border-gray-700/50 hover:border-accent-light dark:hover:border-accent-dark hover:shadow-lg'
+              }`}
             >
-              {/* Selected indicator */}
-              {isSelected && (
-                <div className="absolute -top-3 -right-3 w-10 h-10 bg-green-500 rounded-full flex items-center justify-center shadow-lg animate-bounce">
-                  <svg
-                    className="w-6 h-6 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={3}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
+              {/* Content wrapper */}
+              <div className="flex items-start gap-4">
+                {/* Emoji icon */}
+                <div className="text-5xl flex-shrink-0">{style.emoji}</div>
+
+                {/* Text content */}
+                <div className="flex-grow">
+                  {/* Title and Description */}
+                  <h3 className="text-xl font-bold text-text-light dark:text-text-dark mb-1">
+                    {style.name}
+                  </h3>
+                  <p className="text-sm text-subtle-light dark:text-subtle-dark mb-3">
+                    {style.description}
+                  </p>
+
+                  {/* Features List */}
+                  <ul className="space-y-1">
+                    {style.features.map((feature) => (
+                      <li
+                        key={feature}
+                        className="flex items-center gap-2 text-sm text-text-light dark:text-text-dark"
+                      >
+                        <span className="material-icons text-success text-base">
+                          check_circle
+                        </span>
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-              )}
 
-              {/* Icon */}
-              <div className="mb-4 text-center">
-                <span className="text-6xl">{style.icon}</span>
+                {/* Selection Indicator */}
+                {isSelected && (
+                  <div className="flex-shrink-0">
+                    <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                      <svg
+                        className="w-4 h-4 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={3}
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                )}
               </div>
-
-              {/* Title */}
-              <h4
-                className={`
-                  text-xl font-bold mb-2 text-center
-                  ${isSelected ? 'text-green-700' : 'text-gray-900'}
-                `}
-              >
-                {style.name}
-              </h4>
-
-              {/* Description */}
-              <p className="text-sm text-gray-600 text-center mb-4">
-                {style.description}
-              </p>
-
-              {/* Features List */}
-              <ul className="space-y-2">
-                {style.features.map((feature, index) => (
-                  <li
-                    key={index}
-                    className="flex items-center gap-2 text-sm text-gray-700"
-                  >
-                    <span className="text-green-500">✓</span>
-                    <span>{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {/* Emoji decoration */}
-              <div className="mt-4 text-center text-2xl opacity-70">
-                {style.emoji}
-              </div>
-
-              {/* Hover effect gradient */}
-              <div
-                className={`
-                  absolute inset-0 rounded-xl opacity-0 transition-opacity duration-200
-                  ${isSelected ? 'opacity-0' : 'hover:opacity-10'}
-                `}
-                style={{
-                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(52, 211, 153, 0.3) 100%)',
-                }}
-              />
             </button>
           );
         })}
       </div>
 
-      {/* Selection Confirmation */}
-      {selectedStyle && (
-        <div className="mt-6 p-4 rounded-lg bg-green-50 border border-green-200 animate-fade-in">
-          <div className="flex items-center justify-center gap-2">
-            <span className="text-2xl">
-              {STYLE_OPTIONS.find((s) => s.id === selectedStyle)?.icon}
-            </span>
-            <p className="text-sm font-medium text-green-800">
-              <strong>
-                {STYLE_OPTIONS.find((s) => s.id === selectedStyle)?.name}
-              </strong>{' '}
-              style selected! Ready to generate your decoration.
-            </p>
+      {/* Selection Confirmation with Suggested Prompt */}
+      {selectedOption && (
+        <div className="mt-6 space-y-4 animate-fade-in">
+          {/* Confirmation Message */}
+          <div className="p-4 rounded-lg bg-green-100 dark:bg-green-900/50 border border-green-200 dark:border-green-700">
+            <div className="flex items-center justify-center gap-2">
+              <span className="text-2xl">{selectedOption.emoji}</span>
+              <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                <strong>{selectedOption.name}</strong> style
+                selected! Ready to generate your decoration.
+              </p>
+            </div>
           </div>
+
+          {/* Suggested Prompt */}
+          {selectedOption.suggestedPrompt && (
+            <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50">
+              <div className="flex gap-3">
+                <span className="text-xl flex-shrink-0">💡</span>
+                <div>
+                  <p className="text-xs font-semibold text-amber-900 dark:text-amber-200 mb-1">
+                    AI WILL USE THIS PROMPT
+                  </p>
+                  <p className="text-sm text-amber-800 dark:text-amber-300 italic">
+                    "{selectedOption.suggestedPrompt}"
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
-
-      {/* Additional Info */}
-      <div className="mt-8 p-4 rounded-lg bg-blue-50 border border-blue-200">
-        <div className="flex items-start gap-3">
-          <span className="text-2xl">💡</span>
-          <div className="text-sm text-blue-800">
-            <strong>Not sure which style to choose?</strong>
-            <p className="mt-1">
-              Classic works great for traditional homes, Modern suits contemporary architecture,
-              and Over-the-Top is perfect if you want to be the talk of the neighborhood! You can
-              try different styles using your free credits.
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

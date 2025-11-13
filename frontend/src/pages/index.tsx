@@ -73,6 +73,8 @@ export default function Home() {
   const [areaResults, setAreaResults] = useState<AreaResultWithProgress[]>([]);
   const [overallStatus, setOverallStatus] = useState<'pending' | 'processing' | 'completed' | 'failed' | 'partial'>('pending');
   const [error, setError] = useState<UserFacingError | null>(null);
+  const [geocodedAddress, setGeocodedAddress] = useState<string | undefined>(undefined);
+  const [geocodingAccuracy, setGeocodingAccuracy] = useState<string | undefined>(undefined);
 
   // Refs for cleanup and scrolling
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -178,6 +180,10 @@ export default function Home() {
         console.log('[Home] Generation completed:', response);
 
         if (!response.areas) return;
+
+        // Capture geocoding information
+        setGeocodedAddress(response.geocoded_address);
+        setGeocodingAccuracy(response.geocoding_accuracy);
 
         // Update to final state
         const finalResults: AreaResultWithProgress[] = response.areas.map((result: any) => ({
@@ -302,6 +308,8 @@ export default function Home() {
     setAreaResults([]);
     setOverallStatus('pending');
     setError(null);
+    setGeocodedAddress(undefined);
+    setGeocodingAccuracy(undefined);
     resetPolling();
     resetForm();
     clearGenerationFromLocalStorage();
@@ -502,6 +510,8 @@ export default function Home() {
               <GenerationResultsInline
                 areas={areaResults}
                 address={address}
+                geocodedAddress={geocodedAddress}
+                geocodingAccuracy={geocodingAccuracy}
                 onStartNew={handleStartNew}
               />
             </motion.div>

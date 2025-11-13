@@ -26,8 +26,12 @@ import { getAreaEmoji, getAreaDisplayName } from './shared/utils';
 export interface GenerationResultsInlineProps {
   /** Array of completed area results */
   areas: AreaResultWithProgress[];
-  /** Property address */
+  /** Property address (user input) */
   address?: string;
+  /** Geocoded address from Google Maps (what was actually used) */
+  geocodedAddress?: string;
+  /** Geocoding accuracy level */
+  geocodingAccuracy?: string;
   /** Callback when user clicks "Start New Generation" */
   onStartNew?: () => void;
   /** Optional custom className */
@@ -217,6 +221,8 @@ function BeforeAfterCarousel({
 export default function GenerationResultsInline({
   areas,
   address,
+  geocodedAddress,
+  geocodingAccuracy,
   onStartNew,
   className = '',
 }: GenerationResultsInlineProps) {
@@ -225,6 +231,9 @@ export default function GenerationResultsInline({
   // Count successful and failed areas
   const successCount = areas.filter((a) => a.status === 'completed').length;
   const failedCount = areas.filter((a) => a.status === 'failed').length;
+
+  // Check if geocoding accuracy is low
+  const isLowAccuracy = geocodingAccuracy && !['ROOFTOP'].includes(geocodingAccuracy);
 
   return (
     <motion.div
@@ -246,7 +255,36 @@ export default function GenerationResultsInline({
                 ? '❌ Design Creation Failed'
                 : '⚠️ Partial Results'}
           </h2>
-          {address && <p className="text-gray-700 text-xl text-center mb-3">{address}</p>}
+          {/* Address Information */}
+          <div className="mb-4">
+            {address && (
+              <p className="text-gray-700 text-center mb-2">
+                <span className="font-medium">Address:</span> {address}
+              </p>
+            )}
+            {geocodedAddress && geocodedAddress !== address && (
+              <p className="text-gray-600 text-center text-sm mb-2">
+                <span className="font-medium">Used for generation:</span> {geocodedAddress}
+              </p>
+            )}
+
+            {/* Accuracy Warning */}
+            {isLowAccuracy && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-3">
+                <p className="text-sm text-amber-800">
+                  <span className="font-semibold">⚠️ Geocoding Precision Note:</span> The address was geocoded with{' '}
+                  <span className="font-medium">
+                    {geocodingAccuracy === 'RANGE_INTERPOLATED'
+                      ? 'address range precision'
+                      : geocodingAccuracy === 'GEOMETRIC_CENTER'
+                        ? 'geometric center precision'
+                        : 'approximate precision'}
+                  </span>
+                  . The generated images may not be from your exact property location.
+                </p>
+              </div>
+            )}
+          </div>
 
           {/* Stats Bar */}
           <div className="flex items-center justify-center gap-6 mt-4 flex-wrap">

@@ -297,6 +297,21 @@ async def create_multi_area_generation(
             subscription_service=subscription_service
         )
 
+        # Step 2.5: Geocode address to capture geocoding accuracy info for user
+        print(f"✅ STEP 2a: Capturing geocoding information...")
+        geocoded_address = None
+        geocoding_accuracy = None
+        try:
+            geocode_result = await generation_service.maps_service.geocode_address(request.address)
+            if geocode_result:
+                geocoded_address = geocode_result.formatted_address
+                geocoding_accuracy = geocode_result.location_type
+                print(f"   ✅ Geocoded to: {geocoded_address}")
+                print(f"   ✅ Accuracy: {geocoding_accuracy}")
+        except Exception as e:
+            print(f"   ⚠️  Geocoding capture failed (non-fatal): {str(e)}")
+            # Non-fatal - continue with generation even if geocoding info capture fails
+
         # Step 3: Call GenerationService.create_generation() - handles payment + Street View
         print(f"✅ STEP 2: Calling generation_service.create_generation()...")
         success, generation_id, error_message, generation_data = await generation_service.create_generation(
@@ -509,6 +524,9 @@ async def create_multi_area_generation(
         return MultiAreaGenerationResponse(
             id=generation_id,
             status=GenerationStatus.PENDING,
+            address=request.address,
+            geocoded_address=geocoded_address,
+            geocoding_accuracy=geocoding_accuracy,
             total_cost=generation_data['total_cost'],
             payment_method=generation_data['payment_method'],
             credits_remaining=credits_remaining,

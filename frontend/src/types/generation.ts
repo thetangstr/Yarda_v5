@@ -367,9 +367,24 @@ export interface GenerationStatusResponse {
   status: GenerationStatus;
 
   /**
-   * Property address
+   * Property address (user input)
    */
   address?: string;
+
+  /**
+   * Geocoded address from Google Maps
+   * Shows what address was actually used for image retrieval
+   */
+  geocoded_address?: string;
+
+  /**
+   * Geocoding accuracy level
+   * ROOFTOP = exact location
+   * RANGE_INTERPOLATED = address range
+   * GEOMETRIC_CENTER = geometric center
+   * APPROXIMATE = approximate location
+   */
+  geocoding_accuracy?: string;
 
   /**
    * Payment method used

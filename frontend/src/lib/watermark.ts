@@ -101,3 +101,64 @@ export function downloadImage(imageUrl: string, filename: string = 'yarda-decora
   link.click();
   document.body.removeChild(link);
 }
+
+/**
+ * Share image using Web Share API (native mobile sharing)
+ * @param imageUrl - Data URL of watermarked image
+ * @param title - Title for the share (platform name)
+ * @param text - Text to include in share
+ * @returns Promise<boolean> - True if shared successfully, false if Web Share API not supported
+ */
+export async function shareImageViaWebShare(
+  imageUrl: string,
+  title: string = '🎄 Decorated with Yarda AI',
+  text: string = 'Check out my AI-decorated home!'
+): Promise<boolean> {
+  // Check if Web Share API is available
+  if (!navigator.share || !navigator.canShare) {
+    console.warn('Web Share API not supported on this device');
+    return false;
+  }
+
+  try {
+    // Convert data URL to Blob
+    const blob = await dataUrlToBlob(imageUrl);
+
+    // Create File object for sharing
+    const file = new File([blob], 'yarda-decorated-holiday.jpg', { type: 'image/jpeg' });
+
+    // Check if device can share files
+    const shareData = {
+      title,
+      text,
+      files: [file],
+    };
+
+    if (!navigator.canShare(shareData)) {
+      console.warn('Device cannot share files via Web Share API');
+      return false;
+    }
+
+    // Trigger native share intent
+    await navigator.share(shareData);
+    return true;
+  } catch (error: any) {
+    // User cancelled share or error occurred
+    if (error.name === 'AbortError') {
+      console.log('Share cancelled by user');
+    } else {
+      console.error('Web Share API error:', error);
+    }
+    return false;
+  }
+}
+
+/**
+ * Detect if Web Share API is available and supports files
+ * @returns boolean - True if Web Share API can share files
+ */
+export function isWebShareAvailable(): boolean {
+  return typeof navigator !== 'undefined' &&
+         typeof navigator.share === 'function' &&
+         typeof navigator.canShare === 'function';
+}

@@ -16,9 +16,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Share2, Check, AlertCircle, Zap, Copy, Download } from 'lucide-react';
+import { X, Share2, Check, AlertCircle, Zap, Copy, Download, Smartphone } from 'lucide-react';
 import { holidayAPI } from '@/lib/api';
-import { addWatermarkToImage, copyImageToClipboard, downloadImage } from '@/lib/watermark';
+import { addWatermarkToImage, copyImageToClipboard, downloadImage, shareImageViaWebShare, isWebShareAvailable } from '@/lib/watermark';
 import type { ShareRequest, ShareResponse, SharePlatform } from '@/types/holiday';
 
 interface SocialShareModalProps {
@@ -116,6 +116,7 @@ export default function SocialShareModal({
   const [watermarkedImageUrl, setWatermarkedImageUrl] = useState<string | null>(null);
   const [isGeneratingWatermark, setIsGeneratingWatermark] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [canUseWebShare, setCanUseWebShare] = useState(false);
 
   // Generate watermarked image when modal opens
   useEffect(() => {
@@ -135,6 +136,13 @@ export default function SocialShareModal({
         });
     }
   }, [isOpen, imageUrl, watermarkedImageUrl]);
+
+  // Detect Web Share API availability when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setCanUseWebShare(isWebShareAvailable());
+    }
+  }, [isOpen]);
 
   // Reset states when modal closes
   useEffect(() => {
@@ -172,16 +180,6 @@ export default function SocialShareModal({
     setIsLoading(true);
 
     try {
-      // Auto-copy watermarked image to clipboard
-      if (watermarkedImageUrl) {
-        try {
-          await copyImageToClipboard(watermarkedImageUrl);
-          setCopySuccess(true);
-        } catch (clipboardErr) {
-          console.warn('Could not copy to clipboard, continuing anyway:', clipboardErr);
-        }
-      }
-
       // Create share tracking link
       const shareRequest: ShareRequest = {
         generation_id: generationId,
@@ -191,15 +189,63 @@ export default function SocialShareModal({
       const response = await holidayAPI.createShare(shareRequest);
       setShareResponse(response);
 
-      // Open share URL in new window
-      window.open(response.share_url, '_blank', 'width=600,height=600');
+      // Handle mobile and desktop differently
+      if (canUseWebShare && watermarkedImageUrl) {
+        // Mobile: Use Web Share API to pass image directly to native apps
+        const shareTitle = `Check out my ${platform.name} decoration! 🎄`;
+        const shareText = response.share_url || 'Check out my AI-decorated home!';
 
-      // Show success message
-      setShowSuccess(true);
+        const webShareSucceeded = await shareImageViaWebShare(
+          watermarkedImageUrl,
+          shareTitle,
+          shareText
+        );
 
-      // Notify parent component
-      if (onShareComplete) {
-        onShareComplete();
+        if (webShareSucceeded) {
+          // Show success message
+          setShowSuccess(true);
+
+          // Notify parent component
+          if (onShareComplete) {
+            onShareComplete();
+          }
+        } else {
+          // Web Share API was cancelled or failed, fall back to clipboard + URL
+          console.log('Web Share cancelled, falling back to clipboard');
+          try {
+            await copyImageToClipboard(watermarkedImageUrl);
+            setCopySuccess(true);
+            window.open(response.share_url, '_blank', 'width=600,height=600');
+            setShowSuccess(true);
+            if (onShareComplete) {
+              onShareComplete();
+            }
+          } catch (fallbackErr) {
+            console.warn('Fallback share also failed:', fallbackErr);
+            setError('Unable to share. Please try again.');
+          }
+        }
+      } else {
+        // Desktop: Use traditional clipboard + URL approach
+        if (watermarkedImageUrl) {
+          try {
+            await copyImageToClipboard(watermarkedImageUrl);
+            setCopySuccess(true);
+          } catch (clipboardErr) {
+            console.warn('Could not copy to clipboard, continuing anyway:', clipboardErr);
+          }
+        }
+
+        // Open share URL in new window
+        window.open(response.share_url, '_blank', 'width=600,height=600');
+
+        // Show success message
+        setShowSuccess(true);
+
+        // Notify parent component
+        if (onShareComplete) {
+          onShareComplete();
+        }
       }
     } catch (err: any) {
       console.error('Share creation failed:', err);
@@ -462,16 +508,31 @@ export default function SocialShareModal({
                   transition={{ delay: 0.3 }}
                   className="space-y-4"
                 >
-                  <div className="p-4 bg-blue-50 rounded-2xl border border-blue-200">
-                    <p className="text-xs text-blue-900 leading-relaxed">
-                      <strong className="text-blue-900">📸 How to share (3 simple steps!):</strong>
-                      <ol className="list-decimal list-inside mt-2 space-y-1">
-                        <li>Click a platform below (image auto-copied to clipboard!)</li>
-                        <li>Paste the image in your post</li>
-                        <li>Add your caption and post!</li>
-                      </ol>
-                    </p>
-                  </div>
+                  {canUseWebShare ? (
+                    <div className="p-4 bg-blue-50 rounded-2xl border border-blue-200">
+                      <p className="text-xs text-blue-900 leading-relaxed">
+                        <strong className="text-blue-900 flex items-center gap-2">
+                          <Smartphone className="w-4 h-4" />
+                          How to share (2 simple steps!):
+                        </strong>
+                        <ol className="list-decimal list-inside mt-2 space-y-1">
+                          <li>Click a platform below (the app will open with your image ready!)</li>
+                          <li>Add your caption and post!</li>
+                        </ol>
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-blue-50 rounded-2xl border border-blue-200">
+                      <p className="text-xs text-blue-900 leading-relaxed">
+                        <strong className="text-blue-900">📸 How to share (3 simple steps!):</strong>
+                        <ol className="list-decimal list-inside mt-2 space-y-1">
+                          <li>Click a platform below (image auto-copied to clipboard!)</li>
+                          <li>Paste the image in your post</li>
+                          <li>Add your caption and post!</li>
+                        </ol>
+                      </p>
+                    </div>
+                  )}
 
                   <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200">
                     <p className="text-xs text-emerald-900 leading-relaxed">

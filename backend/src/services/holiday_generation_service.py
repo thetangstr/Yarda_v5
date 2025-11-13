@@ -109,6 +109,15 @@ class HolidayGenerationService:
         """
         generation_id = uuid4()
 
+        # Check if this is the 25th, 50th, 75th, etc. generation globally (easter egg)
+        try:
+            total_generations = await self.db.fetchval(
+                "SELECT COUNT(*) FROM holiday_generations"
+            )
+            is_easter_egg = (total_generations + 1) % 25 == 0
+        except Exception:
+            is_easter_egg = False
+
         try:
             # Step 1: Deduct credit atomically BEFORE generation
             # CRITICAL: Deduct first to prevent free generations on failure
@@ -235,6 +244,7 @@ class HolidayGenerationService:
                     style=style,
                     original_image_url=original_image_url,
                     credit_type_used=credit_type_used,
+                    is_easter_egg=is_easter_egg,
                 )
             )
 
@@ -257,6 +267,7 @@ class HolidayGenerationService:
         style: str,
         original_image_url: str,
         credit_type_used: str,
+        is_easter_egg: bool = False,
     ):
         """
         Generate decorated image via Gemini AI.
@@ -271,6 +282,7 @@ class HolidayGenerationService:
             style: Decoration style
             original_image_url: URL of original image
             credit_type_used: Type of credit used ('holiday' or 'token') for refunds
+            is_easter_egg: Whether this is a special 25th+ generation easter egg
         """
         try:
             # Update status to processing
@@ -288,7 +300,8 @@ class HolidayGenerationService:
             # For now, use placeholder
             decorated_image_bytes = await self._call_gemini_for_decoration(
                 street_view_bytes,
-                style
+                style,
+                is_easter_egg=is_easter_egg
             )
 
             # Upload decorated image
@@ -365,7 +378,8 @@ class HolidayGenerationService:
     async def _call_gemini_for_decoration(
         self,
         image_bytes: bytes,
-        style: str
+        style: str,
+        is_easter_egg: bool = False,
     ) -> bytes:
         """
         Call Gemini AI to generate holiday-decorated image.
@@ -373,9 +387,12 @@ class HolidayGenerationService:
         Transforms the Street View image by adding festive holiday decorations
         while preserving the house structure and architectural details.
 
+        Special: Every 25th generation globally includes a Labubu Santa easter egg!
+
         Args:
             image_bytes: Original Street View image
             style: Decoration style ('classic', 'modern_minimalist', 'over_the_top')
+            is_easter_egg: Whether to include Labubu Santa easter egg
 
         Returns:
             Decorated image bytes (JPEG)
@@ -408,6 +425,18 @@ class HolidayGenerationService:
 
             custom_prompt = style_prompts.get(style, style_prompts["classic"])
 
+            # Easter egg: Every 25th generation gets a special Labubu Santa!
+            easter_egg_suffix = ""
+            if is_easter_egg:
+                logger.info("🎉 SPECIAL: This is a lucky 25th generation! Adding Labubu Santa easter egg!")
+                easter_egg_suffix = (
+                    "\n\n🎉 SPECIAL EASTER EGG:\n"
+                    "Add a cute Labubu Santa character figure to the scene! "
+                    "Labubu is a cute Pop Mart collectible character with a distinctive look. "
+                    "Add it prominently on the lawn or porch, dressed as Santa Claus with a red suit and white fur trim. "
+                    "Make it eye-catching and whimsical as a special easter egg for this lucky generation!"
+                )
+
             logger.info(f"Calling Gemini for holiday decoration with style: {style}")
 
             # Use Gemini to generate decorated version
@@ -428,6 +457,7 @@ class HolidayGenerationService:
                     f"5. Do NOT remove or change structural elements - only ADD festive decorations\n"
                     f"6. Ensure decorations are bright, colorful, and eye-catching\n"
                     f"7. The decorated version should look dramatically more festive while keeping the same house"
+                    f"{easter_egg_suffix}"
                 ),
                 preservation_strength=0.35  # Dramatic transformation (0.0-0.4 range) for VISIBLE decorations
             )

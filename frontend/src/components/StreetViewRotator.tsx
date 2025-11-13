@@ -23,7 +23,6 @@ interface StreetViewRotatorProps {
   address: string;
   initialHeading?: number;
   onHeadingChange: (heading: number) => void;
-  onStreetOffsetChange?: (offsetFeet: number) => void;
   disabled?: boolean;
 }
 
@@ -31,7 +30,6 @@ export default function StreetViewRotator({
   address,
   initialHeading = 180,
   onHeadingChange,
-  onStreetOffsetChange: _onStreetOffsetChange,
   disabled = false,
 }: StreetViewRotatorProps) {
   const [heading, setHeading] = useState(initialHeading);
@@ -41,13 +39,14 @@ export default function StreetViewRotator({
   const [showFineTuneControls, setShowFineTuneControls] = useState(false);
   // Street offset: move camera position along the street (in feet)
   // 1 foot = 0.3048 meters, so we convert for backend use
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_streetOffsetFeet, _setStreetOffsetFeet] = useState(0);
+  // NOTE: Street offset feature planned for future implementation
 
   // Fetch Street View preview when heading changes
   // Uses backend preview endpoint to get EXACT same image that will be sent to Gemini
   useEffect(() => {
     if (!address) return;
+
+    let isMounted = true;
 
     const fetchPreview = async () => {
       setIsLoading(true);
@@ -57,6 +56,9 @@ export default function StreetViewRotator({
         // Call backend preview endpoint to get geocoded Street View URL
         // This ensures preview matches exactly what will be sent to Gemini
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
         const response = await fetch(`${apiUrl}/holiday/preview`, {
           method: 'POST',
           headers: {
@@ -67,23 +69,47 @@ export default function StreetViewRotator({
             heading,
             pitch: 0,
           }),
+          signal: controller.signal,
         });
 
+        clearTimeout(timeoutId);
+
         if (!response.ok) {
-          throw new Error('Failed to fetch preview');
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
         const data = await response.json();
-        setPreviewUrl(data.street_view_url);
+        if (isMounted) {
+          setPreviewUrl(data.street_view_url);
+        }
       } catch (err: any) {
-        console.error('Street View preview error:', err);
-        setError('Failed to load Street View preview. Try a different address.');
+        // Silently handle abort errors (component unmounted or timeout)
+        if (err.name === 'AbortError') {
+          return;
+        }
+
+        // Log other errors but don't show error UI for network issues
+        console.warn('Street View preview fetch issue:', err.message);
+
+        if (isMounted) {
+          // Only show error if it's a real issue (not network timeout)
+          if (!err.message.includes('AbortError')) {
+            setError('Failed to load Street View preview. Try a different address.');
+          }
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     fetchPreview();
+
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isMounted = false;
+    };
   }, [address, heading]);
 
   // Handle rotation

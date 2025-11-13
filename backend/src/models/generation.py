@@ -204,7 +204,15 @@ class MultiAreaGenerationResponse(BaseModel):
     id: UUID = Field(description="Unique generation request ID")
     user_id: Optional[UUID] = Field(None, description="User who created this generation")
     status: GenerationStatus = Field(description="Overall generation status")
-    address: Optional[str] = Field(None, description="Property address")
+    address: Optional[str] = Field(None, description="Property address (user input)")
+    geocoded_address: Optional[str] = Field(
+        None,
+        description="Formatted address from Google Maps (what was actually used for image retrieval)"
+    )
+    geocoding_accuracy: Optional[str] = Field(
+        None,
+        description="Geocoding accuracy level (ROOFTOP, RANGE_INTERPOLATED, GEOMETRIC_CENTER, APPROXIMATE)"
+    )
     total_cost: int = Field(ge=1, description="Total cost in credits/tokens")
     payment_method: PaymentType = Field(description="Payment method used (trial/token/subscription)")
     credits_remaining: Optional[Dict[str, int]] = Field(

@@ -8,6 +8,18 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Holiday Design System
+        primary: '#D34242', // Festive Red
+        'background-light': '#F8F5F2', // Creamy White
+        'background-dark': '#1A202C', // Dark Slate
+        'surface-light': '#FFFFFF',
+        'surface-dark': '#2D3748',
+        'text-light': '#1A202C',
+        'text-dark': '#E2E8F0',
+        'subtle-light': '#A0AEC0',
+        'subtle-dark': '#718096',
+        'accent-light': '#C4A484', // Tan/Gold Accent
+        'accent-dark': '#F6E05E', // Gold Accent
         // yarda.pro Brand Colors
         brand: {
           green: '#5A6C4D',        // Primary olive/sage green
@@ -54,6 +66,7 @@ module.exports = {
       },
       fontFamily: {
         sans: [
+          'Poppins',
           '-apple-system',
           'BlinkMacSystemFont',
           '"Segoe UI"',
@@ -62,6 +75,7 @@ module.exports = {
           'Arial',
           'sans-serif',
         ],
+        display: ['Playfair Display', 'serif'],
       },
       fontSize: {
         'xs': ['0.75rem', { lineHeight: '1rem' }],      // 12px/16px
@@ -95,6 +109,8 @@ module.exports = {
         '2xl': '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
         'inner': 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.06)',
         'brand': '0 10px 30px -5px rgba(90, 108, 77, 0.2)',
+        'card': '0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+        'card-dark': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.1)',
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',

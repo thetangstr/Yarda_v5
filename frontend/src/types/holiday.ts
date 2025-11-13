@@ -13,8 +13,9 @@
 
 /**
  * Holiday decoration style options
+ * Supports 7 styles: classic, modern, over_the_top, pop_culture, glam_gold, cyber_christmas, cozy_rustic
  */
-export type HolidayStyle = 'classic' | 'modern' | 'over_the_top';
+export type HolidayStyle = 'classic' | 'modern' | 'over_the_top' | 'pop_culture' | 'glam_gold' | 'cyber_christmas' | 'cozy_rustic';
 
 /**
  * Generation status lifecycle

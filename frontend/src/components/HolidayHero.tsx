@@ -10,34 +10,24 @@
  * User Story 1: New User Discovery & First Generation
  */
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import BeforeAfterSlider from '@/components/BeforeAfterSlider';
 
 export default function HolidayHero() {
-  const [isVisible, setIsVisible] = useState(false);
-
-  // Fade-in animation on mount
-  useEffect(() => {
-    setIsVisible(true);
-  }, []);
-
   return (
     <section
       data-testid="holiday-hero"
-      className={`
-        relative overflow-hidden
-        bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900
-        transition-opacity duration-1000
-        ${isVisible ? 'opacity-100' : 'opacity-0'}
-      `}
+      className="relative overflow-hidden bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 animate-fade-in"
     >
-      {/* Background decorative elements */}
-      <div className="absolute inset-0 opacity-20">
-        <div className="absolute top-10 left-10 text-6xl animate-bounce">❄️</div>
-        <div className="absolute top-20 right-20 text-5xl animate-pulse">✨</div>
-        <div className="absolute bottom-10 left-1/4 text-6xl animate-bounce delay-150">🎄</div>
-        <div className="absolute bottom-20 right-1/3 text-5xl animate-pulse delay-300">⭐</div>
+      {/* Background decorative elements - More Christmas vibes */}
+      <div className="absolute inset-0 opacity-30">
+        <div className="absolute top-10 left-10 text-7xl animate-bounce">❄️</div>
+        <div className="absolute top-20 right-20 text-6xl animate-pulse">✨</div>
+        <div className="absolute bottom-10 left-1/4 text-7xl animate-bounce delay-150">🎄</div>
+        <div className="absolute bottom-20 right-1/3 text-6xl animate-pulse delay-300">⭐</div>
+        <div className="absolute top-1/3 right-10 text-6xl animate-spin-slow">🎅</div>
+        <div className="absolute bottom-1/4 left-1/3 text-5xl animate-bounce delay-500">🎁</div>
       </div>
 
       {/* Hero content container */}
@@ -56,18 +46,19 @@ export default function HolidayHero() {
             {/* Headline */}
             <h1
               data-testid="hero-headline"
-              className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight"
+              className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight drop-shadow-lg"
             >
               Transform Your Home into a{' '}
-              <span className="bg-gradient-to-r from-yellow-300 via-red-300 to-pink-300 bg-clip-text text-transparent">
-                Winter Wonderland
+              <span className="bg-gradient-to-r from-yellow-200 via-orange-200 to-red-200 bg-clip-text text-transparent">
+                Christmas Masterpiece
               </span>
+              <span className="text-5xl ml-2">🎄</span>
             </h1>
 
             {/* Subheadline */}
-            <p className="text-lg md:text-xl text-blue-100 mb-8 max-w-2xl mx-auto lg:mx-0">
-              AI-powered Holiday Decorator creates stunning festive designs in seconds.
-              Perfect for social media, greeting cards, or inspiration! 🎄✨
+            <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-2xl mx-auto lg:mx-0 font-medium">
+              AI decorates your home with festive lights, decorations & holiday magic!
+              Get decorated instantly. Share & earn more credits! 🎅✨
             </p>
 
             {/* Value props */}
@@ -119,23 +110,6 @@ export default function HolidayHero() {
                   />
                 </svg>
               </Link>
-
-              {/* Secondary CTA */}
-              <Link
-                href="/holiday#examples"
-                className="
-                  inline-flex items-center justify-center
-                  px-8 py-4 rounded-xl
-                  bg-white/10 backdrop-blur-sm
-                  border-2 border-white/30
-                  hover:bg-white/20 hover:border-white/40
-                  text-white font-semibold text-lg
-                  transition-all duration-200
-                "
-              >
-                <span className="mr-2">✨</span>
-                See Examples
-              </Link>
             </div>
 
             {/* Social proof */}
@@ -164,8 +138,8 @@ export default function HolidayHero() {
               "
             >
               <BeforeAfterSlider
-                beforeImage="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&h=600&fit=crop"
-                afterImage="https://images.unsplash.com/photo-1512156260244-6ac8b4c5e8b2?w=800&h=600&fit=crop"
+                beforeImage="/images/holiday_before.jpg"
+                afterImage="/images/holiday_after.jpg"
               />
 
               {/* Floating badge */}

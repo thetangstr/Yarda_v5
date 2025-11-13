@@ -17,7 +17,15 @@ from decimal import Decimal
 # Enums & Constants
 # ============================================================================
 
-HolidayStyle = Literal['classic', 'modern', 'over_the_top']
+HolidayStyle = Literal[
+    'classic',
+    'modern',
+    'over_the_top',
+    'pop_culture',      # Trendy K-pop, Labubu Santa, Gen-Z vibes
+    'glam_gold',        # Luxe gold & white theme
+    'cyber_christmas',  # Neon futuristic cyberpunk
+    'cozy_rustic',      # Warm cabin fireplace aesthetic
+]
 GenerationStatus = Literal['pending', 'processing', 'completed', 'failed']
 SharePlatform = Literal['x', 'facebook', 'instagram', 'pinterest', 'tiktok']
 TransactionType = Literal['signup_bonus', 'social_share', 'generation', 'admin_grant', 'refund']

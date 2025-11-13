@@ -74,10 +74,10 @@ export default function GenerationProgressInline({
     >
       {/* Header */}
       <div key="progress-header" className="mb-6 text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 className="text-3xl md:text-4xl font-bold text-text-light dark:text-text-dark mb-2">
           Creating Your Landscape Design
         </h2>
-        <p className="text-gray-600" data-testid="progress-status">
+        <p className="text-subtle-light dark:text-subtle-dark font-light" data-testid="progress-status">
           {overallStatus === 'processing'
             ? 'This may take 1-2 minutes...'
             : overallStatus === 'completed'
@@ -98,7 +98,7 @@ export default function GenerationProgressInline({
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
               transition={{ delay: index * ANIMATION_DELAY.short, duration: ANIMATION_DURATION.fast }}
-              className="bg-white rounded-lg shadow-md p-6 border border-gray-200"
+              className="bg-surface-light dark:bg-surface-dark rounded-lg shadow-card dark:shadow-card-dark p-6 border border-gray-200 dark:border-gray-700"
               data-testid={`progress-area-${area.areaId}`}
             >
               {/* Area Header */}
@@ -106,7 +106,7 @@ export default function GenerationProgressInline({
                 <div className="flex items-center space-x-3">
                   <span className="text-3xl">{getAreaEmoji(area.areaId)}</span>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-lg font-semibold text-text-light dark:text-text-dark">
                       {getAreaDisplayName(area.areaId)}
                     </h3>
                     <p className={`text-sm font-medium ${getStatusColor(area.status)}`}>
@@ -172,15 +172,15 @@ export default function GenerationProgressInline({
 
               {/* Progress Bar */}
               {area.status !== 'failed' && (
-                <div key={`progress-bar-${area.areaId}`} className="w-full bg-gray-200 rounded-full h-2.5">
+                <div key={`progress-bar-${area.areaId}`} className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                   <motion.div
                     key={`progress-fill-${area.areaId}`}
                     className={`h-2.5 rounded-full ${
                       area.status === 'completed'
-                        ? 'bg-green-600'
+                        ? 'bg-green-600 dark:bg-green-500'
                         : area.status === 'processing'
-                          ? 'bg-blue-600'
-                          : 'bg-gray-400'
+                          ? 'bg-blue-600 dark:bg-blue-500'
+                          : 'bg-gray-400 dark:bg-gray-600'
                     }`}
                     initial={{ width: 0 }}
                     animate={{ width: `${area.progress}%` }}
@@ -306,7 +306,7 @@ export default function GenerationProgressInline({
                       transition={{ duration: ANIMATION_DURATION.fast }}
                       className="mt-4"
                     >
-                      <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200">
+                      <div className="relative aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-700">
                         <img
                           src={area.imageUrl}
                           alt={`${getAreaDisplayName(area.areaId)} result`}
@@ -324,9 +324,9 @@ export default function GenerationProgressInline({
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
-                  className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md"
+                  className="mt-3 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-md"
                 >
-                  <p className="text-sm text-red-800">{area.error}</p>
+                  <p className="text-sm text-red-800 dark:text-red-200">{area.error}</p>
                 </motion.div>
               )}
             </motion.div>
@@ -342,24 +342,24 @@ export default function GenerationProgressInline({
           animate={{ opacity: 1 }}
           className="mt-6 text-center"
         >
-          <div className="inline-flex items-center space-x-2 text-gray-600">
+          <div className="inline-flex items-center space-x-2 text-subtle-light dark:text-subtle-dark">
             <motion.div
               key="loading-dot-1"
               animate={{ scale: [1, 1.2, 1] }}
               transition={{ repeat: Infinity, duration: ANIMATION_DURATION.pulse }}
-              className="w-2 h-2 bg-blue-500 rounded-full"
+              className="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full"
             />
             <motion.div
               key="loading-dot-2"
               animate={{ scale: [1, 1.2, 1] }}
               transition={{ repeat: Infinity, duration: ANIMATION_DURATION.pulse, delay: ANIMATION_DELAY.medium }}
-              className="w-2 h-2 bg-blue-500 rounded-full"
+              className="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full"
             />
             <motion.div
               key="loading-dot-3"
               animate={{ scale: [1, 1.2, 1] }}
               transition={{ repeat: Infinity, duration: ANIMATION_DURATION.pulse, delay: ANIMATION_DELAY.long }}
-              className="w-2 h-2 bg-blue-500 rounded-full"
+              className="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full"
             />
           </div>
         </motion.div>
