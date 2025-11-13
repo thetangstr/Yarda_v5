@@ -209,8 +209,11 @@ export default function HolidayDecoratorPage() {
         <title>Holiday Decorator | Yarda AI</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 py-12">
-        <div className="max-w-7xl mx-auto px-4">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+        {/* Holiday Hero - Entry Point */}
+        <HolidayHero />
+
+        <div className="max-w-7xl mx-auto px-4 py-12">
           {/* Header with credit badge */}
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -238,28 +241,6 @@ export default function HolidayDecoratorPage() {
               </div>
             </div>
           </div>
-
-          {/* Demo: Before & After Showcase */}
-          {!generationStatus && !address && (
-            <div className="mb-12 bg-white rounded-xl p-8 shadow-lg border-2 border-green-200">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-                ✨ See What's Possible
-              </h2>
-              <p className="text-center text-gray-600 mb-6 max-w-2xl mx-auto">
-                Watch how our AI transforms ordinary homes into festive holiday wonderlands.
-                Start by entering your address below to create your own magical transformation!
-              </p>
-
-              {/* Demo slider - you can customize these image URLs */}
-              <BeforeAfterSlider
-                beforeImage="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&h=600&fit=crop"
-                afterImage="https://images.unsplash.com/photo-1512156260244-6ac8b4c5e8b2?w=800&h=600&fit=crop"
-                beforeAlt="Example home before decoration"
-                afterAlt="Example home after AI holiday decoration"
-                className="max-w-2xl mx-auto"
-              />
-            </div>
-          )}
 
           {/* Main content */}
           {!generationStatus && (
