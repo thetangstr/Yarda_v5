@@ -402,8 +402,8 @@ export default function Home() {
                 <BeforeAfterSlider
                   beforeImage="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200&h=675&fit=crop"
                   afterImage="https://images.unsplash.com/photo-1585330114519-ac47f91e0e01?w=1200&h=675&fit=crop"
-                  beforeLabel="Before"
-                  afterLabel="After"
+                  beforeAlt="Landscape before transformation"
+                  afterAlt="Landscape after AI transformation"
                 />
               </div>
             </div>
