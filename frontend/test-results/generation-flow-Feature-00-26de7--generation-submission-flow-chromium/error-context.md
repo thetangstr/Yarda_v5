@@ -113,7 +113,4 @@
           - img [ref=e149]
         - img [ref=e152]
   - alert [ref=e154]
-  - generic [ref=e156]:
-    - generic [ref=e158]: 1600 Amphitheatre Parkway
-    - generic [ref=e159]: Mountain View, CA 94043, USA
 ```

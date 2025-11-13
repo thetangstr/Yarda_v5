@@ -178,6 +178,9 @@ class User(BaseModel):
     current_period_end: Optional[datetime] = None
     cancel_at_period_end: bool = False
 
+    # Localization
+    preferred_language: str = Field(default="en", description="Preferred language (en, es, zh)")
+
     # Timestamps
     created_at: datetime
     updated_at: Optional[datetime] = None
@@ -194,6 +197,7 @@ class UserProfile(BaseModel):
     trial_used: int
     subscription_tier: str
     subscription_status: str
+    preferred_language: str = Field(default="en")
     created_at: datetime
 
 
@@ -202,6 +206,7 @@ class UpdateProfileRequest(BaseModel):
     current_password: Optional[str] = None
     new_password: Optional[str] = Field(None, min_length=8)
     new_email: Optional[str] = None
+    preferred_language: Optional[str] = Field(None, pattern="^(en|es|zh)$", description="Preferred language (en, es, zh)")
 
     @field_validator('new_email')
     @classmethod

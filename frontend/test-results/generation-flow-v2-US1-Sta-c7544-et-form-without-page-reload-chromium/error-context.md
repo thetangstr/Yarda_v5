@@ -13,7 +13,7 @@
       - navigation [ref=e4]:
         - navigation [ref=e5]:
           - link "Sign Up" [ref=e6] [cursor=pointer]:
-            - /url: /signup?next=%2Fsso-api%3Furl%3Dhttps%253A%252F%252Fyarda-v5-frontend-jxonwuxkj-thetangstrs-projects.vercel.app%252Flogin%253F_vercel_share%253Do64DXz4AMnGg6wpNTJ6UIqnk3EnGeGen%26nonce%3D0e725b5236dc38f744a53879a96be16e8ca6549ed6a1b1bfa836411cc419270b
+            - /url: /signup?next=%2Fsso-api%3Furl%3Dhttps%253A%252F%252Fyarda-v5-frontend-jxonwuxkj-thetangstrs-projects.vercel.app%252Flogin%253F_vercel_share%253Do64DXz4AMnGg6wpNTJ6UIqnk3EnGeGen%26nonce%3D1ab1c853bb80ffe37f184f830d3e7ec78cfdd97d7174d7b41e7488db9dae3d9e
             - paragraph [ref=e8]: Sign Up
     - main [ref=e9]:
       - generic [ref=e10]:
@@ -41,7 +41,7 @@
         - paragraph [ref=e51]:
           - text: Don't have an account?
           - link "Sign Up" [ref=e52] [cursor=pointer]:
-            - /url: /signup?email=test%2Btrial%40yarda.ai&next=%2Fsso-api%3Furl%3Dhttps%3A%2F%2Fyarda-v5-frontend-jxonwuxkj-thetangstrs-projects.vercel.app%2Flogin%3F_vercel_share%3Do64DXz4AMnGg6wpNTJ6UIqnk3EnGeGen%26nonce%3D0e725b5236dc38f744a53879a96be16e8ca6549ed6a1b1bfa836411cc419270b
+            - /url: /signup?email=test%2Btrial%40yarda.ai&next=%2Fsso-api%3Furl%3Dhttps%3A%2F%2Fyarda-v5-frontend-jxonwuxkj-thetangstrs-projects.vercel.app%2Flogin%3F_vercel_share%3Do64DXz4AMnGg6wpNTJ6UIqnk3EnGeGen%26nonce%3D1ab1c853bb80ffe37f184f830d3e7ec78cfdd97d7174d7b41e7488db9dae3d9e
       - generic [ref=e55]:
         - link "Terms" [ref=e56] [cursor=pointer]:
           - /url: /legal/terms
