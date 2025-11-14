@@ -1,0 +1,25 @@
+# Python Backend Configuration for Railway
+# Build and deploy the Python FastAPI backend from /backend directory
+
+[phases.setup]
+nixPkgs = ["python311", "postgresql", "git"]
+aptPkgs = []
+
+[phases.install]
+dependsOn = ["setup"]
+cmds = [
+  "echo 'Installing Python dependencies...'",
+  "python3 -m pip install --upgrade pip setuptools wheel",
+  "pip install -r requirements.txt",
+  "echo 'Dependencies installed successfully'"
+]
+
+[phases.build]
+dependsOn = ["install"]
+cmds = [
+  "echo 'Python FastAPI backend ready for deployment'"
+]
+
+[start]
+# Start the backend API server
+cmd = "uvicorn src.main:app --host 0.0.0.0 --port $PORT"
