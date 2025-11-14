@@ -2,6 +2,28 @@
 
 AI-powered landscape design platform with trial credits, token system, and subscription plans.
 
+## 📚 Documentation
+
+**New to the project?** Start here:
+
+| Document | Description |
+|----------|-------------|
+| [CLAUDE.md](CLAUDE.md) | **AI Assistant Context** - High-level overview and quick reference |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, patterns, and data flows |
+| [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) | Feature specifications and business logic |
+| [docs/TESTING.md](docs/TESTING.md) | Testing strategy, CUJs, and commands |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Environment configs, CI/CD, deployment guide |
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Setup, commands, troubleshooting |
+| [docs/API.md](docs/API.md) | API endpoint reference |
+| [docs/DATABASE.md](docs/DATABASE.md) | Schema, migrations, query patterns |
+| [docs/adr/](docs/adr/) | Architecture Decision Records |
+
+**Quick Links:**
+- 🚀 [Quick Start](#quick-start) - Get running locally in 5 minutes
+- 🧪 [Testing](#testing) - Run E2E and unit tests
+- 🚢 [Deployment](#deployment) - Deploy to production
+- 🏗️ [Project Structure](#project-structure) - Codebase organization
+
 ## Project Structure
 
 ```

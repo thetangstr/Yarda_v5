@@ -6,22 +6,43 @@ description: Test specific Critical User Journey (CUJ) - verifies end-to-end use
 
 **Purpose:** Verify complete user workflows from start to finish. Tests the real scenarios users experience.
 
-**Usage:** `/test-cuj [cuj-name] [environment]`
+**Usage:** `/test-cuj [cuj-name] [environment] [options]`
+
+## AUTOMATED TEST EXECUTION
+
+**Test File:** `frontend/tests/e2e/all-cujs-automated.spec.ts`
+
+This command now runs **fully automated** Playwright tests (no manual clicking required).
+
+**Current Status:** ✅ **81% Pass Rate** (21/26 tests passing)
+- ✅ CUJ1: Registration & Trial Flow - PASSING
+- ❌ CUJ2: Language Selection - Needs selector fix
+- ✅ CUJ3: Single-Page Generation - PASSING
+- ⏭️ CUJ4: Token Purchase - SKIPPED (requires Stripe)
+- ⏭️ CUJ5: Subscription - SKIPPED (requires Stripe)
+- ❌ CUJ6: Trial Exhaustion - Needs test logic fix
+- ✅ CUJ7: Holiday Decorator - PASSING
+- ✅ Backend Integration - All passing
 
 ## Quick Start
 
 ```bash
-# Test new user registration to first generation
-/test-cuj registration-to-generation
+# Test ALL CUJs (automated)
+/test-cuj all
 
-# Test language switching workflow
-/test-cuj language-switching-persistence
+# Test specific CUJ
+/test-cuj cuj1                          # Registration & trial
+/test-cuj cuj2                          # Language switching
+/test-cuj cuj3                          # Generation flow
+/test-cuj cuj7                          # Holiday decorator
 
-# Test complete purchase flow on staging
-/test-cuj token-purchase staging
+# Test on different environments
+/test-cuj all staging                   # Test all on staging
+/test-cuj cuj3 production --verbose     # Test generation on production
 
-# Test subscription to unlimited generations
-/test-cuj subscription-unlimited local --verbose
+# Direct npm commands (for CI/CD)
+npm run test:e2e -- tests/e2e/all-cujs-automated.spec.ts
+npx playwright test tests/e2e/all-cujs-automated.spec.ts --headed
 ```
 
 ## Available CUJs
@@ -460,6 +481,49 @@ Each CUJ test verifies:
 - State preserved between steps
 - Expected outcomes achieved
 - User can proceed to next CUJ
+
+---
+
+## IMPLEMENTATION
+
+When user runs `/test-cuj [cuj-name]`, execute the following:
+
+```bash
+# Parse CUJ name and map to test
+cd frontend
+
+# Run specific CUJ test or all
+case "$cuj_name" in
+  "all")
+    npx playwright test tests/e2e/all-cujs-automated.spec.ts
+    ;;
+  "cuj1"|"registration-to-generation")
+    npx playwright test tests/e2e/all-cujs-automated.spec.ts -g "CUJ1"
+    ;;
+  "cuj2"|"language-switching-persistence")
+    npx playwright test tests/e2e/all-cujs-automated.spec.ts -g "CUJ2"
+    ;;
+  "cuj3"|"single-page-generation")
+    npx playwright test tests/e2e/all-cujs-automated.spec.ts -g "CUJ3"
+    ;;
+  "cuj6"|"trial-exhaustion")
+    npx playwright test tests/e2e/all-cujs-automated.spec.ts -g "CUJ6"
+    ;;
+  "cuj7"|"holiday-decorator")
+    npx playwright test tests/e2e/all-cujs-automated.spec.ts -g "CUJ7"
+    ;;
+  *)
+    echo "Unknown CUJ: $cuj_name"
+    echo "Available: all, cuj1, cuj2, cuj3, cuj6, cuj7"
+    exit 1
+    ;;
+esac
+```
+
+**Environment Configuration:**
+- `local`: Uses http://localhost:3000 and http://localhost:8000
+- `staging`: Uses Vercel preview URL and Railway staging
+- `production`: Uses production URLs (use with caution!)
 
 ---
 
