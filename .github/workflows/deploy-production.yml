@@ -56,8 +56,10 @@ jobs:
           npm install -g @railway/cli@latest
 
       - name: Authenticate with Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          railway login --token ${{ secrets.RAILWAY_TOKEN }}
+          echo "Railway CLI will use RAILWAY_TOKEN environment variable"
 
       - name: Link to Railway project
         run: |
