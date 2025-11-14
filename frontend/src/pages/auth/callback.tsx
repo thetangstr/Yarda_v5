@@ -237,9 +237,18 @@ export default function AuthCallback() {
           // No session and no OAuth callback parameters - wait longer for Supabase to detect session from URL
           // detectSessionInUrl: true in Supabase config should handle this, but give it more time
           console.log('[Auth Callback] No session or OAuth params found, waiting for session detection...');
+          console.log('[Auth Callback] DEBUGGING - Current URL:', window.location.href);
+          console.log('[Auth Callback] DEBUGGING - Has hash:', !!window.location.hash);
+          console.log('[Auth Callback] DEBUGGING - Has code param:', window.location.search.includes('code='));
+          console.log('[Auth Callback] DEBUGGING - Search string:', window.location.search);
+          console.log('[Auth Callback] DEBUGGING - Hash string:', window.location.hash);
           setTimeout(() => {
             if (!processed) {
-              console.log('[Auth Callback] No auth event received after 5 seconds, redirecting to login');
+              console.error('[Auth Callback] ERROR: No auth event received after 5 seconds');
+              console.error('[Auth Callback] ERROR: This usually means Supabase redirect URL is not configured');
+              console.error('[Auth Callback] ERROR: Check Supabase dashboard → Authentication → URL Configuration');
+              console.error('[Auth Callback] ERROR: Ensure redirect URL includes:', window.location.origin + '/auth/callback');
+              console.log('[Auth Callback] Redirecting to login...');
               router.push('/login');
             }
           }, 5000);
