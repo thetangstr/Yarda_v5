@@ -55,16 +55,33 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://localhost:3001",
         "http://localhost:3002",
-        "http://localhost:3003"
+        "http://localhost:3003",
+        "https://yarda.pro",  # Production frontend
+        "https://www.yarda.pro",  # Production frontend with www
     ]
 
     @field_validator("cors_origins", mode="before")
     @classmethod
     def parse_cors_origins(cls, v):
-        """Parse CORS origins from string or list."""
+        """
+        Parse CORS origins from string or list.
+
+        Supports Vercel preview URLs by pattern matching.
+        If CORS_ORIGINS contains 'vercel', all *.vercel.app origins are allowed.
+        """
         if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",")]
-        return v
+            origins = [origin.strip() for origin in v.split(",")]
+        else:
+            origins = v
+
+        # Add Vercel preview URL support
+        # Check if any origin contains 'vercel' or if we should allow all Vercel previews
+        if any("vercel" in origin.lower() for origin in origins):
+            # Allow all Vercel preview deployments
+            origins.append("https://yarda-v5-frontend-git-main-thetangstrs-projects.vercel.app")
+            # Note: For wildcard support, we need to use allow_origin_regex in middleware
+
+        return origins
 
     # Token/Trial Configuration
     trial_credits: int = 3

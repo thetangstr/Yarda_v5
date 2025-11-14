@@ -57,7 +57,8 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    # Note: Vercel preview URLs should be added to cors_origins in production
+    # Support Vercel preview URLs with wildcard pattern
+    allow_origin_regex=r"https://.*\.vercel\.app"
 )
 
 
