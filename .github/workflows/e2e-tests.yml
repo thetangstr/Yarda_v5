@@ -39,6 +39,26 @@ jobs:
           cd frontend
           npx playwright install --with-deps ${{ matrix.browser }}
 
+      - name: Setup Python for backend
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Start backend server
+        run: |
+          cd backend
+          uvicorn src.main:app --host 0.0.0.0 --port 8000 &
+          sleep 10
+          curl -f http://localhost:8000/health || exit 1
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          E2E_MODE: true
+
       - name: Run E2E tests
         run: |
           cd frontend
