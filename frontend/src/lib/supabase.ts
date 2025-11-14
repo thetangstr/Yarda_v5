@@ -42,22 +42,42 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
  * @param redirectTo - Optional redirect URL after successful authentication
  */
 export async function signInWithGoogle(redirectTo?: string) {
-  // Always redirect to /auth/callback for OAuth handling
-  // Pass the intended final destination as a query parameter
-  let callbackUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/auth/callback`
-    : '/auth/callback';
+  // Determine the correct origin for production vs development
+  // IMPORTANT: Use explicit production URL to avoid Supabase redirecting to localhost
+  const getOrigin = () => {
+    if (typeof window === 'undefined') return 'https://yarda.pro';
+
+    // Check if we're on Vercel preview or production
+    const hostname = window.location.hostname;
+    if (hostname.includes('.vercel.app')) {
+      // On Vercel preview deployment
+      return window.location.origin;
+    } else if (hostname === 'yarda.pro' || hostname === 'www.yarda.pro') {
+      // Production - use canonical URL
+      return 'https://yarda.pro';
+    } else if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      // Local development
+      return window.location.origin;
+    } else {
+      // Fallback to production
+      return 'https://yarda.pro';
+    }
+  };
+
+  const origin = getOrigin();
+  let callbackUrl = `${origin}/auth/callback`;
 
   // Add the redirect parameter if provided
   if (redirectTo) {
-    const url = new URL(callbackUrl, window.location.origin);
+    const url = new URL(callbackUrl);
     url.searchParams.set('redirect', redirectTo);
     callbackUrl = url.toString();
   }
 
   // Log for debugging OAuth issues in production
   if (typeof window !== 'undefined') {
-    console.log('[signInWithGoogle] Window origin:', window.location.origin);
+    console.log('[signInWithGoogle] Detected hostname:', window.location.hostname);
+    console.log('[signInWithGoogle] Using origin:', origin);
     console.log('[signInWithGoogle] Callback URL:', callbackUrl);
     console.log('[signInWithGoogle] Redirect to:', redirectTo);
   }
