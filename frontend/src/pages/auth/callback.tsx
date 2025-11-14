@@ -175,6 +175,14 @@ export default function AuthCallback() {
               }
             }
 
+            // Clean up URL before redirect to prevent code reuse
+            // Replace current URL to remove code/hash parameters
+            if (typeof window !== 'undefined') {
+              const cleanUrl = window.location.origin + window.location.pathname;
+              window.history.replaceState({}, '', cleanUrl);
+              console.log('[Auth Callback] Cleaned URL, removed OAuth parameters');
+            }
+
             // Redirect to the home page or intended destination
             const redirectTo = router.query.redirect as string || '/';
             console.log('[Auth Callback] Redirecting to:', redirectTo);
@@ -228,6 +236,14 @@ export default function AuthCallback() {
               full_name: googleMetadata?.full_name || googleMetadata?.name,
             } as any);
             await syncAllCredits();
+
+            // Clean up URL before redirect
+            if (typeof window !== 'undefined') {
+              const cleanUrl = window.location.origin + window.location.pathname;
+              window.history.replaceState({}, '', cleanUrl);
+              console.log('[Auth Callback] Cleaned URL, removed OAuth parameters');
+            }
+
             const redirectTo = router.query.redirect as string || '/';
             console.log('[Auth Callback] Redirecting to:', redirectTo);
             router.push(redirectTo);
@@ -257,6 +273,13 @@ export default function AuthCallback() {
             // CRITICAL: Sync all credits for existing session
             // This ensures the frontend always has current credit balances (trial, token, holiday)
             await syncAllCredits();
+          }
+
+          // Clean up URL before redirect
+          if (typeof window !== 'undefined') {
+            const cleanUrl = window.location.origin + window.location.pathname;
+            window.history.replaceState({}, '', cleanUrl);
+            console.log('[Auth Callback] Cleaned URL, removed OAuth parameters');
           }
 
           const redirectTo = router.query.redirect as string || '/';
