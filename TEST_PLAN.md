@@ -1,20 +1,21 @@
-# Yarda AI - Agent-Driven Test Strategy & CI/CD Pipeline
+# Yarda AI - Test Strategy & CI/CD Pipeline
 
-**Version:** 2.0
-**Generated:** 2025-11-10
-**Status:** ACTIVE
-**Goal:** 100% automated testing with zero manual intervention
+**Version:** 3.0
+**Last Updated:** 2025-11-13
+**Status:** ACTIVE - Production Ready
+**Owner:** Engineering Team
 
 ---
 
 ## 🎯 Testing Philosophy
 
 **Core Principles:**
-1. **Zero Manual Testing** - Every test must be automated
-2. **Fast Feedback** - Tests run in parallel, fail fast
-3. **Agent-First** - Specialized agents handle each testing phase
-4. **Progressive Validation** - Test locally → staging → production
-5. **Shift-Left** - Catch bugs early in development
+1. **Automated Everything** - Every test executed by agents via Playwright MCP
+2. **No Manual Testing** - Except final UX/design review (also agent-assisted)
+3. **Fast Feedback** - Tests run in parallel, fail fast, auto-fix
+4. **Environment-Aware** - Local → Staging → Production with approval gates
+5. **CUJ-First** - Test user journeys, not just features
+6. **Shift-Left** - Catch issues early in development
 
 ---
 
@@ -23,488 +24,411 @@
 ### Layer 1: Unit Tests (< 30 seconds)
 **Purpose:** Test individual functions/components in isolation
 **Tools:** pytest (backend), vitest (frontend)
-**Coverage Target:** 80% code coverage
-**Agent:** `unit-testing:test-automator`
+**Coverage:** Core business logic, API endpoints, services
+**Agent:** Backend tests run automatically, reviewed by team
 
 ### Layer 2: Integration Tests (< 2 minutes)
-**Purpose:** Test service interactions and API contracts
-**Tools:** pytest with real database, supertest for API testing
-**Coverage Target:** 100% API endpoints
-**Agent:** `backend-development:backend-architect`
+**Purpose:** Test service interactions, database state, atomic operations
+**Tools:** pytest with real database (backend), Playwright with real API (frontend)
+**Coverage:** Credit deduction, payment webhooks, auth flows
+**Status:** ⚠️ Needs implementation (see TEST_REVIEW.md)
 
-### Layer 3: E2E Tests (< 5 minutes)
-**Purpose:** Test complete user journeys
-**Tools:** Playwright MCP (replaces ALL manual testing)
-**Coverage Target:** 100% Critical User Journeys
-**Agent:** `full-stack-orchestration:test-automator`
+### Layer 3: E2E Tests (< 10 minutes)
+**Purpose:** Test complete user journeys (CUJs) with real backend
+**Tools:** Playwright MCP - automated agent-driven testing
+**Coverage:** 100% of Critical User Journeys
+**Agent:** `full-stack-orchestration:test-automator` via slash commands
+
+### Layer 4: Design/UX Tests (< 15 minutes)
+**Purpose:** Verify design polish, accessibility, responsive design
+**Tools:** Playwright MCP - automated visual inspection
+**Coverage:** WCAG AA compliance, responsive breakpoints, visual regression
+**Agent:** Automated via `/test-comprehensive` command
 
 ---
 
-## 🤖 Agent-Driven CI/CD Pipeline
+## 🚀 Testing Slash Commands (Primary Interface)
 
-### Phase 1: Development (Local Environment)
+All testing is executed through these unified slash commands:
 
-```yaml
-trigger: Feature request created
-agents:
-  - Plan: Analyzes requirements, creates implementation plan
-  - backend-development:backend-architect: Implements backend changes
-  - javascript-typescript:typescript-pro: Implements frontend changes
-  - unit-testing:test-automator: Writes/updates tests
+### `/test-smart` - Full CI/CD Pipeline ⭐ PRIMARY COMMAND
+
+**What it does:**
+```
+Local Test → Auto-Fix → Deploy Staging → Test → Auto-Fix → Approval → Deploy Production → Monitor
+```
+
+**Usage:**
+```bash
+/test-smart
 ```
 
 **Workflow:**
-1. User creates feature request
-2. Agent pulls latest from main: `git pull origin main`
-3. Agent creates feature branch: `git checkout -b feature/XXX`
-4. Agent implements feature with TDD approach
-5. Agent runs local test suite
+1. Analyzes changed files
+2. Runs affected tests locally (smart selection)
+3. Auto-fixes failures (up to 3 attempts)
+4. Commits auto-fixes
+5. Pushes to branch (triggers staging deployment)
+6. Waits for Vercel/Railway deployment
+7. Runs full test suite on staging
+8. Auto-fixes staging-specific issues
+9. Requests human approval
+10. Merges to main and deploys to production
+11. Runs smoke tests and monitors
 
-### Phase 2: Local Testing
+**Time:** 45-60 minutes for full pipeline
 
+**Agent:** `deployment-engineer` + `test-automator` + `debugger`
+
+---
+
+### `/test-all-local` - Complete Local Test Suite
+
+**Usage:**
 ```bash
-# Automated by agents - runs in parallel
-npm run test:unit       # < 30s
-npm run test:integration # < 2min
-npm run test:e2e:local  # < 5min
+/test-all-local
 ```
 
-**Test Execution Matrix:**
-| Test Type | Command | Timeout | Parallel |
-|-----------|---------|---------|----------|
-| Backend Unit | `pytest backend/tests/unit -n auto` | 30s | ✅ |
-| Backend Integration | `pytest backend/tests/integration` | 120s | ✅ |
-| Frontend Unit | `npm run test` | 30s | ✅ |
-| Frontend E2E | `npx playwright test` | 300s | ✅ |
+**What it tests:**
+- 50+ E2E tests across all features
+- All 7 Critical User Journeys
+- 5 browser types (Chromium, Firefox, WebKit, Mobile Chrome, Mobile Safari)
+- 145+ design verification checks
 
-### Phase 3: Staging Deployment
+**Time:** 15-20 minutes
 
-```yaml
-trigger: All local tests pass
-agents:
-  - full-stack-orchestration:deployment-engineer: Deploys to staging
-  - full-stack-orchestration:test-automator: Runs staging tests
-```
+**Agent:** `test-automator`
 
-**Deployment:**
-- Frontend → Vercel Preview
-- Backend → Railway Staging
-- Database → Supabase (staging branch)
+---
 
-### Phase 4: Staging Validation
+### `/test-specific` - Single Feature Quick Test
 
+**Usage:**
 ```bash
-# Playwright MCP replaces ALL manual testing
-npx playwright test --config=playwright.config.staging.ts
+/test-specific language-switching
+/test-specific generation staging --verbose
+/test-specific tokens local --fail-fast
 ```
 
-**Critical User Journeys (CUJs) - Fully Automated:**
+**Supported features:**
+- `language-switching` / `i18n` (9 tests, 2-3 min)
+- `auth` / `authentication` (12+ tests, 2-3 min)
+- `generation` / `generation-flow` (15+ tests, 4-5 min)
+- `tokens` / `token-management` (8+ tests, 2-3 min)
+- `trial` / `trial-credits` (6+ tests, 2-3 min)
+- `payment` / `purchase` (10+ tests, 3-4 min)
+- `subscription` (8+ tests, 3-4 min)
+- `holiday` / `decorator` (12+ tests, 4-5 min)
 
-| CUJ | Description | Test File | Priority |
-|-----|-------------|-----------|----------|
-| CUJ-1 | New user registration → trial generation | `auth-and-trial.spec.ts` | P0 |
-| CUJ-2 | Token purchase → generation | `token-flow.spec.ts` | P0 |
-| CUJ-3 | Subscription → unlimited generations | `subscription.spec.ts` | P0 |
-| CUJ-4 | Generation flow (address → style → results) | `generation-e2e.spec.ts` | P0 |
-| CUJ-5 | Error recovery & edge cases | `error-handling.spec.ts` | P1 |
+**Time:** 2-5 minutes per feature
 
-### Phase 5: Production Promotion
+**Agent:** `general-purpose` with Playwright MCP
 
-```yaml
-trigger: User approval after staging tests pass
-agents:
-  - full-stack-orchestration:deployment-engineer: Production deploy
-  - full-stack-orchestration:security-auditor: Security scan
-  - full-stack-orchestration:performance-engineer: Performance validation
-```
+---
 
-### Phase 6: Production Smoke Tests
+### `/test-cuj` - Critical User Journey Testing
 
+**Usage:**
 ```bash
-# Minimal critical path validation
-npx playwright test --config=playwright.config.production.ts --grep @smoke
+/test-cuj registration-to-generation        # CUJ1
+/test-cuj single-page-generation           # CUJ3
+/test-cuj token-purchase-flow              # CUJ4
+/test-cuj subscription-unlimited            # CUJ5
+/test-cuj all                               # All CUJs
+/test-cuj registration-to-generation staging # With environment
 ```
+
+**Available CUJs:**
+- **CUJ1:** New user registration & 3 trial credits
+- **CUJ2:** Language selection & persistence (i18n)
+- **CUJ3:** Single-page generation without navigation
+- **CUJ4:** Token purchase via Stripe
+- **CUJ5:** Subscription for unlimited generations
+- **CUJ6:** Trial exhaustion & purchase required
+- **CUJ7:** Holiday decorator (seasonal)
+
+**Time:** 3-5 minutes per CUJ
+
+**Agent:** `general-purpose` with Playwright MCP
 
 ---
 
-## 🚀 Speed Optimizations
+### `/test-bug-fix` - Environment-Aware Bug Workflow
 
-### 1. Parallel Execution Strategy
-```javascript
-// playwright.config.ts
-export default {
-  workers: process.env.CI ? 4 : '50%', // Use 50% of CPU cores
-  fullyParallel: true,
-  forbidOnly: true, // Prevent .only() in CI
-  retries: process.env.CI ? 1 : 0, // Single retry in CI
-  use: {
-    trace: 'on-first-retry', // Only trace failures
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
-  }
-}
-```
-
-### 2. Test Data Strategy
-```typescript
-// Shared test accounts (no registration needed)
-const TEST_ACCOUNTS = {
-  trial: 'test.trial@yarda.app',     // 3 credits
-  tokens: 'test.tokens@yarda.app',   // 100 tokens
-  subscription: 'test.sub@yarda.app', // Active Pro
-  expired: 'test.expired@yarda.app'  // No credits
-};
-```
-
-### 3. Smart Test Selection
+**Usage:**
 ```bash
-# Run only affected tests based on git diff
-npm run test:affected
-
-# Run tests by tag
-npm run test:e2e -- --grep @critical
-npm run test:e2e -- --grep @payment
+/test-bug-fix              # Auto-detects environment
+/test-bug-fix --production # Force production workflow
 ```
+
+**Smart workflows:**
+- **Production Bug:** Fix locally → Test locally → Test on staging → Deploy to production
+- **Staging Bug:** Fix locally → Test locally → Auto-deploy staging
+- **Local Bug:** Fix → Test → Done
+
+**Time:** 2-45 minutes depending on bug environment
+
+**Agent:** `debugging-toolkit:debugger` + `deployment-engineer`
 
 ---
 
-## 📋 Consolidated E2E Test Suites
+### `/test-comprehensive` - Design/UX/A11y/Performance
 
-### Suite 1: Authentication & Onboarding
-**File:** `frontend/tests/e2e/auth-onboarding.spec.ts`
-```typescript
-test.describe('Authentication & Onboarding', () => {
-  test('Google OAuth login flow', async ({ page }) => {
-    // Automated with mocked OAuth response
-  });
-
-  test('Magic link authentication', async ({ page }) => {
-    // Automated with intercepted email
-  });
-
-  test('New user gets 3 trial credits', async ({ page }) => {
-    // Verify database state
-  });
-});
-```
-
-### Suite 2: Generation Flow
-**File:** `frontend/tests/e2e/generation-complete.spec.ts`
-```typescript
-test.describe('Complete Generation Flow', () => {
-  test('Address autocomplete works', async ({ page }) => {
-    // Mock Google Places API
-  });
-
-  test('Location preview shows correct images', async ({ page }) => {
-    // Verify Street View/Satellite logic
-  });
-
-  test('Generation completes within 2 minutes', async ({ page }) => {
-    // Mock Gemini API for speed
-  });
-
-  test('Results display with download buttons', async ({ page }) => {
-    // Verify Vercel Blob URLs
-  });
-});
-```
-
-### Suite 3: Payment Flows
-**File:** `frontend/tests/e2e/payments.spec.ts`
-```typescript
-test.describe('Payment Scenarios', () => {
-  test('Token purchase through Stripe', async ({ page }) => {
-    // Mock Stripe Checkout
-  });
-
-  test('Subscription upgrade flow', async ({ page }) => {
-    // Mock Customer Portal
-  });
-
-  test('Webhook processing', async ({ request }) => {
-    // Direct API test with webhook signature
-  });
-});
-```
-
-### Suite 4: Error Scenarios
-**File:** `frontend/tests/e2e/error-recovery.spec.ts`
-```typescript
-test.describe('Error Handling', () => {
-  test('Network timeout recovery', async ({ page }) => {
-    // Simulate network issues
-  });
-
-  test('Invalid address handling', async ({ page }) => {
-    // Test validation
-  });
-
-  test('Payment failure recovery', async ({ page }) => {
-    // Test declined cards
-  });
-});
-```
-
----
-
-## 🔧 Agent Configuration
-
-### Test Automation Agents
-
-```yaml
-agents:
-  unit-testing:test-automator:
-    responsibilities:
-      - Write unit tests for new code
-      - Update tests for changed code
-      - Maintain 80% code coverage
-      - Mock external dependencies
-
-  full-stack-orchestration:test-automator:
-    responsibilities:
-      - Write Playwright E2E tests
-      - Replace ALL manual testing
-      - Test cross-browser compatibility
-      - Generate test reports
-
-  debugging-toolkit:debugger:
-    responsibilities:
-      - Fix failing tests
-      - Debug flaky tests
-      - Optimize test performance
-      - Resolve test environment issues
-
-  full-stack-orchestration:deployment-engineer:
-    responsibilities:
-      - Deploy to staging/production
-      - Run deployment validations
-      - Rollback on failures
-      - Monitor deployment health
-```
-
-### Agent Coordination Workflow
-
-```mermaid
-graph TD
-    A[Feature Request] --> B[Plan Agent]
-    B --> C[Development Agents]
-    C --> D[Test Automation Agent]
-    D --> E{Local Tests Pass?}
-    E -->|No| F[Debugging Agent]
-    F --> C
-    E -->|Yes| G[Deployment Agent]
-    G --> H[Staging Tests]
-    H --> I{Staging Pass?}
-    I -->|No| F
-    I -->|Yes| J[User Approval]
-    J --> K[Production Deploy]
-    K --> L[Smoke Tests]
-```
-
----
-
-## 🎭 Playwright MCP Configuration
-
-### Local Environment
-```typescript
-// playwright.config.local.ts
-export default {
-  use: {
-    baseURL: 'http://localhost:3000',
-    extraHTTPHeaders: {
-      'X-Test-Environment': 'local'
-    }
-  },
-  projects: [
-    { name: 'chromium', use: devices['Desktop Chrome'] },
-    { name: 'mobile', use: devices['iPhone 13'] }
-  ]
-}
-```
-
-### Staging Environment
-```typescript
-// playwright.config.staging.ts
-export default {
-  use: {
-    baseURL: process.env.STAGING_URL,
-    extraHTTPHeaders: {
-      'X-Test-Environment': 'staging'
-    }
-  }
-}
-```
-
-### Production Smoke Tests
-```typescript
-// playwright.config.production.ts
-export default {
-  use: {
-    baseURL: 'https://yarda.ai',
-    extraHTTPHeaders: {
-      'X-Test-Environment': 'production'
-    }
-  },
-  // Only run @smoke tagged tests
-  grep: /@smoke/
-}
-```
-
----
-
-## 📊 Test Metrics & Monitoring
-
-### Key Metrics to Track
-1. **Test Execution Time** - Target: < 8 minutes total
-2. **Flaky Test Rate** - Target: < 1%
-3. **Code Coverage** - Target: > 80%
-4. **Bug Escape Rate** - Target: < 5%
-5. **Test Maintenance Cost** - Track time spent fixing tests
-
-### Automated Reporting
+**Usage:**
 ```bash
-# Generate test report after each run
-npm run test:report
-
-# Metrics dashboard
-npm run test:metrics
+/test-comprehensive all                           # Everything
+/test-comprehensive generation --accessibility    # A11y focus
+/test-comprehensive all staging --detailed --report
 ```
 
----
+**Coverage:**
+- 🎨 Design verification (colors, spacing, typography)
+- ♿ Accessibility audit (WCAG AA compliance)
+- 📱 Responsive testing (6+ devices, all orientations)
+- ⚡ Performance metrics (load time, TTI, CLS)
+- 🌐 Cross-browser compatibility
+- 🔄 Visual regression detection
 
-## 🚨 Common Issues & Solutions
+**Time:** 5-15 minutes
 
-| Issue | Solution | Prevention |
-|-------|----------|------------|
-| Flaky tests | Add explicit waits, use data-testid | Review in PR |
-| Slow tests | Parallelize, mock external APIs | Monitor execution time |
-| Test data conflicts | Use unique test accounts | Reset after each test |
-| Environment differences | Use environment variables | Test in all environments |
-
----
-
-## 🔄 Continuous Improvement
-
-### Weekly Test Review
-1. Analyze test failures from past week
-2. Identify flaky tests for fixing
-3. Review test execution times
-4. Update test coverage gaps
-
-### Monthly Test Optimization
-1. Remove redundant tests
-2. Combine similar test scenarios
-3. Optimize slow-running tests
-4. Update test infrastructure
+**Agent:** Playwright MCP automated visual inspection
 
 ---
 
-## 📝 Quick Commands Reference
+### `/test-help` - Quick Reference Guide
 
+**Usage:**
 ```bash
-# Development
-npm run test:unit:watch      # Watch mode for TDD
-npm run test:affected        # Test only changed code
+/test-help
+```
 
-# Local Testing
-npm run test:all:local       # Run all tests locally
-npm run test:e2e:debug       # Debug mode with headed browser
+Shows quick reference for all commands, common workflows, troubleshooting.
 
-# Staging
-npm run test:staging         # Full staging test suite
-npm run test:staging:smoke   # Quick smoke tests only
+---
 
-# Production
-npm run test:prod:smoke      # Production smoke tests
+## 📋 Test Coverage Matrix
 
-# Reporting
-npm run test:coverage        # Generate coverage report
-npm run test:report          # Open HTML test report
+| Feature | E2E Tests | Integration Tests | Unit Tests | Status |
+|---------|-----------|------------------|-----------|--------|
+| Registration (CUJ1) | 6+ | 🔴 Missing | ✅ Present | ⚠️ Partial |
+| Language Switching (CUJ2) | 9+ | 🔴 Missing | ✅ Present | ✅ Complete |
+| Generation (CUJ3) | 15+ | 🔴 Missing | ✅ Present | ⚠️ Partial |
+| Token Purchase (CUJ4) | 🔴 Minimal | 🔴 Missing | ✅ Present | 🔴 Minimal |
+| Subscription (CUJ5) | 🔴 Minimal | 🔴 Missing | ✅ Present | 🔴 Minimal |
+| Trial System (CUJ6) | 6+ | ⏱️ Timeout | ✅ Present | ⚠️ Flaky |
+| Holiday Decorator (CUJ7) | 12+ | 🔴 Missing | ✅ Present | ✅ Complete |
+| **Total** | **50+** | **Missing** | **100+** | **Partial** |
 
-# Agent Commands
-npm run agent:test:fix       # Launch debugging agent for test fixes
-npm run agent:test:write     # Launch agent to write new tests
-npm run agent:deploy         # Launch deployment agent
+**Legend:** ✅ Complete | ⚠️ Partial | 🔴 Missing | ⏱️ Issues
+
+---
+
+## 🔄 CI/CD Pipeline Architecture
+
+### Phase 1: Local Development
+
+```
+Developer writes code
+    ↓
+/test-specific {feature}     # Quick feedback (2-5 min)
+    ↓
+Tests pass? → YES → Continue
+              NO → Fix and retry
+```
+
+### Phase 2: Before PR
+
+```
+/test-all-local              # Full local validation (15-20 min)
+    ↓
+All tests pass? → YES → Create PR
+                → NO → Fix and retry
+```
+
+### Phase 3: Pre-Deployment
+
+```
+/test-cuj {cuj-name}         # Verify specific journey (3-5 min)
+/test-comprehensive all      # Design/UX verification (5-15 min)
+    ↓
+All CUJs verified? → YES → Deploy
+                   → NO → Fix and retry
+```
+
+### Phase 4: Full Deployment
+
+```
+/test-smart                  # Complete pipeline (45-60 min)
+    ↓
+Local tests pass? → YES → Deploy staging
+                 → NO → Stop, fix locally
+    ↓
+Staging tests pass? → YES → Request approval
+                   → NO → Auto-fix and retry
+    ↓
+Human approves? → YES → Deploy production
+               → NO → Cancel or fix
+    ↓
+Production smoke tests pass? → YES → Success ✅
+                            → NO → Monitor & alert
 ```
 
 ---
 
-## ✅ Success Criteria
+## 📊 Test Execution Times
 
-1. **Zero Manual Testing** - 100% automated with Playwright MCP
-2. **Fast Feedback** - Full test suite < 8 minutes
-3. **High Confidence** - 0% bug escape rate to production
-4. **Low Maintenance** - < 10% time spent on test maintenance
-5. **Agent Efficiency** - 90% of testing handled by agents
+| Command | Time | Details |
+|---------|------|---------|
+| `/test-specific {feature}` | 2-5 min | Single feature, quick feedback |
+| `/test-all-local` | 15-20 min | All 50+ tests, full coverage |
+| `/test-cuj {cuj}` | 3-5 min | Single user journey |
+| `/test-comprehensive all` | 5-15 min | Design/UX/A11y/perf checks |
+| `/test-smart local only` | 5-10 min | Local phase only |
+| `/test-smart full pipeline` | 45-60 min | Local → staging → production |
 
 ---
 
-## 🏆 Code Quality & Refactoring (2025-11-13)
+## 🔍 Critical User Journeys (CUJs)
 
-### Completed Refactoring Tasks
+All testing is organized around these 7 critical journeys:
 
-**Critical Fixes (HIGH Priority):**
-- ✅ Fixed `HolidayStyle` type mismatch: Updated types/holiday.ts to support all 7 styles (was only 3)
-- ✅ Fixed memory leak: Added polling cleanup with `useRef` and `useEffect` cleanup in holiday.tsx
-- ✅ Improved error typing: Removed generic `any` types in error handlers
+### CUJ1: New User Registration & Trial Flow
+- User registers → Gets 3 trial credits
+- Can generate immediately
+- **Test Command:** `/test-cuj registration-to-generation`
 
-**Code Cleanup (MEDIUM Priority):**
-- ✅ Removed unused props: Deleted `_onStreetOffsetChange` and `_streetOffsetFeet` from StreetViewRotator
-- ✅ Optimized StyleSelector: Added `useMemo` to cache `.find()` lookups (eliminated 4 redundant O(n) calls per render)
-- ✅ Fixed array keys: Changed from index-based to content-based keys in StyleSelector features list
-- ✅ Simplified animations: Removed unnecessary `isVisible` state from HolidayHero, using CSS animation instead
+### CUJ2: Language Selection & Persistence
+- User selects language → Persists in localStorage & backend
+- Works across login/logout
+- **Test Command:** `/test-cuj language-switching-persistence`
 
-### Test Coverage Additions
+### CUJ3: Single-Page Generation
+- User fills form → Progress updates inline → Results inline
+- No page navigation during flow
+- **Test Command:** `/test-cuj single-page-generation`
 
-New test cases added to verify refactoring correctness:
+### CUJ4: Token Purchase via Stripe
+- User purchases tokens → Stripe webhook processes → Tokens added
+- Can generate immediately with new tokens
+- **Test Command:** `/test-cuj token-purchase-flow`
 
-```typescript
-// Test: Polling cleanup on unmount prevents memory leaks
-test('clears polling timeout when component unmounts mid-generation', async ({ page }) => {
-  // Navigate away during generation
-  // Verify no pending timers in browser console
-});
+### CUJ5: Subscription for Unlimited
+- User subscribes ($99/month) → Active subscription allows unlimited generation
+- Can manage via Customer Portal
+- **Test Command:** `/test-cuj subscription-unlimited`
 
-// Test: All 7 HolidayStyle options work end-to-end
-const allStyles = ['classic', 'modern', 'over_the_top', 'pop_culture', 'glam_gold', 'cyber_christmas', 'cozy_rustic'];
-allStyles.forEach(style => {
-  test(`generates successfully with ${style} style`, async ({ page }) => {
-    // Verify style is accepted and generation completes
-  });
-});
+### CUJ6: Trial Exhaustion & Purchase Required
+- User exhausts 3 trial credits
+- Modal appears with purchase/subscribe options
+- Generation blocked until purchase
+- **Test Command:** `/test-cuj trial-exhaustion-purchase`
 
-// Test: StyleSelector performance with memoization
-test('StyleSelector re-renders efficiently with memoized selections', async ({ page }) => {
-  // Change heading 5 times
-  // Verify StyleSelector confirmation message updates without console warnings
-});
+### CUJ7: Holiday Decorator (Seasonal)
+- During Nov-Jan, user can decorate home with holiday theme
+- Atomic credit deduction prevents negative balance
+- Social sharing grants bonus credits
+- **Test Command:** `/test-cuj holiday-decorator-flow`
+
+**Full CUJ documentation:** [CUJS.md](CUJS.md)
+
+---
+
+## 🤖 Agent Capabilities
+
+Your testing system uses these specialized agents:
+
+| Agent | Role | Capabilities |
+|-------|------|--------------|
+| `deployment-engineer` | CI/CD orchestration | Deploy, monitor, approval gates |
+| `test-automator` | Test execution | Run tests, parse results, generate reports |
+| `debugger` | Auto-fix failures | Analyze failures, apply fixes, retry |
+| `general-purpose` | Test execution | Run specific features, CUJs |
+| `playwright-mcp` | Browser automation | Visual testing, design verification |
+
+---
+
+## ✅ Success Criteria for Production
+
+Before deploying to production, verify:
+
+```
+✅ /test-smart passed all phases
+✅ 50+ E2E tests passing (100%)
+✅ All 7 CUJs verified working
+✅ /test-comprehensive passed
+✅ Design/UX/A11y verified
+✅ Performance within SLA
+✅ No flaky tests
+✅ Code reviewed
+✅ No known issues
+✅ Ready for users! 🚀
 ```
 
-### Performance Improvements
+---
 
-| Component | Before | After | Improvement |
-|-----------|--------|-------|-------------|
-| StyleSelector lookup calls | 4 per render | 1 (memoized) | 75% reduction |
-| HolidayHero animation | State + transition | CSS only | 1 fewer re-render |
-| StreetViewRotator props | 5 props | 4 props | Cleaner API |
-| Polling memory usage | Unbounded | Bounded | No memory leaks |
+## ⚠️ Known Limitations & Action Items
+
+### Issue 1: Frontend Tests Use Mocked APIs
+**Status:** 🔴 HIGH PRIORITY
+**Description:** E2E tests mock API responses, can't detect backend failures
+**Impact:** Can't verify credit deduction, payment processing, etc.
+**Fix:** Implement real backend integration tests
+**Timeline:** This sprint
+
+### Issue 2: Missing Integration Tests
+**Status:** 🔴 HIGH PRIORITY
+**Description:** No tests verify database state changes
+**Impact:** Can't detect data corruption, atomic operation failures
+**Fix:** Create backend integration test suite
+**Timeline:** This sprint
+
+### Issue 3: Payment Tests Missing
+**Status:** 🔴 HIGH PRIORITY
+**Description:** No tests for Stripe webhook processing
+**Impact:** Payment failures won't be caught before production
+**Fix:** Add Stripe test mode tests
+**Timeline:** Next sprint
+
+### Issue 4: Backend Unit Tests Timeout
+**Status:** 🔴 BLOCKING
+**Description:** Holiday credit service tests timeout
+**Impact:** Can't verify credit system works correctly
+**Fix:** Debug and fix timeouts
+**Timeline:** Immediate
 
 ---
 
-## 🎯 Implementation Checklist
+## 📚 Related Documents
 
-- [ ] Consolidate redundant E2E tests into focused suites
-- [ ] Set up parallel execution for all test types
-- [ ] Configure test accounts with proper data isolation
-- [ ] Implement agent workflows for each testing phase
-- [ ] Create mock services for external dependencies
-- [ ] Set up automated test reporting and metrics
-- [ ] Configure Playwright MCP for all environments
-- [ ] Create smoke test suite for production
-- [ ] Document agent responsibilities and triggers
-- [ ] Set up continuous monitoring and alerts
+- **[CUJS.md](CUJS.md)** - Canonical definition of all 7 Critical User Journeys
+- **[TEST_REVIEW.md](TEST_REVIEW.md)** - Comprehensive test coverage analysis
+- **[CLAUDE.md](CLAUDE.md)** - Architecture & development guidelines
+- **[.claude/commands/test-smart.md](.claude/commands/test-smart.md)** - Full CI/CD details
+- **[.claude/commands/test-comprehensive.md](.claude/commands/test-comprehensive.md)** - Design/UX testing
 
 ---
 
-*This test plan is designed to be executed entirely by agents with zero human intervention beyond initial approval gates.*
+## 🔗 Quick Links
+
+### Run Tests
+- Quick feature: `/test-specific {feature}`
+- Single CUJ: `/test-cuj {cuj-name}`
+- Full suite: `/test-all-local`
+- Full pipeline: `/test-smart`
+
+### Add New Tests
+1. Add CUJ definition to [CUJS.md](CUJS.md)
+2. Create test file: `frontend/tests/e2e/{feature}.spec.ts`
+3. Write tests for all acceptance criteria
+4. Run `/test-specific {feature}` to verify
+
+### View Progress
+- Test coverage: [Test Coverage Matrix](#📊-test-coverage-matrix) above
+- CUJ status: [CUJS.md](CUJS.md#cuj-implementation-matrix)
+- Known issues: [Known Limitations](#⚠️-known-limitations--action-items) above
+
+---
+
+**Last Updated:** 2025-11-13
+**Next Review:** 2025-11-20 (weekly)
+**Maintained By:** Engineering Team
