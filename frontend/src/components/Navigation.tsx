@@ -17,7 +17,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useUserStore } from '@/store/userStore';
 import { useSubscriptionStore } from '@/store/subscriptionStore';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 interface NavigationProps {
   transparent?: boolean;
@@ -133,9 +132,6 @@ export default function Navigation({ transparent = false }: NavigationProps) {
 
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            {/* Language Switcher */}
-            <LanguageSwitcher className="border-l border-gray-200 pl-4" />
-
             {isAuthenticated ? (
               <div className="flex items-center gap-3 profile-menu-container relative">
                 {isProUser && (

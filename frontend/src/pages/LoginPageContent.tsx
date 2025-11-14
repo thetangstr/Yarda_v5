@@ -19,8 +19,6 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { authAPI, getErrorMessage } from '@/lib/api';
 import { useUserStore } from '@/store/userStore';
-import { useLanguage } from '@/context/LanguageContext';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
 import GoogleOneTap from '@/components/GoogleOneTap';
 import { MagicLinkForm } from '@/components/auth/MagicLinkForm';
@@ -28,7 +26,6 @@ import { MagicLinkForm } from '@/components/auth/MagicLinkForm';
 export default function LoginPage() {
   const router = useRouter();
   const { setUser, setAccessToken } = useUserStore();
-  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -65,7 +62,7 @@ export default function LoginPage() {
     if (!validateEmail(formData.email)) {
       setErrors((prev) => ({
         ...prev,
-        email: t('errors.invalidEmail'),
+        email: 'Invalid email address',
       }));
       return;
     }
@@ -74,7 +71,7 @@ export default function LoginPage() {
     if (!formData.password) {
       setErrors((prev) => ({
         ...prev,
-        password: t('auth.passwordRequired'),
+        password: 'Password is required',
       }));
       return;
     }
@@ -123,11 +120,6 @@ export default function LoginPage() {
         />
       </Head>
 
-      {/* Language Switcher - Top Right */}
-      <div className="absolute top-4 right-4">
-        <LanguageSwitcher />
-      </div>
-
       {/* Google One Tap - auto sign-in for returning users */}
       <GoogleOneTap
         clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''}
@@ -139,9 +131,9 @@ export default function LoginPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-block mb-4">
-            <h1 className="text-3xl font-bold text-gray-900">{t('common.appName')}</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Yarda</h1>
           </Link>
-          <p className="text-gray-600">{t('auth.signInToAccount')}</p>
+          <p className="text-gray-600">Sign in to your account</p>
         </div>
 
         {/* Password Login Form - Hidden by default */}
@@ -163,7 +155,7 @@ export default function LoginPage() {
                 htmlFor="email"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                {t('auth.email')}
+                Email
               </label>
               <input
                 type="email"
@@ -192,7 +184,7 @@ export default function LoginPage() {
                 htmlFor="password"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                {t('auth.password')}
+                Password
               </label>
               <input
                 type="password"
@@ -231,7 +223,7 @@ export default function LoginPage() {
                   htmlFor="remember-me"
                   className="ml-2 block text-sm text-gray-700"
                 >
-                  {t('auth.rememberMe')}
+                  Remember me
                 </label>
               </div>
               <div className="text-sm">
@@ -239,7 +231,7 @@ export default function LoginPage() {
                   href="#"
                   className="text-blue-600 hover:text-blue-700 font-medium"
                 >
-                  {t('auth.forgotPassword')}
+                  Forgot password?
                 </a>
               </div>
             </div>
@@ -273,10 +265,10 @@ export default function LoginPage() {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  {t('auth.signingIn')}
+                  Signing in...
                 </span>
               ) : (
-                t('auth.signIn')
+                'Sign In'
               )}
             </button>
           </form>
@@ -298,7 +290,7 @@ export default function LoginPage() {
                 </div>
                 <div className="relative flex justify-center text-sm">
                   <span className="px-2 bg-white text-gray-500">
-                    {t('auth.orSignInWithMagicLink')}
+                    Or sign in with Magic Link
                   </span>
                 </div>
               </div>
@@ -327,10 +319,10 @@ export default function LoginPage() {
                 </svg>
                 <div>
                   <p className="text-sm font-medium text-green-900">
-                    {t('auth.trialCreditsMessage')}
+                    New users get 1 free credit!
                   </p>
                   <p className="text-xs text-green-700 mt-1">
-                    {t('auth.trialCreditsDetail')}
+                    No payment required to try it out
                   </p>
                 </div>
               </div>
@@ -343,7 +335,7 @@ export default function LoginPage() {
                 onClick={() => setShowPasswordLogin(true)}
                 className="text-sm text-gray-600 hover:text-gray-900 underline"
               >
-                {t('auth.passwordOption')}
+                Sign in with password instead
               </button>
             </div>
           </>
@@ -357,7 +349,7 @@ export default function LoginPage() {
               onClick={() => setShowPasswordLogin(false)}
               className="text-sm text-gray-600 hover:text-gray-900 underline"
             >
-              {t('auth.backToMagicLink')}
+              Back to Magic Link
             </button>
           </div>
         )}

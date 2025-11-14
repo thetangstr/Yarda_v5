@@ -7,7 +7,6 @@ import WhatsNewModal from '@/components/WhatsNewModal';
 import { useUserStore } from '@/store/userStore';
 import { isHolidaySeasonActive } from '@/lib/seasonalFeatures';
 import { usersAPI } from '@/lib/api';
-import { LanguageProvider } from '@/context/LanguageContext';
 
 export default function App({ Component, pageProps }: AppProps) {
   const { toasts, removeToast } = useToastStore();
@@ -49,17 +48,15 @@ export default function App({ Component, pageProps }: AppProps) {
   };
 
   return (
-    <LanguageProvider>
-      <>
-        {/* Global Toast Notifications */}
-        <ToastContainer toasts={toasts} onDismiss={removeToast} />
+    <>
+      {/* Global Toast Notifications */}
+      <ToastContainer toasts={toasts} onDismiss={removeToast} />
 
-        {/* What's New Modal (Holiday Feature Announcement) */}
-        <WhatsNewModal isOpen={showWhatsNewModal} onDismiss={handleDismissModal} />
+      {/* What's New Modal (Holiday Feature Announcement) */}
+      <WhatsNewModal isOpen={showWhatsNewModal} onDismiss={handleDismissModal} />
 
-        {/* Page Content */}
-        <Component {...pageProps} />
-      </>
-    </LanguageProvider>
+      {/* Page Content */}
+      <Component {...pageProps} />
+    </>
   );
 }

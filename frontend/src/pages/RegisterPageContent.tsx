@@ -14,12 +14,9 @@
 import React from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { useLanguage } from '@/context/LanguageContext';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { t } = useLanguage();
 
   // MAINTENANCE MODE: Block all new registrations
   return (
@@ -31,11 +28,6 @@ export default function RegisterPage() {
           content="New user registration is temporarily disabled"
         />
       </Head>
-
-      {/* Language Switcher - Top Right */}
-      <div className="absolute top-4 right-4">
-        <LanguageSwitcher />
-      </div>
 
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-8">
         {/* Maintenance Icon */}
@@ -57,19 +49,19 @@ export default function RegisterPage() {
           </div>
 
           <h1 className="text-3xl font-bold text-gray-900 mb-3">
-            {t('auth.registrationDisabled')}
+            Registration Temporarily Disabled
           </h1>
 
           <p className="text-gray-700 mb-4 leading-relaxed">
-            {t('auth.registrationMessage')}
+            We're currently not accepting new registrations as we refine our service. Please check back soon!
           </p>
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <p className="text-sm text-blue-800 font-medium mb-2">
-              {t('auth.existingUsers')}
+              Existing Users
             </p>
             <p className="text-xs text-blue-700">
-              {t('auth.existingUsersDetail')}
+              If you already have an account, you can still sign in and use all features.
             </p>
           </div>
 
@@ -78,19 +70,19 @@ export default function RegisterPage() {
               onClick={() => router.push('/login')}
               className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition shadow-md"
             >
-              {t('auth.goToLogin')}
+              Go to Login
             </button>
 
             <button
               onClick={() => router.push('/')}
               className="w-full py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition"
             >
-              {t('auth.backToHome')}
+              Back to Home
             </button>
           </div>
 
           <p className="text-xs text-gray-500 mt-6">
-            {t('auth.comingBack')}
+            We'll be back soon with exciting updates!
           </p>
         </div>
       </div>
