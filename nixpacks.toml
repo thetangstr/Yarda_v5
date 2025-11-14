@@ -1,18 +1,26 @@
+# Python 3.11 Backend Configuration for Railway
+# This config ensures Railway detects and runs the Python backend correctly
+
 [phases.setup]
-nixPkgs = ["python311", "postgresql"]
+nixPkgs = ["python311", "postgresql", "git"]
 aptPkgs = []
 
 [phases.install]
 dependsOn = ["setup"]
 cmds = [
+  "echo 'Installing Python dependencies...'",
   "cd backend",
-  "pip install --upgrade pip",
-  "pip install -r requirements.txt"
+  "pip install --upgrade pip setuptools wheel",
+  "pip install -r requirements.txt",
+  "echo 'Dependencies installed successfully'"
 ]
 
 [phases.build]
 dependsOn = ["install"]
-cmds = ["echo 'Build complete'"]
+cmds = [
+  "echo 'Python FastAPI backend ready for deployment'"
+]
 
 [start]
-cmd = "cd backend && uvicorn src.main:app --host 0.0.0.0 --port $PORT --workers 1"
+# Start the backend API server
+cmd = "cd /app/backend && uvicorn src.main:app --host 0.0.0.0 --port $PORT --workers 1"

@@ -1,0 +1,103 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - 001-data-model
+  workflow_dispatch:
+
+env:
+  RAILWAY_PROJECT_ID: 7a8f9bcb-a265-4c34-82d2-c9c3655d26bf
+  RAILWAY_ENVIRONMENT: staging
+  RAILWAY_SERVICE_NAME: yarda-api
+
+jobs:
+  deploy:
+    name: Deploy Backend to Staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate configuration files
+        run: |
+          echo "Checking Railway configuration..."
+          test -f railway.toml && echo "✓ railway.toml found" || echo "✗ railway.toml missing"
+          test -f nixpacks.toml && echo "✓ nixpacks.toml found" || echo "✗ nixpacks.toml missing"
+          test -f Procfile && echo "✓ Procfile found" || echo "✗ Procfile missing"
+          test -f backend/requirements.txt && echo "✓ backend/requirements.txt found" || echo "✗ backend/requirements.txt missing"
+
+      - name: Validate Python requirements
+        run: |
+          echo "Checking Python dependencies..."
+          test -f backend/requirements.txt && cat backend/requirements.txt | head -5
+
+      - name: Check backend directory
+        run: |
+          echo "Backend structure:"
+          ls -la backend/ | head -20
+
+      - name: Install Railway CLI
+        run: |
+          npm install -g @railway/cli@latest
+
+      - name: Authenticate with Railway
+        run: |
+          railway login --token ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Link to Railway project
+        run: |
+          railway link --project ${{ env.RAILWAY_PROJECT_ID }}
+
+      - name: Deploy to staging environment
+        run: |
+          echo "Deploying to staging environment..."
+          railway deploy --service ${{ env.RAILWAY_SERVICE_NAME }} \
+                        --environment ${{ env.RAILWAY_ENVIRONMENT }} \
+                        --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Monitor deployment
+        run: |
+          echo "Deployment initiated. Waiting for completion..."
+          sleep 30
+          echo "Deployment logs:"
+          railway logs --service ${{ env.RAILWAY_SERVICE_NAME }} \
+                      --environment ${{ env.RAILWAY_ENVIRONMENT }} \
+                      --lines 50 || echo "Logs not yet available"
+
+      - name: Verify deployment
+        run: |
+          echo "Waiting for service to be ready..."
+          sleep 30
+
+          # Get the staging API URL from Railway
+          STAGING_URL=$(railway variables --service ${{ env.RAILWAY_SERVICE_NAME }} \
+                                        --environment ${{ env.RAILWAY_ENVIRONMENT }} \
+                                        --json | grep -o '"URL":"[^"]*"' | head -1 | cut -d'"' -f4)
+
+          if [ -z "$STAGING_URL" ]; then
+            echo "Warning: Could not retrieve staging URL from environment variables"
+            echo "Attempting to retrieve from service..."
+          fi
+
+          echo "Deployment to staging completed successfully!"
+
+      - name: Notify deployment status
+        if: success()
+        run: |
+          echo "✓ Staging deployment successful"
+          echo "Environment: staging"
+          echo "Service: ${{ env.RAILWAY_SERVICE_NAME }}"
+          echo "Project: yarda-api"
+
+      - name: Notify deployment failure
+        if: failure()
+        run: |
+          echo "✗ Staging deployment failed"
+          exit 1

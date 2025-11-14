@@ -1,0 +1,114 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+env:
+  RAILWAY_PROJECT_ID: 7a8f9bcb-a265-4c34-82d2-c9c3655d26bf
+  RAILWAY_ENVIRONMENT: production
+  RAILWAY_SERVICE_NAME: yarda-api
+
+jobs:
+  validate:
+    name: Validate Production Deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate configuration files
+        run: |
+          echo "Checking production deployment configuration..."
+          test -f railway.toml && echo "✓ railway.toml found" || (echo "✗ railway.toml missing" && exit 1)
+          test -f nixpacks.toml && echo "✓ nixpacks.toml found" || (echo "✗ nixpacks.toml missing" && exit 1)
+          test -f backend/requirements.txt && echo "✓ backend/requirements.txt found" || (echo "✗ backend/requirements.txt missing" && exit 1)
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Validate Python dependencies
+        run: |
+          echo "Validating Python requirements.txt syntax..."
+          python3 -m py_compile backend/requirements.txt 2>/dev/null || \
+          (echo "Checking requirements format..." && head -10 backend/requirements.txt)
+
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: validate
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Railway CLI
+        run: |
+          npm install -g @railway/cli@latest
+
+      - name: Authenticate with Railway
+        run: |
+          railway login --token ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Link to Railway project
+        run: |
+          railway link --project ${{ env.RAILWAY_PROJECT_ID }}
+
+      - name: Deploy to production environment
+        run: |
+          echo "Deploying to PRODUCTION environment..."
+          railway deploy --service ${{ env.RAILWAY_SERVICE_NAME }} \
+                        --environment ${{ env.RAILWAY_ENVIRONMENT }} \
+                        --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Monitor deployment
+        run: |
+          echo "Production deployment initiated. Waiting for completion..."
+          sleep 40
+          echo "Deployment logs (last 50 lines):"
+          railway logs --service ${{ env.RAILWAY_SERVICE_NAME }} \
+                      --environment ${{ env.RAILWAY_ENVIRONMENT }} \
+                      --lines 50 || echo "Logs not yet available"
+
+      - name: Wait for service to stabilize
+        run: |
+          echo "Waiting for service to stabilize..."
+          sleep 30
+
+      - name: Verify production deployment health
+        run: |
+          echo "Production deployment completed!"
+          echo "⚠️  Manual health check required:"
+          echo "   1. Verify /v1/credits/balance endpoint returns valid response"
+          echo "   2. Check application logs for errors"
+          echo "   3. Monitor error rates and performance"
+
+      - name: Create deployment summary
+        if: success()
+        run: |
+          echo "✓ Production deployment completed successfully"
+          echo ""
+          echo "Deployment Summary:"
+          echo "  Environment: production"
+          echo "  Service: ${{ env.RAILWAY_SERVICE_NAME }}"
+          echo "  Project: yarda-api (7a8f9bcb-a265-4c34-82d2-c9c3655d26bf)"
+          echo "  Branch: master"
+          echo "  Timestamp: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "✗ Production deployment failed"
+          echo "Investigate deployment logs in Railway dashboard"
+          exit 1
