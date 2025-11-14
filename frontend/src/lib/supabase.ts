@@ -25,6 +25,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     // Detect session from URL callback (for OAuth/magic link redirects)
     detectSessionInUrl: true,
 
+    // Use PKCE flow (more secure and reliable than implicit flow)
+    // PKCE uses query parameters instead of hash fragments
+    flowType: 'pkce',
+
     // Use localStorage for maximum persistence (default, but being explicit)
     storage: typeof window !== 'undefined' ? window.localStorage : undefined,
 
@@ -90,6 +94,9 @@ export async function signInWithGoogle(redirectTo?: string) {
         access_type: 'offline',
         prompt: 'consent',
       },
+      // Use PKCE flow instead of hash flow for better reliability
+      // PKCE uses query parameters instead of hash fragments
+      skipBrowserRedirect: false,
     },
   });
 

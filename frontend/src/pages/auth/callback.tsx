@@ -48,15 +48,44 @@ export default function AuthCallback() {
         console.log('[Auth Callback] Search params:', window.location.search);
         console.log('[Auth Callback] Hash:', window.location.hash);
 
-        // CRITICAL: Force Supabase to process the OAuth redirect if it contains the session
-        // This handles the case where the hash is present but onAuthStateChange doesn't fire immediately
-        if (window.location.hash) {
-          console.log('[Auth Callback] OAuth redirect detected (hash present), processing session from URL...');
-          const { data: { session: urlSession }, error: urlError } = await supabase.auth.getSession();
-          if (urlSession) {
-            console.log('[Auth Callback] Successfully extracted session from URL');
-          } else if (urlError) {
-            console.warn('[Auth Callback] Error extracting session from URL:', urlError);
+        // CRITICAL: Force Supabase to process the OAuth redirect
+        // Handle both PKCE flow (code param) and implicit flow (hash fragment)
+        const hasCode = window.location.search.includes('code=');
+        const hasHash = window.location.hash;
+
+        if (hasCode || hasHash) {
+          console.log('[Auth Callback] OAuth redirect detected - Code:', hasCode, 'Hash:', hasHash);
+          console.log('[Auth Callback] Aggressively processing session...');
+
+          // Try multiple times to get the session, as Supabase might need time to process the redirect
+          let session = null;
+          let attempts = 0;
+          const maxAttempts = 10;
+
+          while (!session && attempts < maxAttempts) {
+            attempts++;
+            console.log(`[Auth Callback] Attempt ${attempts}/${maxAttempts} to extract session...`);
+
+            const { data: { session: extractedSession }, error: extractError } = await supabase.auth.getSession();
+
+            if (extractedSession) {
+              session = extractedSession;
+              console.log('[Auth Callback] ✅ Successfully extracted session from URL on attempt', attempts);
+              console.log('[Auth Callback] User ID:', extractedSession.user.id);
+              console.log('[Auth Callback] User email:', extractedSession.user.email);
+              break;
+            } else if (extractError) {
+              console.warn('[Auth Callback] Error extracting session (attempt', attempts, '):', extractError);
+            } else {
+              console.log('[Auth Callback] No session yet, waiting 200ms before retry...');
+              await new Promise(resolve => setTimeout(resolve, 200));
+            }
+          }
+
+          if (!session) {
+            console.error('[Auth Callback] ❌ Failed to extract session after', maxAttempts, 'attempts');
+            console.error('[Auth Callback] This usually indicates a Supabase configuration issue');
+            console.error('[Auth Callback] Check that Site URL and Redirect URLs are configured correctly');
           }
         }
 
