@@ -1,189 +1,388 @@
 # Testing Help - Quick Reference
 
-## 🧠 Smart Commands (Use This!)
+## 🚀 Command Family (Consolidated)
+
+All testing functionality organized into focused, non-overlapping commands:
 
 ### Primary Command (ONE COMMAND FOR EVERYTHING)
-- **`/test-smart`** - 🚀 Full CI/CD Pipeline (Local → Staging → Production)
-  - **LOCAL**: Analyzes changes, runs tests, auto-fixes failures
-  - **STAGING**: Auto-deploys, runs full suite, auto-fixes failures
-  - **APPROVAL**: Asks for human approval after all tests pass
-  - **PRODUCTION**: Deploys to production, runs smoke tests
-  - **Replaces:** /test-fix, /deploy-staging, /deploy-production
-  - **Use this for:** Everything from development to production
+**`/test-smart`** - Full CI/CD Pipeline (Local → Staging → Production)
+- **LOCAL**: Analyzes changes, runs tests, auto-fixes failures
+- **STAGING**: Auto-deploys, runs full suite, auto-fixes failures
+- **APPROVAL**: Asks for human approval after all tests pass
+- **PRODUCTION**: Deploys to production, runs smoke tests
+- **Use this for:** Everything from development to production
+- **Time:** 45-60 min (includes all phases)
 
-- `/test-all-local` - 📋 Run complete test suite (< 8 min)
-  - All 47 tests in parallel
-  - Use before PRs
-  - Comprehensive validation
+---
 
-## 📦 Deployment Commands
+## 🎯 Specialized Testing Commands
 
-- `/deploy-staging` - Deploy + validate in staging
-  - Runs full test suite in staging
-  - Auto-fixes failures
-  - Reports results
+### `/test-all-local` - Complete Local Test Suite
+- Run **all 50+ tests** locally before PRs
+- **9 tests each** for: language-switching, auth, generation, tokens, trial, purchase, subscription, holiday, etc.
+- Comprehensive validation
+- **Time:** 15-20 min
 
-- `/deploy-production` - Deploy to production
-  - Requires user approval
-  - Runs smoke tests
-  - Monitors for errors
+### `/test-specific` - Test Specific Feature
+- Quick feature verification
+- Smart feature selection: `language-switching`, `generation`, `tokens`, `auth`, etc.
+- Run against local, staging, or production
+- Examples:
+  ```bash
+  /test-specific language-switching
+  /test-specific generation staging --verbose
+  /test-specific tokens local --fail-fast
+  ```
+- **Time:** 2-5 min per feature
 
-## 🎯 Test Suites (4 Consolidated)
+### `/test-cuj` - Critical User Journey Testing
+- Test complete end-to-end user flows
+- Verify real user scenarios work perfectly
+- Examples:
+  ```bash
+  /test-cuj registration-to-generation      # New user → first generation
+  /test-cuj single-page-generation         # Entire generation on one page
+  /test-cuj token-purchase-flow            # Purchase → use tokens
+  /test-cuj subscription-unlimited          # Subscribe → unlimited generations
+  ```
+- **Time:** 3-5 min per CUJ
 
-1. **auth-onboarding.spec.ts** (11 tests, ~90s)
-   - Google OAuth & Magic Link
-   - Trial credits (3 on signup)
-   - Session persistence
+### `/test-bug-fix` - Environment-Aware Bug Workflow
+- Smart bug detection and appropriate fix strategy
+- Auto-detects: production bug? staging? local?
+- **Workflow A (Production):** Fix → Test → Staging Verify → Production Deploy
+- **Workflow B (Staging):** Fix → Test → Auto-Deploy Staging
+- **Workflow C (Local):** Fix → Test → Done
+- Examples:
+  ```bash
+  /test-bug-fix                # Auto-detects environment
+  /test-bug-fix --production   # Force production workflow
+  ```
+- **Time:** Varies by workflow (2-45 min)
 
-2. **generation-complete.spec.ts** (10 tests, ~180s)
-   - Address autocomplete
-   - Location preview (Street View/Satellite)
-   - Single-page flow with polling
-   - Multi-area generation
+### `/test-comprehensive` - Design, UX, A11y, Responsive Testing
+- **Agent-driven comprehensive testing** using Playwright MCP
+- Design verification (colors, spacing, typography, animations)
+- Accessibility audit (WCAG AA compliance)
+- Responsive testing (6+ devices, all orientations)
+- Performance metrics (load time, TTI, CLS)
+- Cross-browser compatibility
+- Visual regression detection
+- Examples:
+  ```bash
+  /test-comprehensive all                     # Everything
+  /test-comprehensive generation --accessibility  # A11y focus
+  /test-comprehensive all staging --detailed      # Full report
+  ```
+- **Time:** 5-15 min for detailed verification
 
-3. **payments.spec.ts** (12 tests, ~150s)
-   - Token packages (10, 50, 100, 500)
-   - Stripe Checkout & webhooks
-   - Subscriptions & Customer Portal
-   - Authorization hierarchy
+---
 
-4. **error-recovery.spec.ts** (14 tests, ~120s)
-   - Network timeouts & offline mode
-   - API errors (500, 429)
-   - Form validation
-   - localStorage recovery
+## 📊 Quick Reference Matrix
 
-**Total: 47 tests, ~540s (9 min) sequential, < 8 min parallel**
+| Command | Purpose | Use When | Time |
+|---------|---------|----------|------|
+| `/test-smart` | Full CI/CD pipeline | Ready to deploy | 45-60 min |
+| `/test-all-local` | Complete test suite | Before PR | 15-20 min |
+| `/test-specific` | Test one feature | Quick verification | 2-5 min |
+| `/test-cuj` | Test user journey | Verify CUJ works | 3-5 min |
+| `/test-bug-fix` | Fix bug properly | Found a bug | 2-45 min |
+| `/test-comprehensive` | Design/UX/A11y | Polish verification | 5-15 min |
 
-## ⚡ Quick Commands
+---
 
-```bash
-# SMART TESTING (Recommended) 🧠
-/test-smart                    # AI decides what to run (2-5 min)
+## 🔥 Common Workflows
 
-# Run specific suite
-npx playwright test tests/e2e/auth-onboarding.spec.ts
-npx playwright test tests/e2e/generation-complete.spec.ts
-npx playwright test tests/e2e/payments.spec.ts
-npx playwright test tests/e2e/error-recovery.spec.ts
-
-# Run by priority
-npx playwright test --grep @critical  # High-priority tests (< 5 min)
-npx playwright test --grep @smoke     # Quick validation (< 2 min)
-
-# Development
-npm run test:unit:watch        # Real-time unit test feedback
-npm run test:all:local         # Full suite locally (< 8 min)
-
-# Staging & Production
-npm run test:staging           # Full staging suite (< 10 min)
-npm run test:prod:smoke        # Production smoke tests (< 3 min)
-```
-
-## 🧠 Smart Testing Intelligence
-
-**What `/test-smart` Does:**
-
-1. **Analyzes Changes**
-   ```bash
-   $ /test-smart
-
-   🔍 Analyzing git diff...
-   📁 Changed: AddressInput.tsx
-   🎯 Impact: Generation flow (Medium risk)
-   💡 Plan: Run generation-complete.spec.ts only
-   ⚡ Time: 3 min (vs 8 min full suite)
-   ```
-
-2. **Maps to Tests**
-   - Uses [test-dependencies.yml](../test-dependencies.yml)
-   - Understands code dependencies
-   - Detects risk levels
-
-3. **Smart Execution**
-   - Runs smoke tests first
-   - Then affected tests
-   - Full suite only if high-risk
-
-**Advanced Features:**
-- 🆕 Auto-generates tests for new components
-- 🔧 Auto-fixes flaky tests
-- 📊 Detects coverage gaps
-- ⚡ Tracks performance regressions
-- 🔮 Predicts likely failures
-
-## 📊 Test Execution Times
-
-| Test Type | Target | Parallel | Strategy |
-|-----------|--------|----------|----------|
-| Smoke tests | < 2m | ✅ Yes | Quick validation |
-| Critical tests | < 5m | ✅ Yes | High-priority |
-| Affected tests | 2-5m | ✅ Yes | Smart selection |
-| Full suite | < 8m | ✅ Yes | Comprehensive |
-
-## 🎯 Daily Workflow
-
-**Development:**
+### Workflow 1: Daily Development
 ```bash
 # 1. Make changes
-$ git add .
+# 2. Quick feature test
+/test-specific language-switching           # 2 min
 
-# 2. Smart test (FAST)
-$ /test-smart
-> ✅ 10 tests passed in 2m 34s
-
-# 3. Commit
-$ git commit -m "Fix bug"
+# 3. If passes → ready to commit
+# 4. Before PR → full suite
+/test-all-local                             # 15 min
 ```
 
-**Before PR:**
+### Workflow 2: Bug Fix
 ```bash
-# Run full suite for safety
-$ /test-all-local
-> ✅ 47 tests passed in 7m 21s
+# 1. Found a bug
+# 2. Smart bug fix workflow (auto-detects environment)
+/test-bug-fix                               # 2-45 min depending on bug
+
+# Result:
+# - Fixed locally if local bug
+# - Fixed + staged if staging bug
+# - Fixed + staged + production if production bug
 ```
 
-**When Tests Fail:**
+### Workflow 3: Feature Complete
 ```bash
-# Agent auto-fixes
-$ /test-fix
-> 🔧 Fixed flaky test
-> ✅ Re-run passed
+# 1. Feature complete, all tests passing
+/test-all-local                             # 15 min
+
+# 2. Verify critical user journeys
+/test-cuj registration-to-generation        # 3 min
+/test-cuj single-page-generation           # 3 min
+
+# 3. Comprehensive design/UX verification
+/test-comprehensive all --accessibility --responsive  # 10 min
+
+# 4. Full CI/CD (ready to production)
+/test-smart                                 # 45-60 min
 ```
 
-## 📚 Documentation
+### Workflow 4: Before Production Deploy
+```bash
+# 1. All local tests pass
+/test-all-local                             # 15 min ✅
 
-- **[SMART_TESTING_GUIDE.md](../SMART_TESTING_GUIDE.md)** - Complete guide
-- **[test-dependencies.yml](../test-dependencies.yml)** - Code-to-test mapping
-- **[TEST_PLAN.md](../TEST_PLAN.md)** - Full testing strategy
-- **[TEST_CONSOLIDATION_COMPLETE.md](../TEST_CONSOLIDATION_COMPLETE.md)** - Consolidation summary
+# 2. All CUJs verified
+/test-cuj all                               # 30 min ✅
 
-## ✅ Success Criteria
+# 3. Comprehensive verification
+/test-comprehensive all staging --detailed --report  # 15 min ✅
 
-- ✅ 100% tests passing
-- ✅ 80%+ code coverage
-- ✅ < 1% flaky test rate
-- ✅ Execution time < 8 minutes
-- ✅ Zero manual testing
+# 4. Full CI/CD pipeline
+/test-smart                                 # 45-60 min ✅
+# → Ask for approval
+# → Deploy to production
+```
+
+---
+
+## ⚙️ Advanced Options
+
+### By Test Type
+```bash
+# Smoke tests (fast)
+/test-all-local --smoke                      # 2-3 min
+
+# Critical tests only
+/test-all-local --critical                   # 5-7 min
+
+# Full suite
+/test-all-local                              # 15-20 min
+```
+
+### By Environment
+```bash
+# Local (fastest)
+/test-specific generation local              # 3 min
+
+# Staging (real backend)
+/test-specific generation staging            # 4 min
+
+# Production (with caution)
+/test-specific generation production --read-only  # 5 min
+```
+
+### By Feature Focus
+```bash
+# Design focus
+/test-comprehensive all --visual-inspection
+
+# Accessibility focus
+/test-comprehensive all --accessibility --report
+
+# Performance focus
+/test-comprehensive all --performance --detailed
+
+# Responsive focus
+/test-comprehensive all --responsive
+```
+
+### Debugging Options
+```bash
+# Show all output
+/test-specific generation --verbose
+
+# Interactive UI mode (visual debugging)
+/test-specific generation --ui
+
+# Show browser window
+/test-specific generation --headed
+
+# Stop on first failure
+/test-specific generation --fail-fast
+```
+
+---
+
+## 📚 Test Coverage
+
+**Current Status:**
+- **50+ total tests**
+- **40+ passing** (core features verified)
+- **5 browser types** (Chromium, Firefox, WebKit, Mobile Chrome, Mobile Safari)
+- **145+ design checks** (via comprehensive testing)
+
+**Coverage by Feature:**
+| Feature | Tests | Browsers | Status |
+|---------|-------|----------|--------|
+| Language Switching (i18n) | 9 | 5 | ✅ Core working |
+| Authentication | 12+ | 5 | ✅ All passing |
+| Generation Flow | 15+ | 5 | ✅ All passing |
+| Token Management | 8+ | 5 | ✅ All passing |
+| Trial Credits | 6+ | 5 | ✅ All passing |
+| Payment/Stripe | 10+ | 5 | ✅ All passing |
+| Subscription | 8+ | 5 | ✅ All passing |
+
+---
+
+## 🎯 When to Use Each Command
+
+### Use `/test-smart` when:
+- ✅ Feature complete, all other tests pass
+- ✅ Ready to deploy to production
+- ✅ Want full CI/CD automation
+- ✅ Need approval gate before production
+
+### Use `/test-all-local` when:
+- ✅ Before creating PR
+- ✅ Want comprehensive validation
+- ✅ Want full test coverage report
+- ✅ Before merging to main
+
+### Use `/test-specific` when:
+- ✅ Testing single feature
+- ✅ Quick verification needed
+- ✅ Don't need full suite
+- ✅ Want fast feedback (2-5 min)
+
+### Use `/test-cuj` when:
+- ✅ Want to verify complete user flow
+- ✅ Feature touches multiple areas
+- ✅ Want end-to-end validation
+- ✅ User journey is complex
+
+### Use `/test-bug-fix` when:
+- ✅ Found a bug
+- ✅ Not sure if production/staging/local
+- ✅ Want smart fix strategy
+- ✅ Need approval gate for production bugs
+
+### Use `/test-comprehensive` when:
+- ✅ Feature complete, tests pass
+- ✅ Want design/UX polish verification
+- ✅ Need accessibility audit
+- ✅ Before final production approval
+- ✅ Want detailed HTML report
+
+---
+
+## 🆘 Troubleshooting
+
+### Tests are flaky
+```bash
+# Run same test 3 times to verify stability
+/test-specific language-switching --repeat 3
+
+# If passes all 3 times → test is stable
+# If fails intermittently → investigate timing issues
+```
+
+### Want to debug specific test failure
+```bash
+# Interactive UI mode (watch test run)
+/test-specific generation local --ui --headed
+
+# Shows exactly where test fails
+# You can inspect page, check console, etc.
+```
+
+### Test fails but passes manually
+```bash
+# Run with increased timeout
+/test-specific generation --timeout 30000
+
+# Run without parallelization
+/test-specific generation --serial
+
+# Check if it's timing/race condition
+```
+
+### Need detailed error information
+```bash
+# Get verbose output
+/test-specific generation --verbose
+
+# Get detailed report with screenshots
+/test-comprehensive generation --detailed --report
+```
+
+---
 
 ## 💡 Pro Tips
 
-1. **Use `/test-smart` daily** - Save 60-90% testing time
-2. **Trust the agent** - It knows the dependency map
-3. **Let agent auto-fix** - Don't debug tests manually
-4. **Review insights** - Learn from coverage gaps
-5. **Update mappings** - Keep test-dependencies.yml current
+1. **Use `/test-smart` as your source of truth** - It handles all workflows
+2. **Trust agent decisions** - It analyzes code changes intelligently
+3. **Run `/test-specific` for rapid feedback** - 2-5 min cycles
+4. **Use `/test-cuj` for user story verification** - Real scenarios
+5. **Let agent auto-fix tests** - Don't debug manually
+6. **Generate reports before production** - Documentation matters
+7. **Check `/test-help` when unsure** - This file is your guide
 
-## 🆘 Need Help?
+---
 
-**Just ask!** The agent is designed to think for you:
+## 📖 Full Documentation
 
-```bash
-$ /test-smart
-> Agent analyzes changes
-> Agent recommends strategy
-> Agent executes tests
-> Agent provides insights
+For detailed documentation of each command, see:
+- **`/test-smart`** - `test-smart.md`
+- **`/test-all-local`** - `test-all-local.md`
+- **`/test-specific`** - `test-specific.md`
+- **`/test-cuj`** - `test-cuj.md`
+- **`/test-bug-fix`** - `test-bug-fix.md`
+- **`/test-comprehensive`** - `test-comprehensive.md`
+
+Or ask the agent: `"Tell me about /test-specific"`
+
+---
+
+## 🎓 Key Concepts
+
+### Critical User Journeys (CUJs)
+End-to-end user scenarios tested by `/test-cuj`:
+- **CUJ1:** New user registration → first generation
+- **CUJ2:** Language selection and persistence
+- **CUJ3:** Single-page generation without navigation
+- **CUJ4:** Token purchase via Stripe
+- **CUJ5:** Subscription for unlimited generations
+- **CUJ6:** Trial exhaustion and purchase required
+- **CUJ7:** Holiday decorator (seasonal)
+
+### Test Environment Hierarchy
+- **Local:** Fastest, for development (localhost:3000 + localhost:8000)
+- **Staging:** Real backend, for verification (Vercel preview + Railway)
+- **Production:** Real users, for monitoring (use with caution)
+
+### Test Levels
+- **Smoke tests** (< 2 min): Quick validation
+- **Critical tests** (< 5 min): High-priority paths
+- **Full suite** (15-20 min): Comprehensive validation
+- **Deep dive** (5-15 min): Design/UX/A11y/performance
+
+---
+
+## ✅ Success Checklist
+
+Before deploying to production:
+
+```
+✅ /test-smart ran successfully
+✅ All tests passed (50+ tests)
+✅ All CUJs verified (7 critical paths)
+✅ /test-comprehensive passed (design/UX/A11y)
+✅ No known issues remaining
+✅ Code reviewed and approved
+✅ Performance within SLA
+✅ Accessibility verified (WCAG AA)
+✅ Responsive on all devices
+✅ Ready for production! 🚀
 ```
 
-**Type `/test-smart` now to see it in action! 🚀**
+---
+
+**Start Testing:** Type `/test-smart` to get started! 🚀
+
+Or use `/test-help` for this quick reference anytime.
