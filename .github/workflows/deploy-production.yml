@@ -62,6 +62,8 @@ jobs:
           echo "Railway CLI will use RAILWAY_TOKEN environment variable"
 
       - name: Link to Railway project
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
           railway link --project ${{ env.RAILWAY_PROJECT_ID }}
 
