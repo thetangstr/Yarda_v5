@@ -11,7 +11,6 @@
  */
 
 import React from 'react';
-import Link from 'next/link';
 import BeforeAfterSlider from '@/components/BeforeAfterSlider';
 
 export default function HolidayHero() {
