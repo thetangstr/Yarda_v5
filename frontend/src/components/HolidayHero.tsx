@@ -80,8 +80,20 @@ export default function HolidayHero() {
             {/* CTA buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               {/* Primary CTA */}
-              <Link
-                href="/holiday"
+              <button
+                onClick={() => {
+                  // Check if we're on the holiday page already
+                  if (typeof window !== 'undefined' && window.location.pathname === '/holiday') {
+                    // Scroll to login section
+                    const loginSection = document.getElementById('holiday-login');
+                    if (loginSection) {
+                      loginSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                  } else {
+                    // Navigate to holiday page
+                    window.location.href = '/holiday#holiday-login';
+                  }
+                }}
                 className="
                   group relative inline-flex items-center justify-center
                   px-8 py-4 rounded-xl
@@ -92,10 +104,16 @@ export default function HolidayHero() {
                   hover:shadow-xl hover:shadow-green-500/60
                   transform hover:scale-105
                   transition-all duration-200
+                  cursor-pointer
                 "
               >
-                <span className="mr-2">🎄</span>
-                Get Started Free
+                <span className="flex items-center gap-2">
+                  <span className="text-2xl">🎄</span>
+                  <span className="flex flex-col items-start">
+                    <span className="text-lg font-bold">Try Now</span>
+                    <span className="text-xs font-normal opacity-90">(No payment required!)</span>
+                  </span>
+                </span>
                 <svg
                   className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform"
                   fill="none"
@@ -109,7 +127,7 @@ export default function HolidayHero() {
                     d="M13 7l5 5m0 0l-5 5m5-5H6"
                   />
                 </svg>
-              </Link>
+              </button>
             </div>
 
             {/* Social proof */}

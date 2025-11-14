@@ -101,10 +101,10 @@ export function AuthOptions({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">{title}</h2>
-        <p className="text-gray-600">{subtitle}</p>
+        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-3 tracking-tight">{title}</h2>
+        <p className="text-base text-gray-700 dark:text-gray-300 font-medium">{subtitle}</p>
       </div>
 
       {/* Magic Link Form */}
@@ -113,10 +113,10 @@ export function AuthOptions({
       {/* Divider */}
       <div className="relative my-6">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-300" />
+          <div className="w-full border-t border-gray-300 dark:border-gray-600" />
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-4 bg-white text-gray-500">Or continue with</span>
+          <span className="px-4 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-medium">Or continue with</span>
         </div>
       </div>
 
@@ -129,7 +129,7 @@ export function AuthOptions({
           <button
             type="button"
             onClick={() => setShowPasswordLogin(true)}
-            className="text-sm text-gray-600 hover:text-gray-900 underline"
+            className="text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white underline font-medium"
           >
             Sign in with password instead
           </button>

@@ -228,7 +228,10 @@ export default function HolidayDecoratorPage() {
           <HolidayHero />
 
           {/* Sign-in prompt */}
-          <div className="max-w-md mx-auto mt-12 p-8 bg-surface-light dark:bg-surface-dark rounded-2xl shadow-card dark:shadow-card-dark border border-gray-200 dark:border-gray-700">
+          <div
+            id="holiday-login"
+            className="max-w-md mx-auto mt-12 p-10 bg-gradient-to-br from-white to-blue-50 dark:from-gray-800 dark:to-gray-900 rounded-3xl shadow-2xl border-2 border-blue-200 dark:border-blue-700"
+          >
             <AuthOptions
               redirectTo="/holiday"
               title="Sign in to Get Started"
