@@ -4,6 +4,10 @@ FROM python:3.11-slim as backend
 # Set working directory
 WORKDIR /app
 
+# Copy startup script
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
 # Copy backend requirements first for better caching
 COPY backend/requirements.txt backend/
 
@@ -15,9 +19,6 @@ RUN cd backend && \
 # Copy backend source code
 COPY backend/ backend/
 
-# Set working directory to backend
-WORKDIR /app/backend
-
 # Expose port (Railway will override with $PORT)
 EXPOSE 8000
 
@@ -25,5 +26,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:8000/health', timeout=5)"
 
-# Run the FastAPI application
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use ENTRYPOINT so it can't be overridden
+ENTRYPOINT ["/bin/bash", "/app/start.sh"]
