@@ -20,7 +20,7 @@ passlib[bcrypt]==1.7.4
 stripe==11.1.0
 
 # AI/ML
-google-genai>=1.0.0
+google-genai==1.25.0  # Pin version to avoid dependency conflicts and ensure ImageConfig availability
 
 # Image Processing
 Pillow==11.0.0
