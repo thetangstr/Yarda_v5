@@ -116,13 +116,19 @@ class GeminiClient:
                 )
 
             # Configure generation for image output
-            generate_content_config = types.GenerateContentConfig(
-                temperature=0.7,  # v2 setting for balanced creativity
-                response_modalities=["IMAGE", "TEXT"],
-                image_config=types.ImageConfig(
+            # Use ImageConfig if available (google-genai >= 1.25.0), otherwise use basic config
+            config_kwargs = {
+                "temperature": 0.7,  # v2 setting for balanced creativity
+                "response_modalities": ["IMAGE", "TEXT"],
+            }
+
+            # Add image_config only if ImageConfig is available (newer versions)
+            if hasattr(types, 'ImageConfig'):
+                config_kwargs["image_config"] = types.ImageConfig(
                     image_size="1K"  # 1024x1024 image output
                 )
-            )
+
+            generate_content_config = types.GenerateContentConfig(**config_kwargs)
 
             # Generate with API call using STREAMING (required for image generation)
             image_data = None
